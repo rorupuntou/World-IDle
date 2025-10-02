@@ -21,7 +21,6 @@ type Effect =
     | { type: 'addCpSToClick', percent: number }
     | { type: 'addCpSToAutoclickerFromOthers', targetId: number, value: number };
 
-// Definimos tipos explícitos para nuestros objetos de juego
 type Autoclicker = { id: number; name: string; cost: number; tps: number; purchased: number; req?: Requirement, humanityGemsCost?: number };
 type Upgrade = { id: number; name: string; desc: string; cost: number; purchased: boolean; effect: Effect[]; req?: Requirement, humanityGemsCost?: number };
 type Achievement = { id: number; name: string; desc: string; unlocked: boolean; req: Requirement, reward?: { humanityGems: number } };
@@ -81,14 +80,10 @@ const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => 
 
 const NewsTicker = () => {
     const [news, setNews] = useState(choose(newsFeed));
-
     useEffect(() => {
-        const newsInterval = setInterval(() => {
-            setNews(choose(newsFeed));
-        }, 8000);
+        const newsInterval = setInterval(() => { setNews(choose(newsFeed)); }, 8000);
         return () => clearInterval(newsInterval);
     }, []);
-
     return (
         <div className="absolute top-0 left-0 right-0 h-8 bg-black/50 flex items-center z-40 overflow-hidden">
             <AnimatePresence mode="wait">
@@ -130,15 +125,9 @@ export default function Game() {
         if (!upg.purchased) return;
         upg.effect.forEach(eff => {
             switch (eff.type) {
-                case 'multiplyClick':
-                    clickCPSValue *= eff.value;
-                    break;
-                case 'addClick':
-                    clickCPSValue += eff.value;
-                    break;
-                case 'multiplyGlobal':
-                    globalMultiplierValue *= eff.value;
-                    break;
+                case 'multiplyClick': clickCPSValue *= eff.value; break;
+                case 'addClick': clickCPSValue += eff.value; break;
+                case 'multiplyGlobal': globalMultiplierValue *= eff.value; break;
                 case 'multiplyAutoclicker':
                     if (autoclickerCPSMap.has(eff.targetId)) {
                         autoclickerCPSMap.set(eff.targetId, (autoclickerCPSMap.get(eff.targetId) || 0) * eff.value);
@@ -204,8 +193,9 @@ export default function Game() {
           if (conditionMet) {
               setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
               setToast(`Logro: ${ach.name}`);
-              if (ach.reward && ach.reward.humanityGems) {
-                  setGameState(prev => ({...prev, humanityGems: prev.humanityGems + ach.reward.humanityGems}));
+              if (ach.reward?.humanityGems) {
+                  const rewardGems = ach.reward.humanityGems;
+                  setGameState(prev => ({...prev, humanityGems: prev.humanityGems + rewardGems}));
               }
           }
       });

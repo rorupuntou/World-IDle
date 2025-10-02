@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { MiniKit, ISuccessResult, VerificationLevel } from "@worldcoin/minikit-js";
 import { IDKitWidget } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
-import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // -- HELPERS --
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -70,27 +70,24 @@ const GLOBAL_UPGRADE_THRESHOLDS = [1000, 10000, 1e5, 1e6, 1e7, 1e8, 1e9];
 // -- COMPONENTES DE UI --
 const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
     useEffect(() => {
-        const timer = setTimeout(() => onDone(), 3000);
+        const timer = setTimeout(() => onDone(), 4000);
         return () => clearTimeout(timer);
     }, [onDone]);
     return (
-        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-lime-400/90 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50">
+        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-lime-400/90 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50">
             <CheckBadgeIcon className="w-6 h-6" />
             <span>{message}</span>
+            <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><XMarkIcon className="w-4 h-4"/></button>
         </motion.div>
     );
 };
 
 const NewsTicker = () => {
     const [news, setNews] = useState(choose(newsFeed));
-
     useEffect(() => {
-        const newsInterval = setInterval(() => {
-            setNews(choose(newsFeed));
-        }, 8000);
+        const newsInterval = setInterval(() => { setNews(choose(newsFeed)); }, 8000);
         return () => clearInterval(newsInterval);
     }, []);
-
     return (
         <div className="absolute top-0 left-0 right-0 h-8 bg-black/50 flex items-center z-40 overflow-hidden">
             <AnimatePresence mode="wait">
@@ -193,7 +190,6 @@ export default function Game() {
   useEffect(() => {
       achievements.forEach(ach => {
           if (ach.unlocked) return;
-          
           let conditionMet = false;
           if (ach.req.totalTokensEarned !== undefined && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
           if (ach.req.totalClicks !== undefined && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
@@ -203,7 +199,6 @@ export default function Game() {
             const owned = autoclickers.find(a => a.id === ach.req.autoclickers?.id)?.purchased || 0;
             if (owned >= ach.req.autoclickers.amount) conditionMet = true;
           }
-
           if (conditionMet) {
               setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
               setToast(`Logro: ${ach.name}`);
@@ -218,12 +213,11 @@ export default function Game() {
   useEffect(() => {
     const newAchievements: Achievement[] = [];
     const newUpgrades: Upgrade[] = [];
-
     autoclickers.forEach(auto => {
       TIER_THRESHOLDS.forEach((tier, index) => {
+        const achievementId = 1000 + auto.id * 100 + index;
+        const upgradeId = 2000 + auto.id * 100 + index;
         if (auto.purchased >= tier) {
-          const achievementId = 1000 + auto.id * 100 + index;
-          const upgradeId = 2000 + auto.id * 100 + index;
           if (!achievements.some(a => a.id === achievementId)) {
             newAchievements.push({
               id: achievementId,
@@ -247,7 +241,6 @@ export default function Game() {
         }
       });
     });
-
     GLOBAL_UPGRADE_THRESHOLDS.forEach((tier, index) => {
         if (stats.totalTokensEarned >= tier) {
             const upgradeId = 3000 + index;
@@ -264,7 +257,6 @@ export default function Game() {
             }
         }
     });
-
     if (newAchievements.length > 0) {
       setAchievements(prev => [...prev, ...newAchievements]);
     }
@@ -399,7 +391,7 @@ export default function Game() {
             <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
             <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>
           </div>
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl text-center border border-slate-700">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl text-center border border-slate-700 sticky top-4 z-20">
               <h2 className="text-5xl font-mono tracking-wider">{formatNumber(gameState.tokens)}</h2>
               <p className="text-sm text-slate-400">$WCLICK</p>
               <div className="flex justify-center items-center gap-6 mt-2">

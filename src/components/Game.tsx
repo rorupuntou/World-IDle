@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { MiniKit, ISuccessResult, VerificationLevel } from "@worldcoin/minikit-js";
 import { IDKitWidget } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
-import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // -- HELPERS --
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -190,6 +190,7 @@ export default function Game() {
   useEffect(() => {
       achievements.forEach(ach => {
           if (ach.unlocked) return;
+          
           let conditionMet = false;
           if (ach.req.totalTokensEarned !== undefined && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
           if (ach.req.totalClicks !== undefined && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
@@ -199,6 +200,7 @@ export default function Game() {
             const owned = autoclickers.find(a => a.id === ach.req.autoclickers?.id)?.purchased || 0;
             if (owned >= ach.req.autoclickers.amount) conditionMet = true;
           }
+
           if (conditionMet) {
               setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
               setToast(`Logro: ${ach.name}`);
@@ -213,11 +215,12 @@ export default function Game() {
   useEffect(() => {
     const newAchievements: Achievement[] = [];
     const newUpgrades: Upgrade[] = [];
+
     autoclickers.forEach(auto => {
       TIER_THRESHOLDS.forEach((tier, index) => {
-        const achievementId = 1000 + auto.id * 100 + index;
-        const upgradeId = 2000 + auto.id * 100 + index;
         if (auto.purchased >= tier) {
+          const achievementId = 1000 + auto.id * 100 + index;
+          const upgradeId = 2000 + auto.id * 100 + index;
           if (!achievements.some(a => a.id === achievementId)) {
             newAchievements.push({
               id: achievementId,
@@ -232,7 +235,7 @@ export default function Game() {
               id: upgradeId,
               name: `Especialización de ${auto.name}`,
               desc: `La producción de ${auto.name} se multiplica x5.`,
-              cost: auto.cost * 10 * (index + 1),
+              cost: (initialAutoclickers.find(a=>a.id === auto.id)?.cost || 10) * 100 * (index + 1),
               purchased: false,
               effect: [{ type: 'multiplyAutoclicker', targetId: auto.id, value: 5 }],
               req: { autoclickers: { id: auto.id, amount: tier } },
@@ -241,6 +244,7 @@ export default function Game() {
         }
       });
     });
+
     GLOBAL_UPGRADE_THRESHOLDS.forEach((tier, index) => {
         if (stats.totalTokensEarned >= tier) {
             const upgradeId = 3000 + index;

@@ -7,36 +7,53 @@ import { IDKitWidget } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
 import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
+// -- HELPERS --
+function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+
 // -- TIPOS DE DATOS Y CONFIGURACIÓN --
 type GameStatus = "UNAUTHENTICATED" | "UNVERIFIED" | "VERIFIED";
 type Requirement = { totalTokensEarned?: number; autoclickers?: { id: number; amount: number }; totalClicks?: number; tps?: number, verified?: boolean };
+type Effect = 
+    | { type: 'multiplyClick', value: number }
+    | { type: 'addClick', value: number }
+    | { type: 'multiplyGlobal', value: number }
+    | { type: 'multiplyAutoclicker', targetId: number, value: number }
+    | { type: 'addCpSToClick', percent: number }
+    | { type: 'addCpSToAutoclickerFromOthers', targetId: number, value: number };
 
-const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1, tokensPerSecond: 0 };
-const initialStats = { totalTokensEarned: 0, totalClicks: 0 };
-const initialAutoclickers = [
-    { id: 1, name: "Dato-Minero", cost: 15, tps: 0.1, purchased: 0 },
-    { id: 2, name: "Quantum-Core", cost: 100, tps: 1, purchased: 0, req: { totalTokensEarned: 100 } },
-    { id: 3, name: "IA Autónoma", cost: 1100, tps: 8, purchased: 0, req: { totalTokensEarned: 1000 } },
-    { id: 4, name: "Enjambre de Drones", cost: 12000, tps: 47, purchased: 0, req: { totalTokensEarned: 10000 } },
-    { id: 5, name: "Granja de Servidores", cost: 130000, tps: 260, purchased: 0, req: { totalTokensEarned: 100000 } },
-    { id: 6, name: "Nodo Planetario", cost: 1.4e6, tps: 1400, purchased: 0, req: { totalTokensEarned: 1e6 } },
-    { id: 7, name: "Orbital de Cómputo", cost: 20e6, tps: 7800, purchased: 0, humanityGemsCost: 10, req: { totalTokensEarned: 10e6 } },
+// Definimos tipos explícitos para nuestros objetos de juego
+type Autoclicker = { id: number; name: string; cost: number; tps: number; purchased: number; req?: Requirement, humanityGemsCost?: number };
+type Upgrade = { id: number; name: string; desc: string; cost: number; purchased: boolean; effect: Effect[]; req?: Requirement, humanityGemsCost?: number };
+type Achievement = { id: number; name: string; desc: string; unlocked: boolean; req: Requirement, reward?: { humanityGems: number } };
+
+
+// -- ESTADO INICIAL Y DATOS DEL JUEGO --
+const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1 };
+const initialStats = { totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 };
+
+const initialAutoclickers: Autoclicker[] = [
+    { id: 0, name: "Cursor", cost: 15, tps: 0.1, purchased: 0 },
+    { id: 1, name: "Dato-Minero", cost: 100, tps: 1, purchased: 0, req: { totalTokensEarned: 100 } },
+    { id: 2, name: "Quantum-Core", cost: 1100, tps: 8, purchased: 0, req: { totalTokensEarned: 1000 } },
+    { id: 3, name: "Enjambre de Drones", cost: 12000, tps: 47, purchased: 0, req: { totalTokensEarned: 10000 } },
+    { id: 4, name: "Granja de Servidores", cost: 130000, tps: 260, purchased: 0, req: { totalTokensEarned: 100000 } },
+    { id: 5, name: "Nodo Planetario", cost: 1.4e6, tps: 1400, purchased: 0, req: { totalTokensEarned: 1e6 } },
+    { id: 6, name: "Orbital de Cómputo", cost: 20e6, tps: 7800, purchased: 0, req: { totalTokensEarned: 10e6 } },
+    { id: 7, name: "Portal Interdimensional", cost: 330e6, tps: 44000, purchased: 0, req: { totalTokensEarned: 100e6 } },
+    { id: 8, name: "Máquina del Tiempo", cost: 5.1e9, tps: 260000, purchased: 0, req: { totalTokensEarned: 1e9 } },
+    { id: 9, name: "Condensador de Humanidad", cost: 75e9, tps: 1.6e6, purchased: 0, humanityGemsCost: 100, req: { totalTokensEarned: 50e9 } },
 ];
-const initialUpgrades = [
-    // Mejoras de Clic
-    { id: 1, name: "Cursor Reforzado", desc: "Clics x2", cost: 100, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { totalTokensEarned: 50 } },
-    { id: 10, name: "Mouse de Titanio", desc: "Clics x2", cost: 2500, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { totalTokensEarned: 2000 } },
-    { id: 11, name: "Dedo Biónico", desc: "Clics x3", cost: 50000, purchased: false, effect: { type: 'multiply', target: 'click', value: 3 }, req: { totalTokensEarned: 40000 } },
-    { id: 12, name: "Asistencia Cuántica de Clic", desc: "Clics x5", cost: 1e6, purchased: false, effect: { type: 'multiply', target: 'click', value: 5 }, req: { totalTokensEarned: 800000 } },
-    
-    // Mejoras de Autoclickers y Globales
-    { id: 2, name: "Mineros Eficientes", desc: "Dato-Mineros x2", cost: 500, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 1, value: 2 }, req: { autoclickers: { id: 1, amount: 5 } } },
-    { id: 4, name: "Protocolo de Sinergia", desc: "Producción total +5%", cost: 10000, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.05 }, req: { totalTokensEarned: 5000 } },
-    { id: 5, name: "Núcleos Optimizados", desc: "Quantum-Cores x2", cost: 5000, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 2, value: 2 }, req: { autoclickers: { id: 2, amount: 5 } } },
-    { id: 6, name: "Conciencia Colectiva IA", desc: "IAs Autónomas x2", cost: 50000, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 3, value: 2 }, req: { autoclickers: { id: 3, amount: 10 } } },
-    { id: 7, name: "Gema de Productividad", desc: "Producción total +10%", cost: 0, humanityGemsCost: 20, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.10 }, req: { totalTokensEarned: 1e6 } },
+const initialUpgrades: Upgrade[] = [
+    { id: 1, name: "Cursor Reforzado", desc: "Clics y cursores x2", cost: 1000, purchased: false, effect: [{ type: 'multiplyClick', value: 2 }, { type: 'multiplyAutoclicker', targetId: 0, value: 2 }], req: { autoclickers: {id: 0, amount: 1} } },
+    { id: 10, name: "Mouse de Titanio", desc: "Clics x2", cost: 5000, purchased: false, effect: [{ type: 'multiplyClick', value: 2 }], req: { autoclickers: {id: 0, amount: 5} } },
+    { id: 100, name: "Mil Dedos", desc: "Cursores ganan +0.1 por cada Autoclicker que no sea un cursor.", cost: 100000, purchased: false, effect: [{ type: 'addCpSToAutoclickerFromOthers', targetId: 0, value: 0.1 }], req: { autoclickers: {id: 0, amount: 25} } },
+    { id: 101, name: "Un Millón de Dedos", desc: "Cursores ganan +0.5 por cada Autoclicker que no sea un cursor.", cost: 10e6, purchased: false, effect: [{ type: 'addCpSToAutoclickerFromOthers', targetId: 0, value: 0.5 }], req: { autoclickers: {id: 0, amount: 50} } },
+    { id: 102, name: "Clics Asistidos", desc: "Los clics ganan un 1% de tu CpS total.", cost: 10e7, purchased: false, effect: [{ type: 'addCpSToClick', percent: 0.01 }], req: { totalTokensEarned: 50e6 } },
+    { id: 2, name: "Mineros Eficientes", desc: "Dato-Mineros x2", cost: 1000, purchased: false, effect: [{ type: 'multiplyAutoclicker', targetId: 1, value: 2 }], req: { autoclickers: { id: 1, amount: 1 } } },
+    { id: 3, name: "Núcleos Optimizados", desc: "Quantum-Cores x2", cost: 10000, purchased: false, effect: [{ type: 'multiplyAutoclicker', targetId: 2, value: 2 }], req: { autoclickers: { id: 2, amount: 1 } } },
+    { id: 4, name: "Protocolo de Sinergia", desc: "Producción total +5%", cost: 25000, purchased: false, effect: [{ type: 'multiplyGlobal', value: 1.05 }], req: { totalTokensEarned: 20000 } },
 ];
-const initialAchievements = [
+const initialAchievements: Achievement[] = [
     { id: 1, name: "El Viaje Comienza", desc: "Gana tu primer $WCLICK", unlocked: false, req: { totalTokensEarned: 1 } },
     { id: 2, name: "Clicker Principiante", desc: "Haz 100 clics", unlocked: false, req: { totalClicks: 100 } },
     { id: 3, name: "Pequeño Capitalista", desc: "Alcanza 1,000 $WCLICK", unlocked: false, req: { totalTokensEarned: 1000 } },
@@ -45,8 +62,10 @@ const initialAchievements = [
     { id: 6, name: "Magnate Digital", desc: "Alcanza 1,000,000 $WCLICK", unlocked: false, req: { totalTokensEarned: 1000000 } },
     { id: 7, name: "Frenesí de Clics", desc: "Haz 5,000 clics", unlocked: false, req: { totalClicks: 5000 } },
 ];
+const newsFeed = ["Noticia: Se sospecha que las granjas de datos emplean mano de obra de IA no declarada.", "Noticia: Científico advierte que los núcleos cuánticos liberan 'demasiada verdad' en los ríos de información.", "Noticia: Hombre roba un banco, lo invierte todo en Autoclickers.", "Noticia: 'Francamente, toda esta historia de los $WCLICK es un poco sospechosa', dice un idiota confundido.", "Noticia: La epidemia de procrastinación golpea a la nación; los expertos culpan a los videos de gatos.", "<q>Humedad de datos.</q><sig>IA Autónoma</sig>", "<q>Estamos observando.</q><sig>IA Autónoma</sig>", "Noticia: El valor de $WCLICK se dispara después de que se rumorea que 'es bueno para la economía'.", "Noticia: La verificación de humanidad ahora es más popular que el pan rebanado, según una encuesta.",];
 const HUMAN_BOOST_MULTIPLIER = 10;
 
+// -- COMPONENTES DE UI --
 const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
     useEffect(() => {
         const timer = setTimeout(() => onDone(), 3000);
@@ -60,79 +79,145 @@ const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => 
     );
 };
 
+const NewsTicker = () => {
+    const [news, setNews] = useState(choose(newsFeed));
+
+    useEffect(() => {
+        const newsInterval = setInterval(() => {
+            setNews(choose(newsFeed));
+        }, 8000);
+        return () => clearInterval(newsInterval);
+    }, []);
+
+    return (
+        <div className="absolute top-0 left-0 right-0 h-8 bg-black/50 flex items-center z-40 overflow-hidden">
+            <AnimatePresence mode="wait">
+                <motion.p 
+                    key={news}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-sm text-slate-300 px-4 whitespace-nowrap w-full text-center"
+                    dangerouslySetInnerHTML={{ __html: news.replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>')}}
+                />
+            </AnimatePresence>
+        </div>
+    );
+};
+
 export default function Game() {
   const [status, setStatus] = useState<GameStatus>("UNAUTHENTICATED");
   const [gameState, setGameState] = useState(initialState);
   const [stats, setStats] = useState(initialStats);
-  const [autoclickers, setAutoclickers] = useState(initialAutoclickers);
-  const [upgrades, setUpgrades] = useState(initialUpgrades);
-  const [achievements, setAchievements] = useState(initialAchievements);
+  const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
+  const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
+  const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
   const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => { MiniKit.install(); }, []);
-
-  const handleConnect = useCallback(async () => { 
-      try {
-          const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce: "world-idle-login" });
-          if (finalPayload.status === 'success') { setStatus("UNVERIFIED"); }
-      } catch (error) { console.error("Wallet connection failed:", error); }
-  }, []);
-
+  const handleConnect = useCallback(async () => { try { const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce: "world-idle-login" }); if (finalPayload.status === 'success') { setStatus("UNVERIFIED"); } } catch (error) { console.error("Wallet connection failed:", error); } }, []);
   const onVerificationSuccess = (_result: ISuccessResult) => { setStatus("VERIFIED"); };
   const handleProof = (_result: ISuccessResult) => { console.log("Proof received (not used in this MVP):", _result); };
 
-  const multipliers = useMemo(() => {
-      const click = upgrades.filter(u => u.purchased && u.effect.target === 'click').reduce((acc, u) => acc * u.effect.value, 1);
-      const all = upgrades.filter(u => u.purchased && u.effect.target === 'all').reduce((acc, u) => acc * u.effect.value, 1);
-      const autoclickerSpecific: Record<number, number> = {};
-      initialAutoclickers.forEach(g => {
-          autoclickerSpecific[g.id] = upgrades.filter(u => u.purchased && u.effect.target === 'autoclicker' && u.effect.targetId === g.id).reduce((acc, u) => acc * u.effect.value, 1);
-      });
-      return { click, all, autoclickerSpecific };
+  const { clickCPS, autoclickerCPS, globalMultiplier } = useMemo(() => {
+    let clickCPSValue = initialState.tokensPerClick;
+    const autoclickerCPSMap = new Map<number, number>();
+    let globalMultiplierValue = 1;
+    initialAutoclickers.forEach(a => { autoclickerCPSMap.set(a.id, a.tps); });
+    upgrades.forEach(upg => {
+        if (!upg.purchased) return;
+        upg.effect.forEach(eff => {
+            switch (eff.type) {
+                case 'multiplyClick':
+                    clickCPSValue *= eff.value;
+                    break;
+                case 'addClick':
+                    clickCPSValue += eff.value;
+                    break;
+                case 'multiplyGlobal':
+                    globalMultiplierValue *= eff.value;
+                    break;
+                case 'multiplyAutoclicker':
+                    if (autoclickerCPSMap.has(eff.targetId)) {
+                        autoclickerCPSMap.set(eff.targetId, (autoclickerCPSMap.get(eff.targetId) || 0) * eff.value);
+                    }
+                    break;
+            }
+        });
+    });
+    return { clickCPS: clickCPSValue, autoclickerCPS: autoclickerCPSMap, globalMultiplier: globalMultiplierValue };
   }, [upgrades]);
   
-  const effectiveTPS = useMemo(() => {
-    const baseTPS = autoclickers.reduce((acc, auto) => {
-        const specificMultiplier = multipliers.autoclickerSpecific[auto.id] || 1;
-        return acc + (auto.purchased * auto.tps * specificMultiplier);
-    }, 0);
-    return baseTPS * multipliers.all * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
-  }, [autoclickers, multipliers, status]);
+  const totalCPS = useMemo(() => {
+    let total = 0;
+    const nonCursorAmount = autoclickers.reduce((acc, a) => a.id !== 0 ? acc + a.purchased : acc, 0);
+    autoclickers.forEach(auto => {
+        let baseCps = autoclickerCPS.get(auto.id) || 0;
+        upgrades.forEach(upg => {
+            if (!upg.purchased) return;
+            upg.effect.forEach(eff => {
+                if (eff.type === 'addCpSToAutoclickerFromOthers' && eff.targetId === auto.id) {
+                    baseCps += nonCursorAmount * eff.value;
+                }
+            });
+        });
+        total += auto.purchased * baseCps;
+    });
+    return total * globalMultiplier * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
+  }, [autoclickers, autoclickerCPS, globalMultiplier, status, upgrades]);
+
+  const clickValue = useMemo(() => {
+    let finalClick = clickCPS;
+    upgrades.forEach(upg => {
+        if (!upg.purchased) return;
+        upg.effect.forEach(eff => {
+            if (eff.type === 'addCpSToClick') {
+                finalClick += totalCPS * eff.percent;
+            }
+        });
+    });
+    return finalClick * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
+  }, [clickCPS, totalCPS, status, upgrades]);
 
   useEffect(() => {
     const passiveGainInterval = setInterval(() => {
-        setGameState(prev => ({ ...prev, tokens: prev.tokens + effectiveTPS / 10 })); // Update more frequently for smoothness
-        setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + effectiveTPS / 10 }));
-    }, 100); // Run 10 times per second
+        const gain = totalCPS / 10;
+        setGameState(prev => ({ ...prev, tokens: prev.tokens + gain }));
+        setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + gain }));
+    }, 100);
+    if (stats.tokensPerSecond !== totalCPS) {
+        setStats(prev => ({...prev, tokensPerSecond: totalCPS}));
+    }
     return () => clearInterval(passiveGainInterval);
-  }, [effectiveTPS]);
+  }, [totalCPS, stats.tokensPerSecond]);
 
   useEffect(() => {
       achievements.forEach(ach => {
           if (ach.unlocked) return;
           let conditionMet = false;
-          if (ach.req.totalTokensEarned && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
-          if (ach.req.totalClicks && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
-          if (ach.req.tps && effectiveTPS >= ach.req.tps) conditionMet = true;
+          if (ach.req.totalTokensEarned !== undefined && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
+          if (ach.req.totalClicks !== undefined && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
+          if (ach.req.tps !== undefined && stats.tokensPerSecond >= ach.req.tps) conditionMet = true;
           if (ach.req.verified && status === "VERIFIED") conditionMet = true;
           if (conditionMet) {
               setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
               setToast(`Logro: ${ach.name}`);
-              if (ach.reward?.humanityGems) {
+              if (ach.reward && ach.reward.humanityGems) {
                   setGameState(prev => ({...prev, humanityGems: prev.humanityGems + ach.reward.humanityGems}));
               }
           }
       });
-  }, [stats, effectiveTPS, status, achievements]);
+  }, [stats, status, achievements]);
   
   const handleManualClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const effectiveTPC = gameState.tokensPerClick * multipliers.click * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
-    const newFloatingNumber = { id: Date.now(), value: `+${effectiveTPC.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, x: e.clientX, y: e.clientY };
+    const value = clickValue;
+    const newFloatingNumber = { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY };
     setFloatingNumbers(current => [...current, newFloatingNumber]);
     setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== newFloatingNumber.id)); }, 2000);
-    setGameState(prev => ({ ...prev, tokens: prev.tokens + effectiveTPC }));
-    setStats(prev => ({ totalTokensEarned: prev.totalTokensEarned + effectiveTPC, totalClicks: prev.totalClicks + 1 }));
+    setGameState(prev => ({ ...prev, tokens: prev.tokens + value }));
+    setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
   };
 
   const checkRequirements = (req: Requirement | undefined) => {
@@ -147,31 +232,25 @@ export default function Game() {
   
   const showRequirements = (item: { name: string, req?: Requirement }) => {
     if (!item.req) return;
-
-    let message = `Requisitos para desbloquear "${item.name}":\n\n`;
+    let message = `Requisitos para "${item.name}":\n\n`;
     if (item.req.totalTokensEarned !== undefined) {
-      message += `- Ganar un total de ${formatNumber(item.req.totalTokensEarned)} $WCLICK.\n`;
-      message += `  (Progreso: ${formatNumber(stats.totalTokensEarned)} / ${formatNumber(item.req.totalTokensEarned)})\n`;
+      message += `- Ganar ${formatNumber(item.req.totalTokensEarned)} $WCLICK en total.\n  (Progreso: ${formatNumber(stats.totalTokensEarned)} / ${formatNumber(item.req.totalTokensEarned)})\n`;
     }
     if (item.req.totalClicks !== undefined) {
-        message += `- Hacer un total de ${formatNumber(item.req.totalClicks)} clics.\n`;
-        message += `  (Progreso: ${formatNumber(stats.totalClicks)} / ${formatNumber(item.req.totalClicks)})\n`;
+        message += `- Hacer ${formatNumber(item.req.totalClicks)} clics.\n  (Progreso: ${formatNumber(stats.totalClicks)} / ${formatNumber(item.req.totalClicks)})\n`;
     }
     if (item.req.autoclickers) {
       const autoInfo = initialAutoclickers.find(a => a.id === item.req?.autoclickers?.id);
       const owned = autoclickers.find(a => a.id === item.req?.autoclickers?.id)?.purchased || 0;
       if (autoInfo) {
-        message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n`;
-        message += `  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
+        message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
       }
     }
     if (item.req.tps !== undefined) {
-        message += `- Alcanzar una producción de ${formatNumber(item.req.tps)} $WCLICK/s.\n`;
-        message += `  (Progreso: ${formatNumber(effectiveTPS)} / ${formatNumber(item.req.tps)})\n`;
+        message += `- Producir ${formatNumber(item.req.tps)} $WCLICK/s.\n  (Progreso: ${formatNumber(stats.tokensPerSecond)} / ${formatNumber(item.req.tps)})\n`;
     }
     if (item.req.verified) {
-        message += `- Verificar tu humanidad con World ID.\n`;
-        message += `  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})\n`;
+        message += `- Verificar con World ID.\n  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})\n`;
     }
     alert(message);
   };
@@ -232,10 +311,9 @@ export default function Game() {
     );
   }
 
-  const effectiveTPC = gameState.tokensPerClick * multipliers.click * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
-
   return (
     <>
+      <NewsTicker />
       <AnimatePresence>
         {floatingNumbers.map(num => (
           <motion.div key={num.id} initial={{ opacity: 1, y: 0, scale: 0.5 }} animate={{ opacity: 0, y: -100, scale: 1.5 }} transition={{ duration: 2 }} className="pointer-events-none absolute font-bold text-lime-300 text-2xl" style={{ left: num.x, top: num.y, zIndex: 9999 }}>
@@ -244,7 +322,7 @@ export default function Game() {
         ))}
         {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </AnimatePresence>
-      <div className="w-full max-w-6xl mx-auto p-4 flex flex-col lg:flex-row gap-6">
+      <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
         <div className="w-full lg:w-2/3 flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
@@ -254,7 +332,7 @@ export default function Game() {
               <h2 className="text-5xl font-mono tracking-wider">{formatNumber(gameState.tokens)}</h2>
               <p className="text-sm text-slate-400">$WCLICK</p>
               <div className="flex justify-center items-center gap-6 mt-2">
-                  <p className="text-md text-lime-400">+{formatNumber(effectiveTPS)}/s</p>
+                  <p className="text-md text-lime-400">+{formatNumber(stats.tokensPerSecond)}/s</p>
                   <div className="flex items-center gap-2 text-yellow-400">
                       <BeakerIcon className="w-5 h-5" />
                       <p className="font-mono text-lg">{gameState.humanityGems}</p>
@@ -262,7 +340,7 @@ export default function Game() {
               </div>
           </motion.div>
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
-            Click! (+{formatNumber(effectiveTPC)})
+            Click! (+{formatNumber(clickValue)})
           </motion.button>
           <div className="space-y-3">
               <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6"/>Autoclickers</h3>
@@ -270,7 +348,7 @@ export default function Game() {
                 <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < auto.cost || !!(auto.humanityGemsCost && gameState.humanityGems < auto.humanityGemsCost)} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
                   <div className="text-left">
                     <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
-                    <p className="text-xs text-lime-400">+{formatNumber(auto.tps)}/s cada uno</p>
+                    <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPS.get(auto.id) || 0)}/s cada uno</p>
                   </div>
                   <div className="text-right font-mono text-yellow-400">
                     <p>{formatNumber(auto.cost)}</p>
@@ -296,7 +374,7 @@ export default function Game() {
                     whileHover={{ scale: 1.1 }} 
                     whileTap={{ scale: 0.9 }} 
                     onClick={() => requirementsMet ? purchaseUpgrade(upg.id) : showRequirements(upg)} 
-                    disabled={!requirementsMet && (gameState.tokens < upg.cost || !!(upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost))}
+                    disabled={!requirementsMet || gameState.tokens < upg.cost || !!(upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)}
                     className={`aspect-square flex flex-col justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-all ${!requirementsMet && 'grayscale opacity-50'}`} 
                     title={`${upg.name} - ${upg.desc}`}
                   >

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // app/components/Game.tsx
 "use client";
 
@@ -6,31 +5,36 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { MiniKit, ISuccessResult, VerificationLevel } from "@worldcoin/minikit-js";
 import { IDKitWidget } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
-import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
+import { BeakerIcon, TrophyIcon, CpuChipIcon, BoltIcon, CheckBadgeIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 // -- TIPOS DE DATOS Y CONFIGURACIÓN --
 type GameStatus = "UNAUTHENTICATED" | "UNVERIFIED" | "VERIFIED";
-type Requirement = { tokensEarned?: number; autoclickers?: { id: number; amount: number } };
+type Requirement = { totalTokensEarned?: number; autoclickers?: { id: number; amount: number }; totalClicks?: number; tps?: number, verified?: boolean };
 
 const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1, tokensPerSecond: 0 };
 const initialStats = { totalTokensEarned: 0, totalClicks: 0 };
 const initialAutoclickers = [
     { id: 1, name: "Dato-Minero", cost: 15, tps: 0.1, purchased: 0 },
-    { id: 2, name: "Quantum-Core", cost: 100, tps: 1, purchased: 0, req: { tokensEarned: 100 } },
-    { id: 3, name: "IA Autónoma", cost: 1100, tps: 8, purchased: 0, req: { tokensEarned: 1000 } },
-    { id: 4, name: "Enjambre de Drones", cost: 12000, tps: 47, purchased: 0, req: { tokensEarned: 10000 } },
-    { id: 5, name: "Granja de Servidores", cost: 130000, tps: 260, purchased: 0, req: { tokensEarned: 100000 } },
-    { id: 6, name: "Nodo Planetario", cost: 1.4e6, tps: 1400, purchased: 0, req: { tokensEarned: 1e6 } },
-    { id: 7, name: "Orbital de Cómputo", cost: 20e6, tps: 7800, purchased: 0, humanityGemsCost: 10, req: { tokensEarned: 10e6 } },
+    { id: 2, name: "Quantum-Core", cost: 100, tps: 1, purchased: 0, req: { totalTokensEarned: 100 } },
+    { id: 3, name: "IA Autónoma", cost: 1100, tps: 8, purchased: 0, req: { totalTokensEarned: 1000 } },
+    { id: 4, name: "Enjambre de Drones", cost: 12000, tps: 47, purchased: 0, req: { totalTokensEarned: 10000 } },
+    { id: 5, name: "Granja de Servidores", cost: 130000, tps: 260, purchased: 0, req: { totalTokensEarned: 100000 } },
+    { id: 6, name: "Nodo Planetario", cost: 1.4e6, tps: 1400, purchased: 0, req: { totalTokensEarned: 1e6 } },
+    { id: 7, name: "Orbital de Cómputo", cost: 20e6, tps: 7800, purchased: 0, humanityGemsCost: 10, req: { totalTokensEarned: 10e6 } },
 ];
 const initialUpgrades = [
-    { id: 1, name: "Cursor Reforzado", desc: "Clics x2", cost: 100, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { tokensEarned: 50 } },
+    // Mejoras de Clic
+    { id: 1, name: "Cursor Reforzado", desc: "Clics x2", cost: 100, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { totalTokensEarned: 50 } },
+    { id: 10, name: "Mouse de Titanio", desc: "Clics x2", cost: 2500, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { totalTokensEarned: 2000 } },
+    { id: 11, name: "Dedo Biónico", desc: "Clics x3", cost: 50000, purchased: false, effect: { type: 'multiply', target: 'click', value: 3 }, req: { totalTokensEarned: 40000 } },
+    { id: 12, name: "Asistencia Cuántica de Clic", desc: "Clics x5", cost: 1e6, purchased: false, effect: { type: 'multiply', target: 'click', value: 5 }, req: { totalTokensEarned: 800000 } },
+    
+    // Mejoras de Autoclickers y Globales
     { id: 2, name: "Mineros Eficientes", desc: "Dato-Mineros x2", cost: 500, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 1, value: 2 }, req: { autoclickers: { id: 1, amount: 5 } } },
-    { id: 3, name: "Manos de Diamante", desc: "Clics x2", cost: 1000, purchased: false, effect: { type: 'multiply', target: 'click', value: 2 }, req: { tokensEarned: 500 } },
-    { id: 4, name: "Protocolo de Sinergia", desc: "Producción total +5%", cost: 10000, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.05 }, req: { tokensEarned: 5000 } },
+    { id: 4, name: "Protocolo de Sinergia", desc: "Producción total +5%", cost: 10000, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.05 }, req: { totalTokensEarned: 5000 } },
     { id: 5, name: "Núcleos Optimizados", desc: "Quantum-Cores x2", cost: 5000, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 2, value: 2 }, req: { autoclickers: { id: 2, amount: 5 } } },
     { id: 6, name: "Conciencia Colectiva IA", desc: "IAs Autónomas x2", cost: 50000, purchased: false, effect: { type: 'multiply', target: 'autoclicker', targetId: 3, value: 2 }, req: { autoclickers: { id: 3, amount: 10 } } },
-    { id: 7, name: "Gema de Productividad", desc: "Producción total +10%", cost: 0, humanityGemsCost: 20, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.10 }, req: { tokensEarned: 1e6 } },
+    { id: 7, name: "Gema de Productividad", desc: "Producción total +10%", cost: 0, humanityGemsCost: 20, purchased: false, effect: { type: 'multiply', target: 'all', value: 1.10 }, req: { totalTokensEarned: 1e6 } },
 ];
 const initialAchievements = [
     { id: 1, name: "El Viaje Comienza", desc: "Gana tu primer $WCLICK", unlocked: false, req: { totalTokensEarned: 1 } },
@@ -39,6 +43,7 @@ const initialAchievements = [
     { id: 4, name: "Flujo Constante", desc: "Alcanza 10 $WCLICK/s", unlocked: false, req: { tps: 10 } },
     { id: 5, name: "Prueba de Humanidad", desc: "Verifícate con World ID", unlocked: false, req: { verified: true }, reward: { humanityGems: 10 } },
     { id: 6, name: "Magnate Digital", desc: "Alcanza 1,000,000 $WCLICK", unlocked: false, req: { totalTokensEarned: 1000000 } },
+    { id: 7, name: "Frenesí de Clics", desc: "Haz 5,000 clics", unlocked: false, req: { totalClicks: 5000 } },
 ];
 const HUMAN_BOOST_MULTIPLIER = 10;
 
@@ -86,26 +91,24 @@ export default function Game() {
       });
       return { click, all, autoclickerSpecific };
   }, [upgrades]);
+  
+  const effectiveTPS = useMemo(() => {
+    const baseTPS = autoclickers.reduce((acc, auto) => {
+        const specificMultiplier = multipliers.autoclickerSpecific[auto.id] || 1;
+        return acc + (auto.purchased * auto.tps * specificMultiplier);
+    }, 0);
+    return baseTPS * multipliers.all * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
+  }, [autoclickers, multipliers, status]);
 
   useEffect(() => {
-      const baseTPS = autoclickers.reduce((acc, auto) => {
-          const specificMultiplier = multipliers.autoclickerSpecific[auto.id] || 1;
-          return acc + (auto.purchased * auto.tps * specificMultiplier);
-      }, 0);
-      setGameState(prev => ({ ...prev, tokensPerSecond: baseTPS }));
-  }, [autoclickers, multipliers.autoclickerSpecific]);
+    const passiveGainInterval = setInterval(() => {
+        setGameState(prev => ({ ...prev, tokens: prev.tokens + effectiveTPS / 10 })); // Update more frequently for smoothness
+        setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + effectiveTPS / 10 }));
+    }, 100); // Run 10 times per second
+    return () => clearInterval(passiveGainInterval);
+  }, [effectiveTPS]);
 
   useEffect(() => {
-      const effectiveTPS = gameState.tokensPerSecond * multipliers.all * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
-      const interval = setInterval(() => {
-          setGameState(prev => ({ ...prev, tokens: prev.tokens + effectiveTPS }));
-          setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + effectiveTPS }));
-      }, 1000);
-      return () => clearInterval(interval);
-  }, [gameState.tokensPerSecond, multipliers.all, status]);
-
-  useEffect(() => {
-      const effectiveTPS = gameState.tokensPerSecond * multipliers.all * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
       achievements.forEach(ach => {
           if (ach.unlocked) return;
           let conditionMet = false;
@@ -121,7 +124,7 @@ export default function Game() {
               }
           }
       });
-  }, [stats, gameState.tokensPerSecond, status, achievements, multipliers.all]);
+  }, [stats, effectiveTPS, status, achievements]);
   
   const handleManualClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const effectiveTPC = gameState.tokensPerClick * multipliers.click * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
@@ -134,12 +137,43 @@ export default function Game() {
 
   const checkRequirements = (req: Requirement | undefined) => {
     if (!req) return true;
-    if (req.tokensEarned && stats.totalTokensEarned < req.tokensEarned) return false;
+    if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
     if (req.autoclickers) {
         const owned = autoclickers.find(a => a.id === req.autoclickers?.id)?.purchased || 0;
         if (owned < req.autoclickers.amount) return false;
     }
     return true;
+  };
+  
+  const showRequirements = (item: { name: string, req?: Requirement }) => {
+    if (!item.req) return;
+
+    let message = `Requisitos para desbloquear "${item.name}":\n\n`;
+    if (item.req.totalTokensEarned !== undefined) {
+      message += `- Ganar un total de ${formatNumber(item.req.totalTokensEarned)} $WCLICK.\n`;
+      message += `  (Progreso: ${formatNumber(stats.totalTokensEarned)} / ${formatNumber(item.req.totalTokensEarned)})\n`;
+    }
+    if (item.req.totalClicks !== undefined) {
+        message += `- Hacer un total de ${formatNumber(item.req.totalClicks)} clics.\n`;
+        message += `  (Progreso: ${formatNumber(stats.totalClicks)} / ${formatNumber(item.req.totalClicks)})\n`;
+    }
+    if (item.req.autoclickers) {
+      const autoInfo = initialAutoclickers.find(a => a.id === item.req?.autoclickers?.id);
+      const owned = autoclickers.find(a => a.id === item.req?.autoclickers?.id)?.purchased || 0;
+      if (autoInfo) {
+        message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n`;
+        message += `  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
+      }
+    }
+    if (item.req.tps !== undefined) {
+        message += `- Alcanzar una producción de ${formatNumber(item.req.tps)} $WCLICK/s.\n`;
+        message += `  (Progreso: ${formatNumber(effectiveTPS)} / ${formatNumber(item.req.tps)})\n`;
+    }
+    if (item.req.verified) {
+        message += `- Verificar tu humanidad con World ID.\n`;
+        message += `  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})\n`;
+    }
+    alert(message);
   };
 
   const purchaseAutoclicker = (id: number) => {
@@ -198,7 +232,6 @@ export default function Game() {
     );
   }
 
-  const effectiveTPS = gameState.tokensPerSecond * multipliers.all * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
   const effectiveTPC = gameState.tokensPerClick * multipliers.click * (status === "VERIFIED" ? HUMAN_BOOST_MULTIPLIER : 1);
 
   return (
@@ -251,22 +284,44 @@ export default function Game() {
           <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
               <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><BoltIcon className="w-6 h-6"/>Mejoras</h3>
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-3">
-              {upgrades.map((upg) => !upg.purchased && checkRequirements(upg.req) && (
-                <motion.button key={upg.id} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => purchaseUpgrade(upg.id)} disabled={gameState.tokens < upg.cost || !!(upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)} className="aspect-square flex flex-col justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40" title={`${upg.name} - ${upg.desc}`}>
-                  <div className="text-3xl text-cyan-400">✧</div>
-                  <div className="text-xs font-mono text-yellow-400 mt-1">
-                    {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
-                    {upg.humanityGemsCost && <p className="text-sm flex items-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}
-                  </div>
-                </motion.button>
-              ))}
+              {upgrades.map((upg) => {
+                const requirementsMet = checkRequirements(upg.req);
+                if (upg.purchased) return null;
+
+                return (
+                  <motion.button 
+                    key={upg.id} 
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    whileHover={{ scale: 1.1 }} 
+                    whileTap={{ scale: 0.9 }} 
+                    onClick={() => requirementsMet ? purchaseUpgrade(upg.id) : showRequirements(upg)} 
+                    disabled={!requirementsMet && (gameState.tokens < upg.cost || !!(upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost))}
+                    className={`aspect-square flex flex-col justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-all ${!requirementsMet && 'grayscale opacity-50'}`} 
+                    title={`${upg.name} - ${upg.desc}`}
+                  >
+                    <div className={`text-3xl ${requirementsMet ? 'text-cyan-400' : 'text-slate-500'}`}>{requirementsMet ? '✧' : <QuestionMarkCircleIcon className="w-8 h-8"/>}</div>
+                    <div className="text-xs font-mono text-yellow-400 mt-1">
+                      {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
+                      {upg.humanityGemsCost && <p className="text-sm flex items-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}
+                    </div>
+                  </motion.button>
+                )
+              })}
               </div>
           </div>
           <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
               <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrophyIcon className="w-6 h-6"/>Logros</h3>
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-3">
               {achievements.map((ach) => (
-                <motion.div key={ach.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`aspect-square flex justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-opacity ${ach.unlocked ? 'opacity-100' : 'opacity-20'}`} title={`${ach.name} - ${ach.desc}`}>
+                <motion.div 
+                  key={ach.id} 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  className={`aspect-square flex justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-opacity cursor-pointer ${ach.unlocked ? 'opacity-100' : 'opacity-20'}`} 
+                  title={ach.unlocked ? `${ach.name} - ${ach.desc}`: ach.name}
+                  onClick={() => !ach.unlocked && showRequirements({name: ach.name, req: ach.req})}
+                >
                   <div className="text-3xl">{ach.unlocked ? '🏆' : '🔒'}</div>
                 </motion.div>
               ))}

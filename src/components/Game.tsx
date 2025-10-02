@@ -65,6 +65,7 @@ const newsFeed = ["Noticia: Se sospecha que las granjas de datos emplean mano de
 const HUMAN_BOOST_MULTIPLIER = 10;
 const PRICE_INCREASE_RATE = 1.15;
 const TIER_THRESHOLDS = [10, 50, 150, 250, 350, 450, 550];
+const GLOBAL_UPGRADE_THRESHOLDS = [1000, 10000, 1e5, 1e6, 1e7, 1e8, 1e9];
 
 // -- COMPONENTES DE UI --
 const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
@@ -192,11 +193,17 @@ export default function Game() {
   useEffect(() => {
       achievements.forEach(ach => {
           if (ach.unlocked) return;
+          
           let conditionMet = false;
           if (ach.req.totalTokensEarned !== undefined && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
           if (ach.req.totalClicks !== undefined && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
           if (ach.req.tps !== undefined && stats.tokensPerSecond >= ach.req.tps) conditionMet = true;
           if (ach.req.verified && status === "VERIFIED") conditionMet = true;
+          if (ach.req.autoclickers) {
+            const owned = autoclickers.find(a => a.id === ach.req.autoclickers?.id)?.purchased || 0;
+            if (owned >= ach.req.autoclickers.amount) conditionMet = true;
+          }
+
           if (conditionMet) {
               setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
               setToast(`Logro: ${ach.name}`);
@@ -206,7 +213,7 @@ export default function Game() {
               }
           }
       });
-  }, [stats, status, achievements]);
+  }, [stats, status, achievements, autoclickers]);
 
   useEffect(() => {
     const newAchievements: Achievement[] = [];
@@ -217,7 +224,6 @@ export default function Game() {
         if (auto.purchased >= tier) {
           const achievementId = 1000 + auto.id * 100 + index;
           const upgradeId = 2000 + auto.id * 100 + index;
-
           if (!achievements.some(a => a.id === achievementId)) {
             newAchievements.push({
               id: achievementId,
@@ -242,13 +248,30 @@ export default function Game() {
       });
     });
 
+    GLOBAL_UPGRADE_THRESHOLDS.forEach((tier, index) => {
+        if (stats.totalTokensEarned >= tier) {
+            const upgradeId = 3000 + index;
+            if (!upgrades.some(u => u.id === upgradeId)) {
+                newUpgrades.push({
+                    id: upgradeId,
+                    name: `Sinergia Universal ${'I'.repeat(index + 1)}`,
+                    desc: `La producción de todos los Autoclickers se multiplica x2.`,
+                    cost: tier * 100,
+                    purchased: false,
+                    effect: [{ type: 'multiplyGlobal', value: 2 }],
+                    req: { totalTokensEarned: tier },
+                });
+            }
+        }
+    });
+
     if (newAchievements.length > 0) {
       setAchievements(prev => [...prev, ...newAchievements]);
     }
     if (newUpgrades.length > 0) {
       setUpgrades(prev => [...prev, ...newUpgrades]);
     }
-  }, [autoclickers, achievements, upgrades]);
+  }, [autoclickers, achievements, upgrades, stats.totalTokensEarned]);
   
   const handleManualClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = clickValue;

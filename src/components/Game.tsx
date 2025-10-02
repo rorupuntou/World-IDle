@@ -24,7 +24,7 @@ type Effect =
 type Autoclicker = { id: number; name: string; cost: number; tps: number; purchased: number; req?: Requirement, humanityGemsCost?: number };
 type Upgrade = { id: number; name: string; desc: string; cost: number; purchased: boolean; effect: Effect[]; req?: Requirement, humanityGemsCost?: number };
 type Achievement = { id: number; name: string; desc: string; unlocked: boolean; req: Requirement, reward?: { humanityGems: number } };
-
+type BuyAmount = 1 | 10 | 100;
 
 // -- ESTADO INICIAL Y DATOS DEL JUEGO --
 const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1 };
@@ -63,6 +63,8 @@ const initialAchievements: Achievement[] = [
 ];
 const newsFeed = ["Noticia: Se sospecha que las granjas de datos emplean mano de obra de IA no declarada.", "Noticia: Científico advierte que los núcleos cuánticos liberan 'demasiada verdad' en los ríos de información.", "Noticia: Hombre roba un banco, lo invierte todo en Autoclickers.", "Noticia: 'Francamente, toda esta historia de los $WCLICK es un poco sospechosa', dice un idiota confundido.", "Noticia: La epidemia de procrastinación golpea a la nación; los expertos culpan a los videos de gatos.", "<q>Humedad de datos.</q><sig>IA Autónoma</sig>", "<q>Estamos observando.</q><sig>IA Autónoma</sig>", "Noticia: El valor de $WCLICK se dispara después de que se rumorea que 'es bueno para la economía'.", "Noticia: La verificación de humanidad ahora es más popular que el pan rebanado, según una encuesta.",];
 const HUMAN_BOOST_MULTIPLIER = 10;
+const PRICE_INCREASE_RATE = 1.15;
+const TIER_THRESHOLDS = [10, 50, 150, 250, 350, 450, 550];
 
 // -- COMPONENTES DE UI --
 const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
@@ -80,10 +82,14 @@ const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => 
 
 const NewsTicker = () => {
     const [news, setNews] = useState(choose(newsFeed));
+
     useEffect(() => {
-        const newsInterval = setInterval(() => { setNews(choose(newsFeed)); }, 8000);
+        const newsInterval = setInterval(() => {
+            setNews(choose(newsFeed));
+        }, 8000);
         return () => clearInterval(newsInterval);
     }, []);
+
     return (
         <div className="absolute top-0 left-0 right-0 h-8 bg-black/50 flex items-center z-40 overflow-hidden">
             <AnimatePresence mode="wait">
@@ -110,6 +116,7 @@ export default function Game() {
   const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
   const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
 
   useEffect(() => { MiniKit.install(); }, []);
   const handleConnect = useCallback(async () => { try { const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce: "world-idle-login" }); if (finalPayload.status === 'success') { setStatus("UNVERIFIED"); } } catch (error) { console.error("Wallet connection failed:", error); } }, []);
@@ -200,6 +207,48 @@ export default function Game() {
           }
       });
   }, [stats, status, achievements]);
+
+  useEffect(() => {
+    const newAchievements: Achievement[] = [];
+    const newUpgrades: Upgrade[] = [];
+
+    autoclickers.forEach(auto => {
+      TIER_THRESHOLDS.forEach((tier, index) => {
+        if (auto.purchased >= tier) {
+          const achievementId = 1000 + auto.id * 100 + index;
+          const upgradeId = 2000 + auto.id * 100 + index;
+
+          if (!achievements.some(a => a.id === achievementId)) {
+            newAchievements.push({
+              id: achievementId,
+              name: `${auto.name} Nivel ${index + 1}`,
+              desc: `Poseer ${tier} de ${auto.name}.`,
+              unlocked: false,
+              req: { autoclickers: { id: auto.id, amount: tier } },
+            });
+          }
+          if (!upgrades.some(u => u.id === upgradeId)) {
+            newUpgrades.push({
+              id: upgradeId,
+              name: `Especialización de ${auto.name}`,
+              desc: `La producción de ${auto.name} se multiplica x5.`,
+              cost: auto.cost * 10 * (index + 1),
+              purchased: false,
+              effect: [{ type: 'multiplyAutoclicker', targetId: auto.id, value: 5 }],
+              req: { autoclickers: { id: auto.id, amount: tier } },
+            });
+          }
+        }
+      });
+    });
+
+    if (newAchievements.length > 0) {
+      setAchievements(prev => [...prev, ...newAchievements]);
+    }
+    if (newUpgrades.length > 0) {
+      setUpgrades(prev => [...prev, ...newUpgrades]);
+    }
+  }, [autoclickers, achievements, upgrades]);
   
   const handleManualClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = clickValue;
@@ -245,11 +294,24 @@ export default function Game() {
     alert(message);
   };
 
+  const calculateBulkCost = (autoclicker: Autoclicker, amount: BuyAmount) => {
+    let totalCost = 0;
+    let currentPrice = autoclicker.cost;
+    for (let i = 0; i < amount; i++) {
+      totalCost += currentPrice;
+      currentPrice = Math.ceil(currentPrice * PRICE_INCREASE_RATE);
+    }
+    return { totalCost };
+  };
+
   const purchaseAutoclicker = (id: number) => {
     const auto = autoclickers.find(a => a.id === id);
-    if (!auto || gameState.tokens < auto.cost || (auto.humanityGemsCost && gameState.humanityGems < auto.humanityGemsCost)) return;
-    setGameState(prev => ({ ...prev, tokens: prev.tokens - auto.cost, humanityGems: prev.humanityGems - (auto.humanityGemsCost || 0) }));
-    setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + 1, cost: Math.ceil(a.cost * 1.15) } : a));
+    if (!auto) return;
+    const { totalCost } = calculateBulkCost(auto, buyAmount);
+    if (gameState.tokens < totalCost || (auto.humanityGemsCost && gameState.humanityGems < (auto.humanityGemsCost * buyAmount))) return;
+    
+    setGameState(prev => ({ ...prev, tokens: prev.tokens - totalCost, humanityGems: prev.humanityGems - ((auto.humanityGemsCost || 0) * buyAmount) }));
+    setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount, cost: Math.ceil(a.cost * Math.pow(PRICE_INCREASE_RATE, buyAmount)) } : a));
   };
 
   const purchaseUpgrade = (id: number) => {
@@ -267,8 +329,8 @@ export default function Game() {
   };
 
   // -- RENDERIZADO --
-  if (status === "UNAUTHENTICATED") {
-    return (
+  if (status !== "VERIFIED") {
+    return status === "UNAUTHENTICATED" ? (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
         <p className="mb-8 text-slate-400">Conecta tu World App para empezar a construir tu imperio.</p>
@@ -276,11 +338,7 @@ export default function Game() {
           Conectar Wallet
         </button>
       </div>
-    );
-  }
-  
-  if (status === "UNVERIFIED") {
-    return (
+    ) : (
        <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
         <p className="mb-8 text-slate-400">Verifícate como humano con World ID para obtener un boost de producción x10.</p>
@@ -333,19 +391,36 @@ export default function Game() {
             Click! (+{formatNumber(clickValue)})
           </motion.button>
           <div className="space-y-3">
-              <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6"/>Autoclickers</h3>
-              {autoclickers.map((auto) => checkRequirements(auto.req) && (
-                <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < auto.cost || !!(auto.humanityGemsCost && gameState.humanityGems < auto.humanityGemsCost)} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
-                  <div className="text-left">
-                    <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
-                    <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPS.get(auto.id) || 0)}/s cada uno</p>
-                  </div>
-                  <div className="text-right font-mono text-yellow-400">
-                    <p>{formatNumber(auto.cost)}</p>
-                    {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4"/>{auto.humanityGemsCost}</p>}
-                  </div>
-                </motion.button>
-              ))}
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6"/>Autoclickers</h3>
+                <div className="flex items-center bg-slate-500/10 border border-slate-700 rounded-lg">
+                    {( [1, 10, 100] as BuyAmount[]).map(amount => (
+                        <button 
+                            key={amount}
+                            onClick={() => setBuyAmount(amount)}
+                            className={`px-4 py-1 text-sm font-bold rounded-md transition-colors ${buyAmount === amount ? 'bg-cyan-500/80 text-white' : 'text-slate-400 hover:bg-slate-500/20'}`}
+                        >
+                            x{amount}
+                        </button>
+                    ))}
+                </div>
+              </div>
+              {autoclickers.map((auto) => {
+                if (!checkRequirements(auto.req)) return null;
+                const { totalCost } = calculateBulkCost(auto, buyAmount);
+                return (
+                    <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < totalCost || !!(auto.humanityGemsCost && gameState.humanityGems < (auto.humanityGemsCost * buyAmount))} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
+                    <div className="text-left">
+                        <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                        <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPS.get(auto.id) || 0)}/s cada uno</p>
+                    </div>
+                    <div className="text-right font-mono text-yellow-400">
+                        <p>{formatNumber(totalCost)}</p>
+                        {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4"/>{auto.humanityGemsCost * buyAmount}</p>}
+                    </div>
+                    </motion.button>
+                )
+              })}
           </div>
         </div>
         <div className="w-full lg:w-1/3 flex flex-col gap-6">
@@ -355,7 +430,6 @@ export default function Game() {
               {upgrades.map((upg) => {
                 const requirementsMet = checkRequirements(upg.req);
                 if (upg.purchased) return null;
-
                 return (
                   <motion.button 
                     key={upg.id} 

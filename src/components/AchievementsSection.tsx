@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrophyIcon } from '@heroicons/react/24/outline';
-import { Achievement, Requirement } from "@/app/types";
+import { Achievement, Requirement } from "@/components/types";
 
 interface AchievementsSectionProps {
   achievements: Achievement[];

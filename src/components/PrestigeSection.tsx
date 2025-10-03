@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { StarIcon } from '@heroicons/react/24/outline';
-
+import { GameState, Requirement } from "@/components/types";
 interface PrestigeSectionProps {
     prestigeBoost: number;
     prestigeBalance: number;

@@ -1,4 +1,4 @@
-import { Autoclicker, Upgrade, Achievement } from "@/app/types";
+import { Autoclicker, Upgrade, Achievement } from "@/components/types";
 
 // -- ESTADO INICIAL Y DATOS DEL JUEGO --
 export const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1 };

@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@worldcoin/idkit": "^2.4.1",
     "@worldcoin/minikit-js": "^1.9.7",
+    "ethers": "^6.15.0",
     "framer-motion": "^12.23.22",
     "next": "15.5.4",
     "react": "19.1.0",

@@ -1,66 +1,76 @@
-# World IDle Development Guide
+# World IDle Development Guide for AI Agents
 
 This guide provides instructions for developing and deploying the World IDle game, a Web3 application that uses World ID for authentication.
 
 ## Project Overview
 
-The project consists of two main parts:
-1.  **Frontend:** A Next.js application located in the `src` directory.
-2.  **Smart Contracts:** Solidity contracts located in the `contracts` directory.
+The project is a monorepo-like structure with two main parts:
+1.  **Frontend:** A Next.js application in the `src` directory. It handles the game's UI and client-side logic.
+2.  **Smart Contracts:** Solidity contracts in the `contracts` directory, managed with Foundry.
 
-## Getting Started
+## Frontend (`src` directory)
 
-### Prerequisites
+The frontend is built with Next.js, React, and TypeScript.
 
--   [Node.js](https://nodejs.org/)
--   [Foundry](https://getfoundry.sh/)
+### Key Technologies & Patterns
 
-### Installation
+-   **Framework:** Next.js with Turbopack (`npm run dev`).
+-   **State Management:** Primarily uses React hooks (`useState`, `useEffect`, `useCallback`, `useMemo`) within the main `src/components/Game.tsx` component. There is no external state management library like Redux or Zustand.
+-   **Game Logic:** The core game logic is centralized in `src/components/Game.tsx`. This component manages game state, calculations (like CPS), and user interactions.
+-   **Data Persistence:** Game state is saved to local storage via the `useGameSave.ts` custom hook. This hook encapsulates the logic for loading and saving progress.
+-   **Styling:** Tailwind CSS is used for styling. Utility classes are applied directly in the JSX.
+-   **Web3 Integration:**
+    -   **World ID:** `@worldcoin/idkit` and `@worldcoin/minikit-js` are used for user verification. The verification status unlocks game boosts.
+    -   **Smart Contracts:** `ethers` is used to interact with the deployed contracts. Configuration, including contract addresses and ABIs, is located in `src/app/contracts/`. The ABIs are stored as JSON files (`GameManager.json`, `PrestigeToken.json`).
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/rorupontou/world-idle.git
-    ```
-2.  Install the dependencies for the frontend:
+### Developer Workflow
+
+1.  **Installation:**
     ```bash
     npm install
     ```
-3.  Install the dependencies for the smart contracts:
+2.  **Running the dev server:**
+    ```bash
+    npm run dev
+    ```
+    The app will be available at `http://localhost:3000`.
+
+### Important Files
+
+-   `src/app/page.tsx`: Main entry point of the application.
+-   `src/components/Game.tsx`: The "god component" containing most of the game's state and logic.
+-   `src/components/useGameSave.ts`: Custom hook for saving and loading game data from local storage.
+-   `src/app/contracts/config.ts`: Exports contract ABIs and addresses for use in the frontend.
+-   `src/app/data.ts`: Contains initial game data like upgrades, achievements, and news ticker items.
+
+## Smart Contracts (`contracts` directory)
+
+The smart contracts are written in Solidity and managed using the Foundry framework.
+
+### Key Contracts
+
+-   `contracts/src/GameManager.sol`: Manages core game logic, such as minting prestige tokens.
+-   `contracts/src/PrestigeToken.sol`: An ERC20 token for in-game prestige rewards.
+
+### Developer Workflow
+
+1.  **Installation:** Navigate to the contracts directory and install dependencies.
     ```bash
     cd contracts && forge install
     ```
+2.  **Compiling:**
+    ```bash
+    forge build
+    ```
+3.  **Testing:**
+    ```bash
+    forge test
+    ```
+4.  **Deployment:** The `script/Deploy.s.sol` script handles deployment. It requires environment variables for the private key and RPC URL.
 
-### Running the Development Server
+## Cross-Component Communication
 
-To run the frontend development server, use the following command:
-```bash
-npm run dev
-```
-
-## Smart Contracts
-
-The smart contracts are managed using Foundry. Key contracts include:
--   `GameManager.sol`: Manages the core game logic.
--   `PrestigeToken.sol`: An ERC20 token used for in-game rewards.
-
-### Compiling and Testing
-
--   **Compile:** `forge build`
--   **Test:** `forge test`
-
-### Deployment
-
-The contracts can be deployed using the `Deploy.s.sol` script. Make sure to set the required environment variables before running the deployment command.
-
-## Frontend
-
-The frontend is built with Next.js and uses the following technologies:
--   **Framework:** React
--   **Styling:** Tailwind CSS
--   **Web3 Integration:** `@worldcoin/idkit`
-
-### Key Components
-
--   `src/app/page.tsx`: The main entry point of the application.
--   `src/components/Game.tsx`: Contains the core game interface and logic.
--   `src/app/contracts/config.ts`: Configuration for the smart contracts, including addresses and ABIs.
+-   The frontend interacts with the smart contracts after deployment.
+-   When contracts are deployed, their addresses must be updated in `src/app/contracts/config.ts`.
+-   The contract ABIs (`*.json` files) in `src/app/contracts/` must be updated if the contract interface changes. This is a manual process.
+-   The `GameManager` contract is responsible for minting `PrestigeToken`s to the player's wallet address. The frontend calls the `prestige` function on `GameManager` to initiate this.

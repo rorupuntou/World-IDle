@@ -2,14 +2,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { MiniKit, ISuccessResult, VerificationLevel } from "@worldcoin/minikit-js";
+import { MiniKit, VerificationLevel } from "@worldcoin/minikit-js";
 import { IDKitWidget } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
-import { BeakerIcon, CheckBadgeIcon, QuestionMarkCircleIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ethers } from "ethers";
-import { GameStatus, Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState } from "@/app/types";
-import { prestigeTokenContract, gameManagerContract } from "@/app/contracts/config";
-import { useGameSave } from "@/app/hooks/useGameSave";
+import { GameStatus, Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState } from "./types";
+import { prestigeTokenContract, gameManagerContract } from "../app/contracts/config";
+import { useGameSave } from "./useGameSave";
 import { 
     initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER, 
     PRICE_INCREASE_RATE, TIER_THRESHOLDS, GLOBAL_UPGRADE_THRESHOLDS, SAVE_KEY 
@@ -177,12 +177,12 @@ export default function Game() {
     useEffect(() => {
         const passiveGainInterval = setInterval(() => {
             const gain = totalCPS / 10;
-            setGameState(prev => ({ ...prev, tokens: prev.tokens + gain }));
-            setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + gain }));
+            setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens + gain }));
+            setStats((prev: StatsState) => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + gain }));
         }, 100);
 
         if (stats.tokensPerSecond !== totalCPS) {
-            setStats(prev => ({ ...prev, tokensPerSecond: totalCPS }));
+            setStats((prev: StatsState) => ({ ...prev, tokensPerSecond: totalCPS }));
         }
 
         return () => clearInterval(passiveGainInterval);
@@ -206,7 +206,7 @@ export default function Game() {
                 setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
                 setToast(`Logro: ${ach.name}`);
                 if (ach.reward?.humanityGems) {
-                    setGameState(prev => ({ ...prev, humanityGems: prev.humanityGems + ach.reward!.humanityGems }));
+                    setGameState((prev: GameState) => ({ ...prev, humanityGems: prev.humanityGems + ach.reward!.humanityGems }));
                 }
             }
         });
@@ -259,8 +259,8 @@ export default function Game() {
         const newFloatingNumber = { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY };
         setFloatingNumbers(current => [...current, newFloatingNumber]);
         setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== newFloatingNumber.id)); }, 2000);
-        setGameState(prev => ({ ...prev, tokens: prev.tokens + value }));
-        setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens + value }));
+        setStats((prev: StatsState) => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
     }, [clickValue, formatNumber, setGameState, setStats]);
 
     const checkRequirements = useCallback((req: Requirement | undefined) => {
@@ -310,7 +310,7 @@ export default function Game() {
 
         if (gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost) return;
 
-        setGameState(prev => ({ ...prev, tokens: prev.tokens - totalTokenCost, humanityGems: prev.humanityGems - totalGemCost }));
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - totalTokenCost, humanityGems: prev.humanityGems - totalGemCost }));
         setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount, cost: Math.ceil(a.cost * Math.pow(PRICE_INCREASE_RATE, buyAmount)) } : a));
     }, [autoclickers, buyAmount, calculateBulkCost, gameState, setGameState, setAutoclickers]);
 
@@ -318,7 +318,7 @@ export default function Game() {
         const upg = upgrades.find(u => u.id === id);
         if (!upg || upg.purchased || gameState.tokens < upg.cost || (upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)) return;
 
-        setGameState(prev => ({ ...prev, tokens: prev.tokens - upg.cost, humanityGems: prev.humanityGems - (upg.humanityGemsCost || 0) }));
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - upg.cost, humanityGems: prev.humanityGems - (upg.humanityGemsCost || 0) }));
         setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
     }, [upgrades, gameState, setGameState, setUpgrades]);
 
@@ -329,8 +329,8 @@ export default function Game() {
         }
     }, []);
 
-    const onVerificationSuccess = useCallback((_result: ISuccessResult) => { setStatus("VERIFIED"); }, []);
-    const handleProof = useCallback((_result: ISuccessResult) => { }, []);
+    const onVerificationSuccess = useCallback(() => { setStatus("VERIFIED"); }, []);
+    const handleProof = useCallback(() => { }, []);
     const handleConnect = useCallback(async () => {
         try {
             await MiniKit.commandsAsync.walletAuth({ nonce: "world-idle-login" });
@@ -357,7 +357,7 @@ export default function Game() {
             const calldata = gameManagerInterface.encodeFunctionData("claimPrestigeReward", [totalTokensInt, signature]);
 
             const tx = { to: gameManagerContract.address, data: calldata, value: '0' };
-            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction(tx);
+            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction(tx as any);
 
             if (finalPayload.status === 'success') {
                 setToast("¡Recompensa de Prestigio reclamada! Reiniciando partida...");
@@ -422,69 +422,34 @@ export default function Game() {
             <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
             <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>
           </div>
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl text-center border border-slate-700 sticky top-4 z-20">
-              <h2 className="text-5xl font-mono tracking-wider">{formatNumber(gameState.tokens)}</h2>
-              <p className="text-sm text-slate-400">$WCLICK</p>
-              <div className="flex justify-center items-center gap-6 mt-2">
-                  <p className="text-md text-lime-400">+{formatNumber(stats.tokensPerSecond)}/s</p>
-                  <div className="flex items-center gap-2 text-yellow-400">
-                      <BeakerIcon className="w-5 h-5" />
-                      <p className="font-mono text-lg">{gameState.humanityGems}</p>
-                  </div>
-              </div>
-          </motion.div>
+          <HeaderStats
+            tokens={gameState.tokens}
+            tokensPerSecond={stats.tokensPerSecond}
+            humanityGems={gameState.humanityGems}
+            formatNumber={formatNumber}
+          />
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
             Click! (+{formatNumber(clickValue)})
           </motion.button>
-          <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6"/>Autoclickers</h3>
-                <div className="flex items-center bg-slate-500/10 border border-slate-700 rounded-lg">
-                    {( [1, 10, 100] as BuyAmount[]).map(amount => (
-                        <button 
-                            key={amount}
-                            onClick={() => setBuyAmount(amount)}
-                            className={`px-4 py-1 text-sm font-bold rounded-md transition-colors ${buyAmount === amount ? 'bg-cyan-500/80 text-white' : 'text-slate-400 hover:bg-slate-500/20'}`}
-                        >
-                            x{amount}
-                        </button>
-                    ))}
-                </div>
-              </div>
-              {autoclickers.map((auto) => {
-                if (!checkRequirements(auto.req)) return null;
-                const { totalCost } = calculateBulkCost(auto, buyAmount);
-                return (
-                    <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < totalCost || !!(auto.humanityGemsCost && gameState.humanityGems < (auto.humanityGemsCost * buyAmount))} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
-                    <div className="text-left">
-                        <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
-                        <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPS.get(auto.id) || 0)}/s cada uno</p>
-                    </div>
-                    <div className="text-right font-mono text-yellow-400">
-                        <p>{formatNumber(totalCost)}</p>
-                        {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4"/>{auto.humanityGemsCost * buyAmount}</p>}
-                    </div>
-                    </motion.button>
-                )
-              })}
-          </div>
+          <AutoclickersSection
+            autoclickers={autoclickers}
+            buyAmount={buyAmount}
+            setBuyAmount={setBuyAmount}
+            gameState={gameState}
+            checkRequirements={checkRequirements}
+            calculateBulkCost={calculateBulkCost}
+            purchaseAutoclicker={purchaseAutoclicker}
+            formatNumber={formatNumber}
+            autoclickerCPSValues={autoclickerCPSValues}
+          />
         </div>
         <div className="w-full lg:w-1/3 flex flex-col gap-6">
-          <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-            <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400"/>Prestigio</h3>
-            <p className="text-sm text-slate-300">
-              Tu bonus de prestigio actual es de <b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b> a todas tus ganancias.
-            </p>
-            <p className="text-xs text-slate-400 mt-1">Se basa en tu saldo de {prestigeBalance.toLocaleString()} $PRESTIGE.</p>
-            <motion.button
-              onClick={handlePrestige}
-              disabled={!isPrestigeReady}
-              whileHover={{ scale: 1.05 }}
-              className="w-full mt-4 bg-yellow-500/80 hover:bg-yellow-500/100 text-stone-900 font-bold py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/80"
-            >
-              Reiniciar para Prestigio
-            </motion.button>
-          </div>
+          <PrestigeSection
+            prestigeBoost={prestigeBoost}
+            prestigeBalance={prestigeBalance}
+            handlePrestige={handlePrestige}
+            isPrestigeReady={isPrestigeReady}
+          />
           <UpgradesSection
             upgrades={upgrades}
             gameState={gameState}

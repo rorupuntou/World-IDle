@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BeakerIcon, BoltIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import { Upgrade, GameState, Requirement } from "@/app/types";
+import { Upgrade, GameState, Requirement } from "@/components/types";
 
 interface UpgradesSectionProps {
   upgrades: Upgrade[];

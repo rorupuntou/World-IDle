@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { CpuChipIcon, BeakerIcon } from '@heroicons/react/24/outline';
-import { Autoclicker, BuyAmount, GameState, Requirement } from "@/app/types";
+import { Autoclicker, BuyAmount, GameState, Requirement } from "@/components/types";
 
 interface AutoclickersSectionProps {
     autoclickers: Autoclicker[];

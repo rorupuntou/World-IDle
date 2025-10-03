@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, StatsState, Autoclicker, Upgrade, Achievement } from '@/app/types';
+import { GameState, StatsState, Autoclicker, Upgrade, Achievement } from '@/components/types';
 import { 
     initialState, initialStats, initialAutoclickers, 
     initialUpgrades, initialAchievements, SAVE_KEY 
-} from '@/app/data';
+} from '@/components/data';
 
 export function useGameSave() {
     const [gameState, setGameState] = useState<GameState>(initialState);

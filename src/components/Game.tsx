@@ -116,6 +116,70 @@ export default function Game() {
     }
 
     return (
-        // ... (El JSX del juego completo va aquí)
-    );
+    <>
+      <NewsTicker />
+      <AnimatePresence>
+        {floatingNumbers.map(num => (
+          <motion.div key={num.id} initial={{ opacity: 1, y: 0, scale: 0.5 }} animate={{ opacity: 0, y: -100, scale: 1.5 }} transition={{ duration: 2 }} className="pointer-events-none absolute font-bold text-lime-300 text-2xl" style={{ left: num.x, top: num.y, zIndex: 9999 }} aria-hidden="true">
+            {num.value}
+          </motion.div>
+        ))}
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      </AnimatePresence>
+      <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-2/3 flex flex-col gap-6">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
+            {player?.isVerified && <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>}
+          </div>
+          <HeaderStats
+            tokens={gameState.tokens}
+            tokensPerSecond={stats.tokensPerSecond}
+            humanityGems={gameState.humanityGems}
+            formatNumber={formatNumber}
+          />
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
+            Click! (+{formatNumber(clickValue)})
+          </motion.button>
+          <AutoclickersSection
+            autoclickers={autoclickers}
+            buyAmount={buyAmount}
+            setBuyAmount={setBuyAmount}
+            gameState={gameState}
+            checkRequirements={checkRequirements}
+            calculateBulkCost={calculateBulkCost}
+            purchaseAutoclicker={purchaseAutoclicker}
+            formatNumber={formatNumber}
+            autoclickerCPSValues={autoclickerCPSValues}
+          />
+        </div>
+        <div className="w-full lg:w-1/3 flex flex-col gap-6">
+          <PrestigeSection
+            prestigeBoost={prestigeBoost}
+            prestigeBalance={prestigeBalance}
+            handlePrestige={handlePrestige}
+            isPrestigeReady={isPrestigeReady}
+          />
+          <UpgradesSection
+            upgrades={upgrades}
+            gameState={gameState}
+            checkRequirements={checkRequirements}
+            purchaseUpgrade={purchaseUpgrade}
+            showRequirements={showRequirements}
+            formatNumber={formatNumber}
+          />
+          <AchievementsSection
+            achievements={achievements}
+            showRequirements={showRequirements}
+          />
+          <div className="text-center">
+            <button onClick={wipeSave} className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1 mx-auto">
+              <ArrowPathIcon className="w-4 h-4" />
+              Reiniciar Partida (Sin Prestigio)
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }

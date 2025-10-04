@@ -1,5 +1,14 @@
-import { getIronSession } from "iron-session";
+import { getIronSession, IronSessionData } from "iron-session";
 import { cookies } from "next/headers";
+import { SiweMessage } from "siwe";
+
+// Augment the IronSessionData interface to declare the shape of our session data
+declare module "iron-session" {
+  interface IronSessionData {
+    nonce?: string;
+    siwe?: SiweMessage;
+  }
+}
 
 export const sessionOptions = {
   cookieName: "world-idle-session",
@@ -10,5 +19,6 @@ export const sessionOptions = {
 };
 
 export function getSession() {
+  // The generic is no longer needed here as the type is augmented globally
   return getIronSession(cookies(), sessionOptions);
 }

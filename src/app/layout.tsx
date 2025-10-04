@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,7 +25,7 @@ export default function RootLayout({
           backgroundSize: '2rem 2rem'
         }}
       >
-        {children}
+        <MiniKitProvider>{children}</MiniKitProvider>
       </body>
     </html>
   );

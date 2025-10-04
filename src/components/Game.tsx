@@ -77,35 +77,8 @@ export default function Game() {
     const [isPrestigeReady, setIsPrestigeReady] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
-    const [minikitStatus, setMinikitStatus] = useState("Checking...");
 
     // -- EFECTOS Y LÓGICA PRINCIPAL --
-
-    // DEBUG: Check for MiniKit on mount with polling
-    useEffect(() => {
-        console.log("Component mounted. Polling for MiniKit...");
-        let attempts = 0;
-        const maxAttempts = 25; // 25 * 200ms = 5 seconds
-
-        const intervalId = setInterval(() => {
-            attempts++;
-            const isInstalled = MiniKit.isInstalled();
-            
-            if (isInstalled) {
-                console.log(`MiniKit found after ${attempts * 200}ms!`);
-                console.log("window.MiniKit object:", (window as any).MiniKit);
-                setMinikitStatus("Installed");
-                clearInterval(intervalId);
-            } else if (attempts >= maxAttempts) {
-                console.error("MiniKit not found after 5 seconds.");
-                console.log("window.MiniKit object remains:", (window as any).MiniKit);
-                setMinikitStatus("Not Installed (Timeout)");
-                clearInterval(intervalId);
-            }
-        }, 200);
-
-        return () => clearInterval(intervalId); // Cleanup on unmount
-    }, []);
 
     // Carga de datos externos y guardado automático
     useEffect(() => {
@@ -281,10 +254,8 @@ export default function Game() {
     // -- MANEJADORES DE EVENTOS Y ACCIONES --
 
     const handleSignIn = useCallback(async () => {
-        const isInstalled = MiniKit.isInstalled();
-        if (!isInstalled) {
-            // More informative alert for debugging
-            alert(`Debug: MiniKit no está instalado. MiniKit.isInstalled() devolvió ${isInstalled}. El objeto window.MiniKit es: ${JSON.stringify((window as any).MiniKit)}`);
+        if (!MiniKit.isInstalled()) {
+            alert("Por favor, abre esta aplicación dentro de World App para continuar.");
             return;
         }
         
@@ -354,8 +325,7 @@ export default function Game() {
             if (autoInfo) message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
         }
         if (item.req.tps !== undefined) message += `- Producir ${formatNumber(item.req.tps)} $WCLICK/s.\n  (Progreso: ${formatNumber(stats.tokensPerSecond)} / ${formatNumber(item.req.tps)})\n`;
-        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})
-`;
+        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})\n`;
         alert(message);
     }, [stats, status, autoclickers, formatNumber]);
 
@@ -450,7 +420,7 @@ export default function Game() {
         >
           {isAuthenticating ? "Conectando..." : "Conectar Billetera"}
         </button>
-        <p className="text-xs text-slate-500 mt-4">Estado de MiniKit: {minikitStatus}</p>
+
       </div>
     );
   }

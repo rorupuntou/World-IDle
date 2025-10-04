@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
+import { ISuccessResult } from '@worldcoin/idkit';
 
 export type VerifyReply = {
   code: string;
@@ -9,7 +10,7 @@ export type VerifyReply = {
 const WLD_API_BASE_URL = 'https://developer.worldcoin.org/api/v1';
 
 // Common verification function
-async function verifyUser(proof: any) {
+async function verifyUser(proof: ISuccessResult) {
   const app_id = process.env.NEXT_PUBLIC_WLD_APP_ID!;
   const action = process.env.WLD_ACTION_ID!;
 

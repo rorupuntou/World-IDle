@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ethers } from "ethers";
 import { ISuccessResult } from "@worldcoin/idkit";
-import { GameStatus, Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState } from "./types";
+import { Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState } from "./types";
 import { prestigeTokenContract } from "../app/contracts/config";
 import { 
     initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER, 
@@ -74,7 +74,7 @@ export default function Game() {
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [prestigeBalance, setPrestigeBalance] = useState(0);
     const [isPrestigeReady, setIsPrestigeReady] = useState(false);
-    const [walletAddress, setWalletAddress] = useState<string | null>(null);
+    const [walletAddress] = useState<string | null>(null);
 
     // -- LÓGICA DE CARGA Y GUARDADO --
 

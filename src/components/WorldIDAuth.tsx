@@ -1,8 +1,19 @@
 import { IDKitWidget, ISuccessResult } from '@worldcoin/idkit';
 import type { VerifyReply } from '@/app/api/world-idle-auth/route';
+import { GameState, StatsState, Autoclicker, Upgrade, Achievement } from './types';
+
+// Define a type for the data structure we expect from the backend
+export type LoadedGameData = {
+  gameState: GameState;
+  stats: StatsState;
+  autoclickers: Autoclicker[];
+  upgrades: Upgrade[];
+  achievements: Achievement[];
+  nullifier_hash: string;
+}
 
 interface WorldIDAuthProps {
-  onSuccessfulVerify: (data: any, proof: ISuccessResult) => void;
+  onSuccessfulVerify: (data: LoadedGameData, proof: ISuccessResult) => void;
 }
 
 export const WorldIDAuth = ({ onSuccessfulVerify }: WorldIDAuthProps) => {

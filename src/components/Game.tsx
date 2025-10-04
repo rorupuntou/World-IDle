@@ -114,7 +114,7 @@ export default function Game() {
         }
         setIsAuthenticating(true);
         try {
-            const { address } = await MiniKit.commands.getWalletAddress();
+            const { address } = await MiniKit.commandsAsync.getWalletAddress();
             setWalletAddress(address);
             setToast("Wallet Connected!");
         } catch (error) {

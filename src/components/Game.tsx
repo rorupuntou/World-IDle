@@ -155,6 +155,226 @@ const [floatingNumbers] = useState<{ id: number; value: string; x: number; y: nu
         }
     }, []);
 
+    const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
+        const purchasedUpgrades = upgrades.filter(u => u.purchased);
+
+        let clickMultiplier = 1, clickAddition = 0, globalMultiplier = 1;
+        const autoclickerMultipliers = new Map<number, number>();
+        const clickCpSUpgrades: Effect[] = [];
+        const autoclickerCpSUpgrades: Effect[] = [];
+
+        purchasedUpgrades.forEach(upg => {
+            upg.effect.forEach(eff => {
+                switch (eff.type) {
+                    case 'multiplyClick': clickMultiplier *= eff.value; break;
+                    case 'addClick': clickAddition += eff.value; break;
+                    case 'multiplyGlobal': globalMultiplier *= eff.value; break;
+                    case 'multiplyAutoclicker':
+                        autoclickerMultipliers.set(eff.targetId, (autoclickerMultipliers.get(eff.targetId) || 1) * eff.value);
+                        break;
+                    case 'addCpSToClick': clickCpSUpgrades.push(eff); break;
+                    case 'addCpSToAutoclickerFromOthers': autoclickerCpSUpgrades.push(eff); break;
+                }
+            });
+        });
+
+        const nonCursorAmount = autoclickers.reduce((acc, a) => a.id !== 0 ? acc + a.purchased : acc, 0);
+        const autoclickerCPS = new Map<number, number>();
+        initialAutoclickers.forEach(auto => {
+            let baseTps = auto.tps * (autoclickerMultipliers.get(auto.id) || 1);
+            autoclickerCpSUpgrades.forEach(eff => {
+                if (eff.type === 'addCpSToAutoclickerFromOthers' && eff.targetId === auto.id) {
+                    baseTps += nonCursorAmount * eff.value;
+                }
+            });
+            autoclickerCPS.set(auto.id, baseTps);
+        });
+
+        const totalAutoclickerCPS = autoclickers.reduce((total, auto) => total + auto.purchased * (autoclickerCPS.get(auto.id) || 0), 0);
+
+        const humanityBoost = player?.isVerified ? HUMAN_BOOST_MULTIPLIER : 1;
+        const finalGlobalMultiplier = globalMultiplier * humanityBoost * (1 + prestigeBoost / 100);
+        const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
+
+        let baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
+        clickCpSUpgrades.forEach(eff => {
+            if (eff.type === 'addCpSToClick') baseClickValue += finalTotalCPS * eff.percent;
+        });
+        const finalClickValue = baseClickValue * humanityBoost;
+
+        return { totalCPS: finalTotalCPS, clickValue: finalClickValue, autoclickerCPSValues: autoclickerCPS };
+    }, [upgrades, autoclickers, player, prestigeBoost]);
+
+    // -- EFECTOS SECUNDARIOS DEL JUEGO --
+
+    // Ganancia pasiva y actualización de stats
+    useEffect(() => {
+        const passiveGainInterval = setInterval(() => {
+            const gain = totalCPS / 10;
+            setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens + gain }));
+            setStats((prev: StatsState) => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + gain }));
+        }, 100);
+
+        if (stats.tokensPerSecond !== totalCPS) {
+            setStats((prev: StatsState) => ({ ...prev, tokensPerSecond: totalCPS }));
+        }
+
+        return () => clearInterval(passiveGainInterval);
+    }, [totalCPS, setGameState, setStats, stats.tokensPerSecond]);
+
+    // Comprobación de logros
+    useEffect(() => {
+        achievements.forEach(ach => {
+            if (ach.unlocked) return;
+            let conditionMet = false;
+            if (ach.req.totalTokensEarned !== undefined && stats.totalTokensEarned >= ach.req.totalTokensEarned) conditionMet = true;
+            if (ach.req.totalClicks !== undefined && stats.totalClicks >= ach.req.totalClicks) conditionMet = true;
+            if (ach.req.tps !== undefined && stats.tokensPerSecond >= ach.req.tps) conditionMet = true;
+            if (ach.req.verified && player?.isVerified) conditionMet = true;
+            if (ach.req.autoclickers) {
+                const owned = autoclickers.find(a => a.id === ach.req.autoclickers?.id)?.purchased || 0;
+                if (owned >= ach.req.autoclickers.amount) conditionMet = true;
+            }
+
+            if (conditionMet) {
+                setAchievements(prev => prev.map(a => a.id === ach.id ? { ...a, unlocked: true } : a));
+                setToast(`Logro: ${ach.name}`);
+                if (ach.reward?.humanityGems) {
+                    setGameState((prev: GameState) => ({ ...prev, humanityGems: prev.humanityGems + ach.reward!.humanityGems }));
+                }
+            }
+        });
+    }, [stats, player, autoclickers, achievements, setAchievements, setGameState, setToast]);
+
+    // Generación dinámica de mejoras y logros
+    useEffect(() => {
+        const newAchievements: Achievement[] = [];
+        const newUpgrades: Upgrade[] = [];
+
+        autoclickers.forEach(auto => {
+            TIER_THRESHOLDS.forEach((tier, index) => {
+                if (auto.purchased >= tier) {
+                    const achievementId = 1000 + auto.id * 100 + index;
+                    if (!achievements.some(a => a.id === achievementId) && !newAchievements.some(a => a.id === achievementId)) {
+                        newAchievements.push({ id: achievementId, name: `${auto.name} Nivel ${index + 1}`, desc: `Poseer ${tier} de ${auto.name}.`, unlocked: false, req: { autoclickers: { id: auto.id, amount: tier } } });
+                    }
+                    const upgradeId = 2000 + auto.id * 100 + index;
+                    if (!upgrades.some(u => u.id === upgradeId) && !newUpgrades.some(u => u.id === upgradeId)) {
+                        newUpgrades.push({ id: upgradeId, name: `Especialización de ${auto.name}`, desc: `La producción de ${auto.name} se multiplica x5.`, cost: (initialAutoclickers.find(a => a.id === auto.id)?.cost || 10) * 100 * (index + 1), purchased: false, effect: [{ type: 'multiplyAutoclicker', targetId: auto.id, value: 5 }], req: { autoclickers: { id: auto.id, amount: tier } } });
+                    }
+                }
+            });
+        });
+
+        GLOBAL_UPGRADE_THRESHOLDS.forEach((tier, index) => {
+            if (stats.totalTokensEarned >= tier) {
+                const upgradeId = 3000 + index;
+                if (!upgrades.some(u => u.id === upgradeId) && !newUpgrades.some(u => u.id === upgradeId)) {
+                    newUpgrades.push({ id: upgradeId, name: `Sinergia Universal ${'I'.repeat(index + 1)}`, desc: `La producción de todos los Autoclickers se multiplica x2.`, cost: tier * 100, purchased: false, effect: [{ type: 'multiplyGlobal', value: 2 }], req: { totalTokensEarned: tier } });
+                }
+            }
+        });
+
+        if (newAchievements.length > 0) setAchievements(prev => [...prev, ...newAchievements]);
+        if (newUpgrades.length > 0) setUpgrades(prev => [...prev, ...newUpgrades]);
+    }, [autoclickers, achievements, upgrades, stats.totalTokensEarned, setAchievements, setUpgrades]);
+
+    // Habilitar prestigio
+    useEffect(() => {
+        if (stats.totalTokensEarned >= 1e9) { // Umbral para prestigio
+            setIsPrestigeReady(true);
+        }
+    }, [stats.totalTokensEarned]);
+
+    // -- MANEJADORES DE EVENTOS Y ACCIONES --
+
+    const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+        const value = clickValue;
+        const newFloatingNumber = { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY };
+        setFloatingNumbers(current => [...current, newFloatingNumber]);
+        setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== newFloatingNumber.id)); }, 2000);
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens + value }));
+        setStats((prev: StatsState) => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
+    }, [clickValue, formatNumber, setGameState, setStats]);
+
+    const checkRequirements = useCallback((req: Requirement | undefined) => {
+        if (!req) return true;
+        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
+        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
+        if (req.tps !== undefined && stats.tokensPerSecond < req.tps) return false;
+        if (req.verified && !player?.isVerified) return false;
+        if (req.autoclickers) {
+            const owned = autoclickers.find(a => a.id === req.autoclickers?.id)?.purchased || 0;
+            if (owned < req.autoclickers.amount) return false;
+        }
+        return true;
+    }, [stats, player, autoclickers]);
+
+    const showRequirements = useCallback((item: { name: string, req?: Requirement }) => {
+        if (!item.req) return;
+        let message = `Requisitos para "${item.name}":\n\n`;
+        if (item.req.totalTokensEarned !== undefined) message += `- Ganar ${formatNumber(item.req.totalTokensEarned)} $WCLICK en total.\n  (Progreso: ${formatNumber(stats.totalTokensEarned)} / ${formatNumber(item.req.totalTokensEarned)})\n`;
+        if (item.req.totalClicks !== undefined) message += `- Hacer ${formatNumber(item.req.totalClicks)} clics.\n  (Progreso: ${formatNumber(stats.totalClicks)} / ${formatNumber(item.req.totalClicks)})\n`;
+        if (item.req.autoclickers) {
+            const autoInfo = initialAutoclickers.find(a => a.id === item.req?.autoclickers?.id);
+            const owned = autoclickers.find(a => a.id === item.req?.autoclickers?.id)?.purchased || 0;
+            if (autoInfo) message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
+        }
+        if (item.req.tps !== undefined) message += `- Producir ${formatNumber(item.req.tps)} $WCLICK/s.\n  (Progreso: ${formatNumber(stats.tokensPerSecond)} / ${formatNumber(item.req.tps)})\n`;
+        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${player?.isVerified ? 'Completado' : 'Pendiente'})\n`;
+        alert(message);
+    }, [stats, player, autoclickers, formatNumber]);
+
+    const calculateBulkCost = useCallback((autoclicker: Autoclicker, amount: BuyAmount) => {
+        let totalCost = 0;
+        let currentPrice = autoclicker.cost;
+        for (let i = 0; i < amount; i++) {
+            totalCost += currentPrice;
+            currentPrice = Math.ceil(currentPrice * PRICE_INCREASE_RATE);
+        }
+        return totalCost;
+    }, []);
+
+    const purchaseAutoclicker = useCallback((id: number) => {
+        const auto = autoclickers.find(a => a.id === id);
+        if (!auto) return;
+
+        const totalTokenCost = calculateBulkCost(auto, buyAmount);
+        const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
+
+        if (gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost) return;
+
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - totalTokenCost, humanityGems: prev.humanityGems - totalGemCost }));
+        setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount, cost: Math.ceil(a.cost * Math.pow(PRICE_INCREASE_RATE, buyAmount)) } : a));
+    }, [autoclickers, buyAmount, calculateBulkCost, gameState, setGameState, setAutoclickers]);
+
+    const purchaseUpgrade = useCallback((id: number) => {
+        const upg = upgrades.find(u => u.id === id);
+        if (!upg || upg.purchased || gameState.tokens < upg.cost || (upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)) return;
+
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - upg.cost, humanityGems: prev.humanityGems - (upg.humanityGemsCost || 0) }));
+        setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
+    }, [upgrades, gameState, setGameState, setUpgrades]);
+
+    const wipeSave = useCallback(() => {
+        if (window.confirm("¿Estás seguro de que quieres borrar tu progreso? Esta acción NO te dará tokens de Prestigio y no se puede deshacer.")) {
+            localStorage.removeItem(SAVE_KEY);
+            window.location.reload();
+        }
+    }, []);
+
+    const handlePrestige = useCallback(async () => {
+        if (!isPrestigeReady || !walletAddress) return;
+        if (!window.confirm("¿Estás seguro de que quieres reiniciar para reclamar tus tokens de Prestigio? Tu progreso actual se borrará, pero empezarás la siguiente partida con un boost permanente.")) return;
+
+        try {
+            alert("La funcionalidad de Prestigio está temporalmente deshabilitada y necesita ser actualizada.");
+        } catch (error) {
+            console.error("Error al ejecutar el Prestigio:", error);
+            alert(`Ocurrió un error al procesar el Prestigio. ${error instanceof Error ? error.message : ''}`);
+        }
+    }, [isPrestigeReady, walletAddress]);
+
     // ... (Toda la otra lógica del juego se mantiene)
 
     if (!walletAddress) {

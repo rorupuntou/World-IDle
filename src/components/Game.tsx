@@ -81,16 +81,30 @@ export default function Game() {
 
     // -- EFECTOS Y LÓGICA PRINCIPAL --
 
-    // DEBUG: Check for MiniKit on mount
+    // DEBUG: Check for MiniKit on mount with polling
     useEffect(() => {
-        console.log("Component mounted. Checking for MiniKit...");
-        // Use a small timeout to give the World App environment time to inject the MiniKit object
-        setTimeout(() => {
+        console.log("Component mounted. Polling for MiniKit...");
+        let attempts = 0;
+        const maxAttempts = 25; // 25 * 200ms = 5 seconds
+
+        const intervalId = setInterval(() => {
+            attempts++;
             const isInstalled = MiniKit.isInstalled();
-            console.log("MiniKit check (after 500ms):", isInstalled);
-            console.log("window.MiniKit object:", (window as any).MiniKit);
-            setMinikitStatus(isInstalled ? "Installed" : "Not Installed");
-        }, 500);
+            
+            if (isInstalled) {
+                console.log(`MiniKit found after ${attempts * 200}ms!`);
+                console.log("window.MiniKit object:", (window as any).MiniKit);
+                setMinikitStatus("Installed");
+                clearInterval(intervalId);
+            } else if (attempts >= maxAttempts) {
+                console.error("MiniKit not found after 5 seconds.");
+                console.log("window.MiniKit object remains:", (window as any).MiniKit);
+                setMinikitStatus("Not Installed (Timeout)");
+                clearInterval(intervalId);
+            }
+        }, 200);
+
+        return () => clearInterval(intervalId); // Cleanup on unmount
     }, []);
 
     // Carga de datos externos y guardado automático

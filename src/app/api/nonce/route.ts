@@ -1,15 +1,7 @@
-import { NextResponse } from "next/server";
+import { generateNonce } from 'siwe';
+import { NextResponse } from 'next/server';
 
-export function GET() {
-  const nonce = crypto.randomUUID().replace(/-/g, "");
-  
-  const response = NextResponse.json({ nonce });
-
-  response.cookies.set("siwe-nonce", nonce, {
-    secure: true,
-    httpOnly: true,
-    sameSite: "lax",
-  });
-
-  return response;
+export async function GET() {
+  const nonce = generateNonce();
+  return NextResponse.json({ nonce });
 }

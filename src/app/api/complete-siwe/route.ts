@@ -1,46 +1,19 @@
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-import {
-  MiniAppWalletAuthSuccessPayload,
-  verifySiweMessage,
-} from "@worldcoin/minikit-js";
+import { SiweMessage } from 'siwe';
+import { type NextRequest, NextResponse } from 'next/server';
 
-interface IRequestPayload {
-  payload: MiniAppWalletAuthSuccessPayload;
-}
-
-export const POST = async (req: NextRequest) => {
-  const { payload } = (await req.json()) as IRequestPayload;
-  const cookieStore = await cookies();
-  const nonce = cookieStore.get("siwe-nonce")?.value;
-
-  if (!nonce) {
-    return NextResponse.json(
-      { status: "error", isValid: false, message: "Invalid nonce." },
-      { status: 400 }
-    );
-  }
-
+export async function POST(req: NextRequest) {
+  const { payload } = await req.json();
+  
   try {
-    // The nonce is passed to the verify function to check against the one in the message
-    const validMessage = await verifySiweMessage(payload, nonce);
+    const siweMessage = new SiweMessage(payload.message);
+    const verification = await siweMessage.verify({ signature: payload.signature });
 
-    const response = NextResponse.json({
-      status: "success",
-      isValid: validMessage.isValid,
-      address: payload.address,
-    });
-
-    // Clear the nonce after successful verification by setting an expired cookie
-    response.cookies.set("siwe-nonce", "", { maxAge: 0 });
-
-    return response;
-  } catch (error: unknown) {
-    // Handle errors in validation or processing
-    const message = error instanceof Error ? error.message : "An unknown error occurred";
-    return NextResponse.json(
-      { status: "error", isValid: false, message },
-      { status: 500 }
-    );
+    if (verification.success) {
+      return NextResponse.json({ isValid: true, address: verification.data.address });
+    }
+    return NextResponse.json({ isValid: false }, { status: 401 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ isValid: false }, { status: 500 });
   }
-};
+}

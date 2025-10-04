@@ -114,9 +114,29 @@ export default function Game() {
         }
         setIsAuthenticating(true);
         try {
-            const { address } = await MiniKit.commandsAsync.getWalletAddress();
-            setWalletAddress(address);
-            setToast("Wallet Connected!");
+            const res = await fetch(`/api/nonce`);
+            const { nonce } = await res.json();
+
+            const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce });
+
+            if (finalPayload.status === 'error') {
+                throw new Error("Wallet authentication failed.");
+            }
+
+            const response = await fetch('/api/complete-siwe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payload: finalPayload }),
+            });
+
+            const { isValid, address } = await response.json();
+
+            if (isValid) {
+                setWalletAddress(address);
+                setToast("Wallet Connected!");
+            } else {
+                throw new Error("Signature verification failed.");
+            }
         } catch (error) {
             console.error("Sign in error:", error);
             alert(`Error connecting wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);

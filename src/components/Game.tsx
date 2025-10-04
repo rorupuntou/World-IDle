@@ -69,13 +69,23 @@ export default function Game() {
     const [upgrades, setUpgrades] = useState<Upgrade[]>([]);
     const [achievements, setAchievements] = useState<Achievement[]>([]);
 
-    const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
+const [floatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
-    const [prestigeBalance, setPrestigeBalance] = useState(0);
-    const [isPrestigeReady, setIsPrestigeReady] = useState(false);
+    const [prestigeBalance] = useState(0);
+    const [isPrestigeReady] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+    // -- LÓGICA DE CARGA Y GUARDADO --
+
+    const formatNumber = useCallback((num: number) => {
+        if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        if (num < 1e6) return `${(num / 1e3).toFixed(2)}K`;
+        if (num < 1e9) return `${(num / 1e6).toFixed(2)}M`;
+        if (num < 1e12) return `${(num / 1e9).toFixed(2)}B`;
+        return `${(num / 1e12).toFixed(2)}T`;
+    }, []);
 
     const handleLoadGame = useCallback((data: any, proof: ISuccessResult) => {
         console.log("Loading game data from backend:", data);

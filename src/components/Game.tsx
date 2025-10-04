@@ -12,7 +12,7 @@ import { Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, Game
 import { prestigeTokenContract } from "../app/contracts/config";
 import { 
     initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER, 
-    PRICE_INCREASE_RATE, TIER_THRESHOLDS, GLOBAL_UPGRADE_THRESHOLDS, SAVE_KEY 
+    PRICE_INCREASE_RATE, TIER_THRESHOLDS, GLOBAL_UPGRADE_THRESHOLDS 
 } from "@/app/data";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
@@ -21,7 +21,45 @@ import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 import { WorldIDAuth } from "./WorldIDAuth";
 
-// ... (UI Components: Toast, NewsTicker)
+function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// -- COMPONENTES DE UI --
+const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
+    useEffect(() => {
+        const timer = setTimeout(onDone, 4000);
+        return () => clearTimeout(timer);
+    }, [onDone]);
+    return (
+        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-lime-400/90 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50">
+            <CheckBadgeIcon className="w-6 h-6" />
+            <span>{message}</span>
+            <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><XMarkIcon className="w-4 h-4" /></button>
+        </motion.div>
+    );
+};
+
+const NewsTicker = () => {
+    const [news, setNews] = useState(() => choose(newsFeed));
+    useEffect(() => {
+        const newsInterval = setInterval(() => { setNews(choose(newsFeed)); }, 8000);
+        return () => clearInterval(newsInterval);
+    }, []);
+    return (
+        <div className="absolute top-0 left-0 right-0 h-8 bg-black/50 flex items-center z-40 overflow-hidden">
+            <AnimatePresence mode="wait">
+                <motion.p
+                    key={news}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-sm text-slate-300 px-4 whitespace-nowrap w-full text-center"
+                    dangerouslySetInnerHTML={{ __html: news.replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
+                />
+            </AnimatePresence>
+        </div>
+    );
+};
 
 export default function Game() {
     const [player, setPlayer] = useState<{ proof: ISuccessResult, isVerified: boolean } | null>(null);

@@ -101,9 +101,24 @@ export default function Game() {
         }
         setIsAuthenticating(true);
         try {
-            const { address } = await MiniKit.commands.getWalletAddress();
-            setWalletAddress(address);
-            setToast("Wallet Connected!");
+            const res = await fetch(`/api/nonce`);
+            const { nonce } = await res.json();
+            const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce });
+            if (finalPayload.status === 'error') {
+                throw new Error("Wallet authentication failed.");
+            }
+            const response = await fetch('/api/complete-siwe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payload: finalPayload }),
+            });
+            const { isValid, address } = await response.json();
+            if (isValid) {
+                setWalletAddress(address);
+                setToast("Wallet Connected!");
+            } else {
+                throw new Error("Signature verification failed.");
+            }
         } catch (error) {
             console.error("Sign in error:", error);
             alert(`Error connecting wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -194,9 +209,79 @@ export default function Game() {
         setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== newFloatingNumber.id)); }, 2000);
         setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens + value }));
         setStats((prev: StatsState) => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
-    }, [clickValue, formatNumber, setGameState, setStats]);
+    }, [clickValue, formatNumber, setFloatingNumbers, setGameState, setStats]);
 
-    // ... (El resto de la lógica del juego como checkRequirements, purchaseAutoclicker, etc. va aquí)
+    const checkRequirements = useCallback((req: Requirement | undefined) => {
+        if (!req) return true;
+        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
+        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
+        if (req.tps !== undefined && stats.tokensPerSecond < req.tps) return false;
+        if (req.verified && !player?.isVerified) return false;
+        if (req.autoclickers) {
+            const owned = autoclickers.find(a => a.id === req.autoclickers?.id)?.purchased || 0;
+            if (owned < req.autoclickers.amount) return false;
+        }
+        return true;
+    }, [stats, player, autoclickers]);
+
+    const showRequirements = useCallback((item: { name: string, req?: Requirement }) => {
+        if (!item.req) return;
+        let message = `Requisitos para "${item.name}":\n\n`;
+        if (item.req.totalTokensEarned !== undefined) message += `- Ganar ${formatNumber(item.req.totalTokensEarned)} $WCLICK en total.\n  (Progreso: ${formatNumber(stats.totalTokensEarned)} / ${formatNumber(item.req.totalTokensEarned)})\n`;
+        if (item.req.totalClicks !== undefined) message += `- Hacer ${formatNumber(item.req.totalClicks)} clics.\n  (Progreso: ${formatNumber(stats.totalClicks)} / ${formatNumber(item.req.totalClicks)})\n`;
+        if (item.req.autoclickers) {
+            const autoInfo = initialAutoclickers.find(a => a.id === item.req?.autoclickers?.id);
+            const owned = autoclickers.find(a => a.id === item.req?.autoclickers?.id)?.purchased || 0;
+            if (autoInfo) message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
+        }
+        if (item.req.tps !== undefined) message += `- Producir ${formatNumber(item.req.tps)} $WCLICK/s.\n  (Progreso: ${formatNumber(stats.tokensPerSecond)} / ${formatNumber(item.req.tps)})\n`;
+        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${player?.isVerified ? 'Completado' : 'Pendiente'})\n`;
+        alert(message);
+    }, [stats, player, autoclickers, formatNumber]);
+
+    const calculateBulkCost = useCallback((autoclicker: Autoclicker, amount: BuyAmount) => {
+        let totalCost = 0;
+        let currentPrice = autoclicker.cost;
+        for (let i = 0; i < amount; i++) {
+            totalCost += currentPrice;
+            currentPrice = Math.ceil(currentPrice * PRICE_INCREASE_RATE);
+        }
+        return totalCost;
+    }, []);
+
+    const purchaseAutoclicker = useCallback((id: number) => {
+        const auto = autoclickers.find(a => a.id === id);
+        if (!auto) return;
+        const totalTokenCost = calculateBulkCost(auto, buyAmount);
+        const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
+        if (gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost) return;
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - totalTokenCost, humanityGems: prev.humanityGems - totalGemCost }));
+        setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount, cost: Math.ceil(a.cost * Math.pow(PRICE_INCREASE_RATE, buyAmount)) } : a));
+    }, [autoclickers, buyAmount, calculateBulkCost, gameState, setGameState, setAutoclickers]);
+
+    const purchaseUpgrade = useCallback((id: number) => {
+        const upg = upgrades.find(u => u.id === id);
+        if (!upg || upg.purchased || gameState.tokens < upg.cost || (upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)) return;
+        setGameState((prev: GameState) => ({ ...prev, tokens: prev.tokens - upg.cost, humanityGems: prev.humanityGems - (upg.humanityGemsCost || 0) }));
+        setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
+    }, [upgrades, gameState, setGameState, setUpgrades]);
+
+    const wipeSave = useCallback(() => {
+        if (window.confirm("¿Estás seguro de que quieres borrar tu progreso? Esta acción es irreversible.")) {
+            window.location.reload();
+        }
+    }, []);
+
+    const handlePrestige = useCallback(async () => {
+        if (!isPrestigeReady || !walletAddress) return;
+        if (!window.confirm("¿Estás seguro de que quieres reiniciar para reclamar tus tokens de Prestigio?")) return;
+        try {
+            alert("La funcionalidad de Prestigio está temporalmente deshabilitada.");
+        } catch (error) {
+            console.error("Error al ejecutar el Prestigio:", error);
+            alert(`Ocurrió un error al procesar el Prestigio. ${error instanceof Error ? error.message : ''}`);
+        }
+    }, [isPrestigeReady, walletAddress]);
 
     if (!walletAddress) {
         return (
@@ -250,10 +335,43 @@ export default function Game() {
                     <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
                         Click! (+{formatNumber(clickValue)})
                     </motion.button>
-                    {/* ... El resto de las secciones del juego ... */}
+                    <AutoclickersSection
+                        autoclickers={autoclickers}
+                        buyAmount={buyAmount}
+                        setBuyAmount={setBuyAmount}
+                        gameState={gameState}
+                        checkRequirements={checkRequirements}
+                        calculateBulkCost={calculateBulkCost}
+                        purchaseAutoclicker={purchaseAutoclicker}
+                        formatNumber={formatNumber}
+                        autoclickerCPSValues={autoclickerCPSValues}
+                    />
                 </div>
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                    {/* ... El resto de las secciones del juego ... */}
+                    <PrestigeSection
+                        prestigeBoost={prestigeBoost}
+                        prestigeBalance={prestigeBalance}
+                        handlePrestige={handlePrestige}
+                        isPrestigeReady={isPrestigeReady}
+                    />
+                    <UpgradesSection
+                        upgrades={upgrades}
+                        gameState={gameState}
+                        checkRequirements={checkRequirements}
+                        purchaseUpgrade={purchaseUpgrade}
+                        showRequirements={showRequirements}
+                        formatNumber={formatNumber}
+                    />
+                    <AchievementsSection
+                        achievements={achievements}
+                        showRequirements={showRequirements}
+                    />
+                    <div className="text-center">
+                        <button onClick={wipeSave} className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1 mx-auto">
+                            <ArrowPathIcon className="w-4 h-4" />
+                            Reiniciar Partida (Sin Prestigio)
+                        </button>
+                    </div>
                 </div>
             </div>
         </>

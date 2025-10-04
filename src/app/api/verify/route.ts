@@ -1,4 +1,3 @@
-import { type IVerifyResponse, verifyCloudProof } from "@worldcoin/idkit-core";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -11,20 +10,27 @@ export async function POST(req: NextRequest) {
 	}
 
 	try {
-		const verifyRes = (await verifyCloudProof(
-			proof,
-			app_id as `app_${string}`,
-			action
-		)) as IVerifyResponse;
+		const res = await fetch(
+			`https://developer.worldcoin.org/api/v2/verify/${app_id}`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ ...proof, action }),
+			}
+		);
 
-		if (verifyRes.success) {
+		const verifyRes = await res.json();
+
+		if (res.ok && verifyRes.success) {
 			// This is where you should perform backend actions if the verification succeeds
 			// Such as, setting a user as "verified" in a database
 			return NextResponse.json(verifyRes, { status: 200 });
 		} else {
 			// This is where you should handle errors from the World ID /verify endpoint.
 			// Usually these errors are due to a user having already verified.
-			return NextResponse.json(verifyRes, { status: 400 });
+			return NextResponse.json(verifyRes, { status: res.status });
 		}
 	} catch (error) {
 		console.error(error);

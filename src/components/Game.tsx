@@ -375,7 +375,7 @@ export default function Game() {
         <p className="mb-8 text-slate-400">Conecta tu World App para empezar a construir tu imperio.</p>
         <IDKitWidget
           app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-          action="connect_wallet"
+          action="play-world-idle"
           onSuccess={onConnectSuccess}
           verification_level={VerificationLevel.Orb}
         >

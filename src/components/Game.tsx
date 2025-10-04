@@ -5,11 +5,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 import { IDKitWidget, VerificationLevel, ISuccessResult } from '@worldcoin/idkit'
+import { MiniKit } from '@worldcoin/minikit-js'
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ethers } from "ethers";
 import { GameStatus, Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState } from "./types";
-import { prestigeTokenContract, gameManagerContract } from "../app/contracts/config";
+import { prestigeTokenContract } from "../app/contracts/config";
 import { useGameSave } from "./useGameSave";
 import { 
     initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER, 
@@ -63,7 +64,7 @@ const NewsTicker = () => {
 };
 
 export default function Game() {
-    const [status, setStatus] = useState<GameStatus>("UNAUTHENTICATED");
+    const [status, setStatus] = useState<GameStatus>("UNVERIFIED");
     const {
         gameState, setGameState, stats, setStats, autoclickers, setAutoclickers,
         upgrades, setUpgrades, achievements, setAchievements, saveGame
@@ -75,29 +76,27 @@ export default function Game() {
     const [prestigeBalance, setPrestigeBalance] = useState(0);
     const [isPrestigeReady, setIsPrestigeReady] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     // -- EFECTOS Y LÓGICA PRINCIPAL --
 
     // Carga de datos externos y guardado automático
     useEffect(() => {
-        const loadBalanceAndSetupSaving = async () => {
-            if ((window as any).ethereum) {
+        const loadBalance = async () => {
+            if (walletAddress && (window as any).ethereum) {
                 try {
                     const provider = new ethers.BrowserProvider((window as any).ethereum);
-                    const signer = await provider.getSigner();
-                    const address = await signer.getAddress();
-                    setWalletAddress(address);
                     const tokenContract = new ethers.Contract(prestigeTokenContract.address, prestigeTokenContract.abi, provider);
-                    const balance = await tokenContract.balanceOf(address);
+                    const balance = await tokenContract.balanceOf(walletAddress);
                     setPrestigeBalance(Number(ethers.formatUnits(balance, 18)));
                     console.log("Balance de Prestigio cargado:", Number(ethers.formatUnits(balance, 18)));
                 } catch (e) {
-                    console.error("No se pudo conectar a la wallet para leer el balance:", e);
+                    console.error("No se pudo leer el balance de prestigio:", e);
                 }
             }
         };
 
-        loadBalanceAndSetupSaving();
+        loadBalance();
         const saveInterval = setInterval(saveGame, 15000);
         window.addEventListener('beforeunload', saveGame);
 
@@ -105,7 +104,7 @@ export default function Game() {
             clearInterval(saveInterval);
             window.removeEventListener('beforeunload', saveGame);
         };
-    }, [saveGame]);
+    }, [walletAddress, saveGame]);
 
 
 
@@ -254,6 +253,44 @@ export default function Game() {
 
     // -- MANEJADORES DE EVENTOS Y ACCIONES --
 
+    const handleSignIn = useCallback(async () => {
+        if (!MiniKit.isInstalled()) {
+            alert("Por favor, abre esta aplicación dentro de World App para continuar.");
+            return;
+        }
+        setIsAuthenticating(true);
+        try {
+            const res = await fetch(`/api/nonce`);
+            const { nonce } = await res.json();
+
+            const { finalPayload } = await MiniKit.commandsAsync.walletAuth({ nonce });
+
+            if (finalPayload.status === 'error') {
+                throw new Error("La autenticación de la billetera falló.");
+            }
+
+            const response = await fetch('/api/complete-siwe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payload: finalPayload }),
+            });
+
+            const { isValid, address } = await response.json();
+
+            if (isValid) {
+                setWalletAddress(address);
+                setToast("¡Billetera conectada!");
+            } else {
+                throw new Error("La verificación de la firma falló.");
+            }
+        } catch (error) {
+            console.error("Error en el inicio de sesión:", error);
+            alert(`Error al conectar la billetera: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        } finally {
+            setIsAuthenticating(false);
+        }
+    }, []);
+
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
         const newFloatingNumber = { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY };
@@ -287,7 +324,8 @@ export default function Game() {
             if (autoInfo) message += `- Poseer ${item.req.autoclickers.amount} de "${autoInfo.name}".\n  (Progreso: ${owned} / ${item.req.autoclickers.amount})\n`;
         }
         if (item.req.tps !== undefined) message += `- Producir ${formatNumber(item.req.tps)} $WCLICK/s.\n  (Progreso: ${formatNumber(stats.tokensPerSecond)} / ${formatNumber(item.req.tps)})\n`;
-        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})\n`;
+        if (item.req.verified) message += `- Verificar con World ID.\n  (Progreso: ${status === 'VERIFIED' ? 'Completado' : 'Pendiente'})
+`;
         alert(message);
     }, [stats, status, autoclickers, formatNumber]);
 
@@ -329,15 +367,15 @@ export default function Game() {
         }
     }, []);
 
-    const onConnectSuccess = useCallback(() => { setStatus("UNVERIFIED"); }, []);
-    const onVerificationSuccess = useCallback(() => { setStatus("VERIFIED"); }, []);
+    const onVerificationSuccess = useCallback(() => { 
+        setStatus("VERIFIED");
+        setToast("¡Verificación completada! Boost x10 activado.");
+    }, []);
 
     const handleVerify = useCallback(async (proof: ISuccessResult) => {
 		const res = await fetch("/api/verify", {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(proof),
 		});
 		if (!res.ok) {
@@ -353,71 +391,60 @@ export default function Game() {
             if (!process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY) {
                 throw new Error("La clave privada del firmante no está configurada en las variables de entorno.");
             }
-            const signer = new ethers.Wallet(process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY);
+            // const signer = new ethers.Wallet(process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY);
             const totalTokensInt = BigInt(Math.floor(stats.totalTokensEarned));
-            const messageHash = ethers.solidityPackedKeccak256(["address", "uint256"], [walletAddress, totalTokensInt]);
-            const signature = await signer.signMessage(ethers.getBytes(messageHash));
-            const gameManagerInterface = new ethers.Interface(gameManagerContract.abi);
-            const calldata = gameManagerInterface.encodeFunctionData("claimPrestigeReward", [totalTokensInt, signature]);
+            // const messageHash = ethers.solidityPackedKeccak256(["address", "uint256"], [walletAddress, totalTokensInt]);
+            // const signature = await signer.signMessage(ethers.getBytes(messageHash));
+            // const gameManagerInterface = new ethers.Interface(gameManagerContract.abi);
+            // const calldata = gameManagerInterface.encodeFunctionData("claimPrestigeReward", [totalTokensInt, signature]);
 
-            const tx = { to: gameManagerContract.address, data: calldata, value: '0' };
-            // TODO: Re-implement transaction sending without MiniKit
-            // const { finalPayload } = await MiniKit.commandsAsync.sendTransaction(tx as any);
-
-            // if (finalPayload.status === 'success') {
-            //     setToast("¡Recompensa de Prestigio reclamada! Reiniciando partida...");
-            //     setTimeout(() => {
-            //         localStorage.removeItem(SAVE_KEY);
-            //         window.location.reload();
-            //     }, 3000);
-            // } else {
-            //     alert("La transacción de Prestigio falló.");
-            // }
+            // const tx = { to: gameManagerContract.address, data: calldata, value: '0' };
+            
             alert("La funcionalidad de Prestigio está temporalmente deshabilitada y necesita ser actualizada.");
         } catch (error) {
             console.error("Error al ejecutar el Prestigio:", error);
             alert(`Ocurrió un error al procesar el Prestigio. ${error instanceof Error ? error.message : ''}`);
         }
-    }, [isPrestigeReady, walletAddress, stats.totalTokensEarned, setToast]);
+    }, [isPrestigeReady, walletAddress, stats.totalTokensEarned]);
 
   // -- RENDERIZADO --
-  if (status !== "VERIFIED") {
-    return status === "UNAUTHENTICATED" ? (
+  if (!walletAddress) {
+    return (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
-        <p className="mb-8 text-slate-400">Conecta tu World App para empezar a construir tu imperio.</p>
-        <IDKitWidget
-          app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-          action="play-world-idle"
-          onSuccess={onConnectSuccess}
-          handleVerify={handleVerify}
-          verification_level={VerificationLevel.Orb}
+        <p className="mb-8 text-slate-400">Conecta tu billetera de World App para empezar a construir tu imperio.</p>
+        <button 
+            onClick={handleSignIn} 
+            disabled={isAuthenticating}
+            className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg disabled:bg-slate-600 disabled:cursor-not-allowed"
         >
-          {({ open }) =>
-            <button onClick={open} className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg">
-              Conectar Wallet
-            </button>
-          }
-        </IDKitWidget>
+          {isAuthenticating ? "Conectando..." : "Conectar Billetera"}
+        </button>
       </div>
-    ) : (
-      <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
-        <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
-        <p className="mb-8 text-slate-400">Verifícate como humano con World ID para obtener un boost de producción x10.</p>
-        <IDKitWidget
-          app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
-          action="play-world-idle"
-            onSuccess={onVerificationSuccess}
-            handleVerify={handleVerify}
-            verification_level={VerificationLevel.Orb}
-        >
-          {({ open }) =>
-            <button onClick={open} className="w-full bg-lime-500/80 hover:bg-lime-500 text-stone-900 font-bold py-3 px-6 rounded-lg text-lg">
-              Verificar con World ID
-            </button>
-          }
-        </IDKitWidget>
-      </div>
+    );
+  }
+
+  if (status !== "VERIFIED") {
+    return (
+        <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
+            <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
+            <p className="mb-8 text-slate-400">Verifícate como humano con World ID para obtener un boost de producción x10 y empezar a jugar.</p>
+            <IDKitWidget
+                app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
+                action="play-world-idle"
+                onSuccess={onVerificationSuccess}
+                handleVerify={handleVerify}
+                verification_level={VerificationLevel.Orb}
+                signal={walletAddress} // Use wallet address as signal for added security
+            >
+              {({ open }) =>
+                <button onClick={open} className="w-full bg-lime-500/80 hover:bg-lime-500 text-stone-900 font-bold py-3 px-6 rounded-lg text-lg">
+                  Verificar con World ID
+                </button>
+              }
+            </IDKitWidget>
+            <button onClick={() => setStatus("VERIFIED")} className="mt-4 text-sm text-slate-400 hover:text-slate-200">Jugar sin verificar</button>
+        </div>
     );
   }
 
@@ -436,7 +463,7 @@ export default function Game() {
         <div className="w-full lg:w-2/3 flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
-            <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>
+            {status === "VERIFIED" && <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>}
           </div>
           <HeaderStats
             tokens={gameState.tokens}

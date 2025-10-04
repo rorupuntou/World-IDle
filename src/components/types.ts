@@ -1,4 +1,4 @@
-export type GameStatus = "UNAUTHENTICATED" | "UNVERIFIED" | "VERIFIED";
+export type GameStatus = "DETECTING" | "MINIKIT_UNAVAILABLE" | "MINIKIT_AVAILABLE" | "UNAUTHENTICATED" | "UNVERIFIED" | "VERIFIED";
 
 export type Requirement = {
   totalTokensEarned?: number;

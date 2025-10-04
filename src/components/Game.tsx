@@ -3,8 +3,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { MiniKit, VerificationLevel } from "@worldcoin/minikit-js";
-import { IDKitWidget } from '@worldcoin/idkit'
+
+import { IDKitWidget, VerificationLevel } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ethers } from "ethers";
@@ -107,8 +107,7 @@ export default function Game() {
         };
     }, [saveGame]);
 
-    // Inicialización de World ID
-    useEffect(() => { MiniKit.install(); }, []);
+
 
     // Formateo de números (memoizado para estabilidad)
     const formatNumber = useCallback((num: number) => {
@@ -330,17 +329,8 @@ export default function Game() {
         }
     }, []);
 
+    const onConnectSuccess = useCallback(() => { setStatus("UNVERIFIED"); }, []);
     const onVerificationSuccess = useCallback(() => { setStatus("VERIFIED"); }, []);
-    const handleProof = useCallback(() => { }, []);
-    const handleConnect = useCallback(async () => {
-        try {
-            await MiniKit.commandsAsync.walletAuth({ nonce: "world-idle-login" });
-            setStatus("UNVERIFIED");
-            window.location.reload();
-        } catch (error) {
-            console.error("Wallet connection failed:", error);
-        }
-    }, []);
 
     const handlePrestige = useCallback(async () => {
         if (!isPrestigeReady || !walletAddress) return;
@@ -358,17 +348,19 @@ export default function Game() {
             const calldata = gameManagerInterface.encodeFunctionData("claimPrestigeReward", [totalTokensInt, signature]);
 
             const tx = { to: gameManagerContract.address, data: calldata, value: '0' };
-            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction(tx as any);
+            // TODO: Re-implement transaction sending without MiniKit
+            // const { finalPayload } = await MiniKit.commandsAsync.sendTransaction(tx as any);
 
-            if (finalPayload.status === 'success') {
-                setToast("¡Recompensa de Prestigio reclamada! Reiniciando partida...");
-                setTimeout(() => {
-                    localStorage.removeItem(SAVE_KEY);
-                    window.location.reload();
-                }, 3000);
-            } else {
-                alert("La transacción de Prestigio falló.");
-            }
+            // if (finalPayload.status === 'success') {
+            //     setToast("¡Recompensa de Prestigio reclamada! Reiniciando partida...");
+            //     setTimeout(() => {
+            //         localStorage.removeItem(SAVE_KEY);
+            //         window.location.reload();
+            //     }, 3000);
+            // } else {
+            //     alert("La transacción de Prestigio falló.");
+            // }
+            alert("La funcionalidad de Prestigio está temporalmente deshabilitada y necesita ser actualizada.");
         } catch (error) {
             console.error("Error al ejecutar el Prestigio:", error);
             alert(`Ocurrió un error al procesar el Prestigio. ${error instanceof Error ? error.message : ''}`);
@@ -381,19 +373,27 @@ export default function Game() {
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
         <p className="mb-8 text-slate-400">Conecta tu World App para empezar a construir tu imperio.</p>
-        <button onClick={handleConnect} className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg">
-          Conectar Wallet
-        </button>
+        <IDKitWidget
+          app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
+          action="connect_wallet"
+          onSuccess={onConnectSuccess}
+          verification_level={VerificationLevel.Orb}
+        >
+          {({ open }) =>
+            <button onClick={open} className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg">
+              Conectar Wallet
+            </button>
+          }
+        </IDKitWidget>
       </div>
     ) : (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
         <p className="mb-8 text-slate-400">Verifícate como humano con World ID para obtener un boost de producción x10.</p>
         <IDKitWidget
-          app_id={process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`}
+          app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
           action="play-world-idle"
             onSuccess={onVerificationSuccess}
-            handleVerify={handleProof}
             verification_level={VerificationLevel.Orb}
         >
           {({ open }) =>

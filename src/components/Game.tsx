@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 
-import { IDKitWidget, VerificationLevel } from '@worldcoin/idkit'
+import { IDKitWidget, VerificationLevel, ISuccessResult } from '@worldcoin/idkit'
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { ethers } from "ethers";
@@ -332,6 +332,19 @@ export default function Game() {
     const onConnectSuccess = useCallback(() => { setStatus("UNVERIFIED"); }, []);
     const onVerificationSuccess = useCallback(() => { setStatus("VERIFIED"); }, []);
 
+    const handleVerify = useCallback(async (proof: ISuccessResult) => {
+		const res = await fetch("/api/verify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(proof),
+		});
+		if (!res.ok) {
+			throw new Error("Verification failed.");
+		}
+	}, []);
+
     const handlePrestige = useCallback(async () => {
         if (!isPrestigeReady || !walletAddress) return;
         if (!window.confirm("¿Estás seguro de que quieres reiniciar para reclamar tus tokens de Prestigio? Tu progreso actual se borrará, pero empezarás la siguiente partida con un boost permanente.")) return;
@@ -377,7 +390,8 @@ export default function Game() {
           app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
           action="play-world-idle"
           onSuccess={onConnectSuccess}
-          verification_level={VerificationLevel.Device}
+          handleVerify={handleVerify}
+          verification_level={VerificationLevel.Orb}
         >
           {({ open }) =>
             <button onClick={open} className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg">
@@ -394,6 +408,7 @@ export default function Game() {
           app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
           action="play-world-idle"
             onSuccess={onVerificationSuccess}
+            handleVerify={handleVerify}
             verification_level={VerificationLevel.Orb}
         >
           {({ open }) =>

@@ -77,8 +77,21 @@ export default function Game() {
     const [isPrestigeReady, setIsPrestigeReady] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [minikitStatus, setMinikitStatus] = useState("Checking...");
 
     // -- EFECTOS Y LÓGICA PRINCIPAL --
+
+    // DEBUG: Check for MiniKit on mount
+    useEffect(() => {
+        console.log("Component mounted. Checking for MiniKit...");
+        // Use a small timeout to give the World App environment time to inject the MiniKit object
+        setTimeout(() => {
+            const isInstalled = MiniKit.isInstalled();
+            console.log("MiniKit check (after 500ms):", isInstalled);
+            console.log("window.MiniKit object:", (window as any).MiniKit);
+            setMinikitStatus(isInstalled ? "Installed" : "Not Installed");
+        }, 500);
+    }, []);
 
     // Carga de datos externos y guardado automático
     useEffect(() => {
@@ -254,10 +267,13 @@ export default function Game() {
     // -- MANEJADORES DE EVENTOS Y ACCIONES --
 
     const handleSignIn = useCallback(async () => {
-        if (!MiniKit.isInstalled()) {
-            alert("Por favor, abre esta aplicación dentro de World App para continuar.");
+        const isInstalled = MiniKit.isInstalled();
+        if (!isInstalled) {
+            // More informative alert for debugging
+            alert(`Debug: MiniKit no está instalado. MiniKit.isInstalled() devolvió ${isInstalled}. El objeto window.MiniKit es: ${JSON.stringify((window as any).MiniKit)}`);
             return;
         }
+        
         setIsAuthenticating(true);
         try {
             const res = await fetch(`/api/nonce`);
@@ -392,7 +408,7 @@ export default function Game() {
                 throw new Error("La clave privada del firmante no está configurada en las variables de entorno.");
             }
             // const signer = new ethers.Wallet(process.env.NEXT_PUBLIC_SIGNER_PRIVATE_KEY);
-            const totalTokensInt = BigInt(Math.floor(stats.totalTokensEarned));
+            // const totalTokensInt = BigInt(Math.floor(stats.totalTokensEarned));
             // const messageHash = ethers.solidityPackedKeccak256(["address", "uint256"], [walletAddress, totalTokensInt]);
             // const signature = await signer.signMessage(ethers.getBytes(messageHash));
             // const gameManagerInterface = new ethers.Interface(gameManagerContract.abi);
@@ -405,7 +421,7 @@ export default function Game() {
             console.error("Error al ejecutar el Prestigio:", error);
             alert(`Ocurrió un error al procesar el Prestigio. ${error instanceof Error ? error.message : ''}`);
         }
-    }, [isPrestigeReady, walletAddress, stats.totalTokensEarned]);
+    }, [isPrestigeReady, walletAddress]);
 
   // -- RENDERIZADO --
   if (!walletAddress) {
@@ -420,6 +436,7 @@ export default function Game() {
         >
           {isAuthenticating ? "Conectando..." : "Conectar Billetera"}
         </button>
+        <p className="text-xs text-slate-500 mt-4">Estado de MiniKit: {minikitStatus}</p>
       </div>
     );
   }

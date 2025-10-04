@@ -33,7 +33,7 @@ export const WorldIDAuth = ({ onSuccessfulVerify }: WorldIDAuthProps) => {
       return;
     }
 
-    const data: VerifyReply = await res.json();
+    const data: LoadedGameData = await res.json();
     onSuccessfulVerify(data, result); // <-- Pass both data and proof
   };
 

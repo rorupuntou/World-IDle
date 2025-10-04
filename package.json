@@ -16,9 +16,11 @@
     "@worldcoin/minikit-js": "^1.9.7",
     "ethers": "^6.15.0",
     "framer-motion": "^12.23.22",
+    "iron-session": "^8.0.4",
     "next": "15.5.4",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "siwe": "^3.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

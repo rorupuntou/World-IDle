@@ -1,5 +1,6 @@
 import { SiweMessage } from 'siwe';
 import { getSession } from '@/lib/session';
+import { IronSessionData } from 'iron-session';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (verification.success) {
-      session.siwe = verification.data; // Guardar datos del usuario en la sesión
+      (session as IronSessionData).siwe = verification.data; // Guardar datos del usuario en la sesión
       await session.save();
       return NextResponse.json({ isValid: true, address: verification.data.address });
     }

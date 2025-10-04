@@ -4,7 +4,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await getSession();
-  session.nonce = generateNonce();
+  const nonce = generateNonce();
+  session.nonce = nonce;
   await session.save();
-  return NextResponse.json({ nonce: session.nonce });
+
+  return NextResponse.json({ nonce });
 }

@@ -1,4 +1,4 @@
-import { getIronSession, IronSessionData } from "iron-session";
+import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 import { SiweMessage } from "siwe";
 
@@ -18,7 +18,7 @@ export const sessionOptions = {
   },
 };
 
-export function getSession() {
+export async function getSession() {
   // The generic is no longer needed here as the type is augmented globally
-  return getIronSession(cookies(), sessionOptions);
+  return getIronSession(await cookies(), sessionOptions);
 }

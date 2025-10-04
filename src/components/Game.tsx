@@ -377,7 +377,7 @@ export default function Game() {
           app_id={process.env.NEXT_PUBLIC_APP_ID as `app_${string}`}
           action="play-world-idle"
           onSuccess={onConnectSuccess}
-          verification_level={VerificationLevel.Orb}
+          verification_level={VerificationLevel.Device}
         >
           {({ open }) =>
             <button onClick={open} className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg">

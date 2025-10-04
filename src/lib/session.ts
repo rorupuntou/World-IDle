@@ -1,4 +1,4 @@
-import { getIronSession, IronSession, IronSessionData } from "iron-session";
+import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
 
 export const sessionOptions = {
@@ -10,5 +10,5 @@ export const sessionOptions = {
 };
 
 export function getSession() {
-  return getIronSession<IronSessionData>(cookies(), sessionOptions);
+  return getIronSession(cookies(), sessionOptions);
 }

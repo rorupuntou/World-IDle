@@ -1,5 +1,4 @@
 import { IDKitWidget, ISuccessResult } from '@worldcoin/idkit';
-import type { VerifyReply } from '@/app/api/world-idle-auth/route';
 import { GameState, StatsState, Autoclicker, Upgrade, Achievement } from './types';
 
 // Define a type for the data structure we expect from the backend
@@ -39,7 +38,7 @@ export const WorldIDAuth = ({ onSuccessfulVerify }: WorldIDAuthProps) => {
 
   return (
     <IDKitWidget
-      app_id={process.env.NEXT_PUBLIC_WLD_APP_ID!}
+      app_id={process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`}
       action={process.env.WLD_ACTION_ID!}
       onSuccess={() => {}} // onSuccess is now handled by handleProof, so we can leave this empty.
       handleVerify={handleProof}

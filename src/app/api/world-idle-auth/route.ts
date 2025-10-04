@@ -14,12 +14,18 @@ async function verifyUser(proof: ISuccessResult) {
   const app_id = process.env.NEXT_PUBLIC_WLD_APP_ID!;
   const action = process.env.WLD_ACTION_ID!;
 
-  const verifyRes = await fetch(`${WLD_API_BASE_URL}/verify`, {
+  const verifyRes = await fetch(`${WLD_API_BASE_URL}/v2/verify/${app_id}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ ...proof, app_id, action }),
+    body: JSON.stringify({
+      nullifier_hash: proof.nullifier_hash,
+      merkle_root: proof.merkle_root,
+      proof: proof.proof,
+      verification_level: proof.verification_level,
+      action: action,
+    }),
   });
 
   const wldResponse: VerifyReply = await verifyRes.json();

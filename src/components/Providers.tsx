@@ -2,14 +2,13 @@
 
 import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { world, mainnet } from 'wagmi/chains';
+import { mainnet } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
 
 // Define World Chain as a custom chain for wagmi
 const worldChain = {
-  ...world, // Inherits properties from the base 'world' chain definition if available
   id: 480,
   name: 'World Chain',
   nativeCurrency: { name: 'Worldcoin', symbol: 'WRLD', decimals: 18 },

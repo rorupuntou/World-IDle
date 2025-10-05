@@ -3,6 +3,7 @@
 import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
+import { injected } from 'wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const worldChain = {
 
 const config = createConfig({
   chains: [worldChain, mainnet],
+  connectors: [injected()],
   transports: {
     [worldChain.id]: http(),
     [mainnet.id]: http(),

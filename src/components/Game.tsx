@@ -14,7 +14,6 @@ import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
-import { WorldIDAuth } from "./WorldIDAuth";
 
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -58,7 +57,6 @@ const NewsTicker = () => {
 export default function Game() {
     const [isClient, setIsClient] = useState(false);
     const [walletAddress, setWalletAddress] = useState<string | null>(null);
-    const [worldIdVerified, setWorldIdVerified] = useState(false);
     
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
@@ -75,8 +73,9 @@ export default function Game() {
         setIsClient(true);
     }, []);
 
-    const handleLoadGame = useCallback((data: { success: boolean; gameData: FullGameState | null }) => {
-        console.log("Loading game data from backend:", data);
+    const loadGameFromBackend = useCallback(async (address: string) => {
+        const res = await fetch(`/api/load-game?walletAddress=${address}`);
+        const data = await res.json();
         if (data.success && data.gameData) {
             const gameData = data.gameData;
             if (gameData.gameState) setGameState(gameData.gameState);
@@ -84,24 +83,21 @@ export default function Game() {
             if (gameData.autoclickers) setAutoclickers(gameData.autoclickers);
             if (gameData.upgrades) setUpgrades(gameData.upgrades);
             if (gameData.achievements) setAchievements(gameData.achievements);
-            setWorldIdVerified(true);
             setToast("Partida cargada exitosamente!");
         } else {
-            // New player, start with initial state
-            setWorldIdVerified(true);
             setToast("¡Bienvenido! Tu aventura comienza ahora.");
         }
     }, []);
 
     const saveGameToBackend = useCallback(async () => {
-        if (!worldIdVerified || !walletAddress) return;
+        if (!walletAddress) return;
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         await fetch("/api/save-game", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ walletAddress, gameData: fullGameState }),
         });
-    }, [worldIdVerified, walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
+    }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
     const handleConnectWallet = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
@@ -119,6 +115,7 @@ export default function Game() {
     
             if (address) {
                 setWalletAddress(address);
+                loadGameFromBackend(address);
             } else {
                 throw new Error("Could not parse address from wallet response.");
             }
@@ -127,7 +124,7 @@ export default function Game() {
             console.error("Wallet connection error:", error);
             alert(`Error connecting wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }, []);
+    }, [loadGameFromBackend]);
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -150,23 +147,23 @@ export default function Game() {
             });
         });
         const totalAutoclickerCPS = autoclickers.reduce((total, auto) => total + auto.purchased * auto.tps, 0);
-        const humanityBoost = worldIdVerified ? HUMAN_BOOST_MULTIPLIER : 1;
+        const humanityBoost = 1; // World ID boost disabled for now
         const finalGlobalMultiplier = globalMultiplier * humanityBoost * (1 + prestigeBoost / 100);
         const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
         const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
         const finalClickValue = baseClickValue * humanityBoost;
         return { totalCPS: finalTotalCPS, clickValue: finalClickValue };
-    }, [upgrades, autoclickers, worldIdVerified, prestigeBoost]);
+    }, [upgrades, autoclickers, prestigeBoost]);
 
     useEffect(() => {
-        if (!worldIdVerified) return;
+        if (!walletAddress) return;
         const saveInterval = setInterval(saveGameToBackend, 15000);
         window.addEventListener('beforeunload', saveGameToBackend);
         return () => {
             clearInterval(saveInterval);
             window.removeEventListener('beforeunload', saveGameToBackend);
         };
-    }, [saveGameToBackend, worldIdVerified]);
+    }, [saveGameToBackend, walletAddress]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -181,13 +178,13 @@ export default function Game() {
         if (req.totalTokensEarned && stats.totalTokensEarned < req.totalTokensEarned) return false;
         if (req.totalClicks && stats.totalClicks < req.totalClicks) return false;
         if (req.tps && totalCPS < req.tps) return false;
-        if (req.verified && !worldIdVerified) return false;
+        if (req.verified) return false; // World ID verification disabled
         if (req.autoclickers) {
             const auto = autoclickers.find(a => a.id === req.autoclickers?.id);
             if (!auto || auto.purchased < req.autoclickers.amount) return false;
         }
         return true;
-    }, [stats.totalTokensEarned, stats.totalClicks, totalCPS, worldIdVerified, autoclickers]);
+    }, [stats.totalTokensEarned, stats.totalClicks, totalCPS, autoclickers]);
 
     const calculateBulkCost = useCallback((autoclicker: Autoclicker, amount: BuyAmount) => {
         // This is a placeholder for bulk cost calculation
@@ -211,16 +208,6 @@ export default function Game() {
         );
     }
 
-    if (!worldIdVerified) {
-        return (
-            <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
-                <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
-                <p className="mb-8 text-slate-400">Verifícate con World ID para cargar tu partida.</p>
-                <WorldIDAuth signal={walletAddress} onSuccessfulVerify={handleLoadGame} />
-            </div>
-        );
-    }
-
     return (
         <>
             <NewsTicker />
@@ -236,7 +223,6 @@ export default function Game() {
                 <div className="w-full lg:w-2/3 flex flex-col gap-6">
                     <div className="text-center">
                         <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
-                        {worldIdVerified && <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>}
                     </div>
                     <HeaderStats
                         tokens={gameState.tokens}

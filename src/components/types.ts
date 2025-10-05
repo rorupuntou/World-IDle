@@ -59,3 +59,12 @@ export type StatsState = {
   totalClicks: number;
   tokensPerSecond: number;
 };
+
+// Define the structure of the full game data saved and loaded from the backend
+export type FullGameState = {
+    gameState: GameState;
+    stats: StatsState;
+    autoclickers: Autoclicker[];
+    upgrades: Upgrade[];
+    achievements: Achievement[];
+};

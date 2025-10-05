@@ -1,17 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckBadgeIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-import { ISuccessResult } from "@worldcoin/idkit";
+import { CheckBadgeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
-import { usePrivy, useLoginWithSiwe } from "@privy-io/react-auth";
 
-import { Requirement, Effect, Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState } from "./types";
+import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
 import { 
-    initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER, 
-    PRICE_INCREASE_RATE, TIER_THRESHOLDS, GLOBAL_UPGRADE_THRESHOLDS
+    initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER 
 } from "@/app/data";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
@@ -60,60 +56,78 @@ const NewsTicker = () => {
 };
 
 export default function Game() {
-    const { ready, authenticated, user, logout } = usePrivy();
-    const { loginWithSiwe } = useLoginWithSiwe();
-
-    const [idKitPlayer, setIdKitPlayer] = useState<{ proof: ISuccessResult, isVerified: boolean } | null>(null);
+    const [isClient, setIsClient] = useState(false);
+    const [walletAddress, setWalletAddress] = useState<string | null>(null);
+    const [worldIdVerified, setWorldIdVerified] = useState(false);
     
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
     const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
     const [upgrades, setUpgrades] = useState<Upgrade[]>([]);
     const [achievements, setAchievements] = useState<Achievement[]>([]);
-    const [prestigeBalance, setPrestigeBalance] = useState(0);
-    const [isPrestigeReady, setIsPrestigeReady] = useState(false);
-
+    const [prestigeBalance] = useState(0);
+    
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
 
-    const handleLoadGame = useCallback((data: any, proof: ISuccessResult) => {
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    const handleLoadGame = useCallback((data: { success: boolean; gameData: FullGameState | null }) => {
         console.log("Loading game data from backend:", data);
-        if (data.gameState) setGameState(data.gameState);
-        if (data.stats) setStats(data.stats);
-        if (data.autoclickers) setAutoclickers(data.autoclickers);
-        if (data.upgrades) setUpgrades(data.upgrades);
-        if (data.achievements) setAchievements(data.achievements);
-        setIdKitPlayer({ proof, isVerified: true });
-        setToast("Partida cargada exitosamente!");
+        if (data.success && data.gameData) {
+            const gameData = data.gameData;
+            if (gameData.gameState) setGameState(gameData.gameState);
+            if (gameData.stats) setStats(gameData.stats);
+            if (gameData.autoclickers) setAutoclickers(gameData.autoclickers);
+            if (gameData.upgrades) setUpgrades(gameData.upgrades);
+            if (gameData.achievements) setAchievements(gameData.achievements);
+            setWorldIdVerified(true);
+            setToast("Partida cargada exitosamente!");
+        } else {
+            // New player, start with initial state
+            setWorldIdVerified(true);
+            setToast("¡Bienvenido! Tu aventura comienza ahora.");
+        }
     }, []);
 
     const saveGameToBackend = useCallback(async () => {
-        if (!idKitPlayer?.isVerified) return;
-        const fullGameState = { gameState, stats, autoclickers, upgrades, achievements };
-        await fetch("/api/world-idle-auth", {
-            method: "PATCH",
+        if (!worldIdVerified || !walletAddress) return;
+        const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
+        await fetch("/api/save-game", {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ proof: idKitPlayer.proof, game_data: fullGameState }),
+            body: JSON.stringify({ walletAddress, gameData: fullGameState }),
         });
-    }, [idKitPlayer, gameState, stats, autoclickers, upgrades, achievements]);
+    }, [worldIdVerified, walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
-    const handleSignIn = useCallback(async () => {
+    const handleConnectWallet = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
             return alert("Please open this app in World App to continue.");
         }
         try {
-            const { finalPayload } = await MiniKit.commandsAsync.walletAuth();
-            if (finalPayload.status === 'error') {
-                throw new Error(finalPayload.error?.message ?? "Wallet authentication failed.");
+            const nonce = String(Math.random());
+            const result = await MiniKit.commandsAsync.walletAuth({ nonce });
+    
+            if (result.finalPayload.status === 'error') {
+                throw new Error("Wallet authentication failed.");
             }
-            const { message, signature } = finalPayload;
-            await loginWithSiwe({ message, signature });
+            
+            const address = result.finalPayload.message.match(/0x[a-fA-F0-9]{40}/)?.[0];
+    
+            if (address) {
+                setWalletAddress(address);
+            } else {
+                throw new Error("Could not parse address from wallet response.");
+            }
+    
         } catch (error) {
-            console.error("Sign in error:", error);
+            console.error("Wallet connection error:", error);
             alert(`Error connecting wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-    }, [loginWithSiwe]);
+    }, []);
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -136,23 +150,23 @@ export default function Game() {
             });
         });
         const totalAutoclickerCPS = autoclickers.reduce((total, auto) => total + auto.purchased * auto.tps, 0);
-        const humanityBoost = idKitPlayer?.isVerified ? HUMAN_BOOST_MULTIPLIER : 1;
+        const humanityBoost = worldIdVerified ? HUMAN_BOOST_MULTIPLIER : 1;
         const finalGlobalMultiplier = globalMultiplier * humanityBoost * (1 + prestigeBoost / 100);
         const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
         const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
         const finalClickValue = baseClickValue * humanityBoost;
         return { totalCPS: finalTotalCPS, clickValue: finalClickValue };
-    }, [upgrades, autoclickers, idKitPlayer, prestigeBoost]);
+    }, [upgrades, autoclickers, worldIdVerified, prestigeBoost]);
 
     useEffect(() => {
-        if (!idKitPlayer?.isVerified) return;
+        if (!worldIdVerified) return;
         const saveInterval = setInterval(saveGameToBackend, 15000);
         window.addEventListener('beforeunload', saveGameToBackend);
         return () => {
             clearInterval(saveInterval);
             window.removeEventListener('beforeunload', saveGameToBackend);
         };
-    }, [saveGameToBackend, idKitPlayer]);
+    }, [saveGameToBackend, worldIdVerified]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -162,15 +176,33 @@ export default function Game() {
         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
     }, [clickValue, formatNumber]);
 
-    if (!ready) return <div>Loading...</div>; // Privy loading state
+    const checkRequirements = useCallback((req: Requirement | undefined) => {
+        if (!req) return true;
+        if (req.totalTokensEarned && stats.totalTokensEarned < req.totalTokensEarned) return false;
+        if (req.totalClicks && stats.totalClicks < req.totalClicks) return false;
+        if (req.tps && totalCPS < req.tps) return false;
+        if (req.verified && !worldIdVerified) return false;
+        if (req.autoclickers) {
+            const auto = autoclickers.find(a => a.id === req.autoclickers?.id);
+            if (!auto || auto.purchased < req.autoclickers.amount) return false;
+        }
+        return true;
+    }, [stats.totalTokensEarned, stats.totalClicks, totalCPS, worldIdVerified, autoclickers]);
 
-    if (!authenticated) {
+    const calculateBulkCost = useCallback((autoclicker: Autoclicker, amount: BuyAmount) => {
+        // This is a placeholder for bulk cost calculation
+        return autoclicker.cost * amount;
+    }, []);
+
+    if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+
+    if (!walletAddress) {
         return (
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
                 <p className="mb-8 text-slate-400">Conecta tu billetera de World App para empezar.</p>
                 <button 
-                    onClick={handleSignIn} 
+                    onClick={handleConnectWallet} 
                     className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
                 >
                     Conectar Billetera
@@ -179,12 +211,12 @@ export default function Game() {
         );
     }
 
-    if (!idKitPlayer?.isVerified) {
+    if (!worldIdVerified) {
         return (
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-3xl font-bold mb-4">¡Un paso más!</h1>
                 <p className="mb-8 text-slate-400">Verifícate con World ID para cargar tu partida.</p>
-                <WorldIDAuth onSuccessfulVerify={handleLoadGame} />
+                <WorldIDAuth signal={walletAddress} onSuccessfulVerify={handleLoadGame} />
             </div>
         );
     }
@@ -204,7 +236,7 @@ export default function Game() {
                 <div className="w-full lg:w-2/3 flex flex-col gap-6">
                     <div className="text-center">
                         <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
-                        {idKitPlayer?.isVerified && <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>}
+                        {worldIdVerified && <p className="text-cyan-400 font-semibold animate-pulse">🚀 Boost de Humanidad Activado 🚀</p>}
                     </div>
                     <HeaderStats
                         tokens={gameState.tokens}
@@ -221,7 +253,7 @@ export default function Game() {
                         setBuyAmount={setBuyAmount}
                         gameState={gameState}
                         checkRequirements={checkRequirements}
-                        calculateBulkCost={useCallback(() => 0, [])} // Placeholder
+                        calculateBulkCost={calculateBulkCost}
                         purchaseAutoclicker={() => {}} // Placeholder
                         formatNumber={formatNumber}
                         autoclickerCPSValues={new Map()} // Placeholder
@@ -232,7 +264,7 @@ export default function Game() {
                         prestigeBoost={prestigeBoost}
                         prestigeBalance={prestigeBalance}
                         handlePrestige={() => {}} // Placeholder
-                        isPrestigeReady={isPrestigeReady}
+                        isPrestigeReady={false} // Placeholder
                     />
                     <UpgradesSection
                         upgrades={upgrades}
@@ -246,12 +278,6 @@ export default function Game() {
                         achievements={achievements}
                         showRequirements={() => {}} // Placeholder
                     />
-                    <div className="text-center">
-                        <button onClick={logout} className="text-xs text-slate-500 hover:text-red-400 flex items-center gap-1 mx-auto">
-                            <ArrowPathIcon className="w-4 h-4" />
-                            Cerrar Sesión
-                        </button>
-                    </div>
                 </div>
             </div>
         </>

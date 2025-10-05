@@ -1,29 +1,27 @@
 import { IDKitWidget, ISuccessResult } from '@worldcoin/idkit';
-import { GameState, StatsState, Autoclicker, Upgrade, Achievement } from './types';
+import { FullGameState } from './types';
 
-// Define a type for the data structure we expect from the backend
-export type LoadedGameData = {
-  gameState: GameState;
-  stats: StatsState;
-  autoclickers: Autoclicker[];
-  upgrades: Upgrade[];
-  achievements: Achievement[];
-  nullifier_hash: string;
+// Define the expected shape of the data from the /api/verify-worldid endpoint
+interface VerifyResponse {
+  success: boolean;
+  gameData: FullGameState | null;
 }
 
 interface WorldIDAuthProps {
-  onSuccessfulVerify: (data: LoadedGameData, proof: ISuccessResult) => void;
+  signal: string; // The user's wallet address
+  onSuccessfulVerify: (data: VerifyResponse) => void;
 }
 
-export const WorldIDAuth = ({ onSuccessfulVerify }: WorldIDAuthProps) => {
+export const WorldIDAuth = ({ signal, onSuccessfulVerify }: WorldIDAuthProps) => {
 
   const handleProof = async (result: ISuccessResult) => {
-    const res = await fetch("/api/world-idle-auth", {
+    const res = await fetch("/api/verify-worldid", { // Use the new endpoint
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ proof: result }),
+      // Send the proof and the signal (wallet address)
+      body: JSON.stringify({ proof: result, signal: signal }), 
     });
 
     if (!res.ok) {
@@ -32,19 +30,25 @@ export const WorldIDAuth = ({ onSuccessfulVerify }: WorldIDAuthProps) => {
       return;
     }
 
-    const data: LoadedGameData = await res.json();
-    onSuccessfulVerify(data, result); // <-- Pass both data and proof
+    const data: VerifyResponse = await res.json();
+    onSuccessfulVerify(data); // Pass the backend response to the parent
   };
 
   return (
     <IDKitWidget
       app_id={process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`}
-      action={process.env.WLD_ACTION_ID!}
-      onSuccess={() => {}} // onSuccess is now handled by handleProof, so we can leave this empty.
+      action={process.env.NEXT_PUBLIC_WLD_ACTION_ID!}
+      signal={signal} // Pass the user's wallet address as the signal
+      onSuccess={() => { /* onSuccess is not needed as handleVerify covers it */ }}
       handleVerify={handleProof}
     >
       {({ open }) => 
-        <button onClick={open}>Sign in with World ID</button>
+        <button 
+            onClick={open}
+            className="w-full bg-blue-500/80 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
+        >
+            Verify with World ID
+        </button>
       }
     </IDKitWidget>
   );

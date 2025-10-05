@@ -88,7 +88,7 @@ export default function Game() {
     const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
 
     useEffect(() => {
-        if (prestigeTokenBalanceData) {
+        if (typeof prestigeTokenBalanceData === 'bigint') {
             const balance = parseFloat(formatUnits(prestigeTokenBalanceData, 18));
             setPrestigeBalance(balance);
         }

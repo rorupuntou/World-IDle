@@ -254,13 +254,19 @@ export default function Game() {
             await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
             const injectedConnector = connectors.find(c => c.id === 'injected');
             if (injectedConnector) {
-                const result = await connect({ connector: injectedConnector });
-                const connectedAddress = result.accounts[0];
-                if (connectedAddress) {
-                    await loadGameFromBackend(connectedAddress);
-                } else {
-                    throw new Error("La conexión con wagmi no devolvió una dirección.");
-                }
+                connect({ connector: injectedConnector }, {
+                    onSuccess: (data) => {
+                        const connectedAddress = data.accounts[0];
+                        if (connectedAddress) {
+                            loadGameFromBackend(connectedAddress);
+                        } else {
+                            alert("La conexión fue exitosa pero no se pudo obtener la dirección.");
+                        }
+                    },
+                    onError: (error) => {
+                        throw error;
+                    }
+                });
             } else {
                 throw new Error("No se encontró el conector de billetera inyectado después de la autenticación.");
             }

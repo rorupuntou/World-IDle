@@ -1,0 +1,18 @@
+# foundry.toml
+
+[profile.default]
+src = "contracts/src"
+out = "contracts/out"
+libs = ["contracts/lib"]
+remappings = [
+    'forge-std/=contracts/lib/forge-std/src/',
+    '@openzeppelin/contracts=contracts/lib/openzeppelin-contracts/contracts'
+]
+
+[rpc_endpoints]
+worldchain = "https://worldchain-mainnet.g.alchemy.com/public"
+
+[etherscan]
+worldchain = { url = "https://worldscan.org", key = "${ETHERSCAN_API_KEY}" }
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

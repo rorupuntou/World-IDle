@@ -9,7 +9,6 @@ contract Deploy is Script {
     function run() external returns (PrestigeToken, GameManager) {
         // Carga las variables de entorno desde el archivo .env
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address signerAddress = vm.envAddress("SIGNER_ADDRESS");
 
         // Inicia la transmisión de transacciones
         vm.startBroadcast(deployerPrivateKey);
@@ -18,8 +17,8 @@ contract Deploy is Script {
         PrestigeToken token = new PrestigeToken();
         console.log("PrestigeToken desplegado en:", address(token));
 
-        // 2. Desplegar el contrato GameManager, pasándole la dirección del token y del firmante
-        GameManager manager = new GameManager(address(token), signerAddress);
+        // 2. Desplegar el contrato GameManager, pasándole la dirección del token
+        GameManager manager = new GameManager(address(token));
         console.log("GameManager desplegado en:", address(manager));
 
         // 3. Configurar el GameManager como la única dirección autorizada para acuñar (mint) nuevos tokens

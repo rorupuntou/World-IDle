@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { formatUnits } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
 import { 
     initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed 
 } from "@/app/data";
+import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
@@ -58,32 +61,64 @@ const NewsTicker = () => {
 
 export default function Game() {
     const [isClient, setIsClient] = useState(false);
-    const [walletAddress, setWalletAddress] = useState<string | null>(null);
+    const { address: accountAddress, isConnected } = useAccount();
     
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
     const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
     const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
-    const [prestigeBalance] = useState(0);
+    const [prestigeBalance, setPrestigeBalance] = useState(0);
     
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
 
+    // --- Contract Interactions ---
+    const { data: hash, writeContract, isPending: isPrestigeLoading } = useWriteContract();
+
+    const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
+        address: contractConfig.prestigeTokenAddress,
+        abi: contractConfig.prestigeTokenAbi,
+        functionName: 'balanceOf',
+        args: [accountAddress!],
+        query: { enabled: !!accountAddress },
+    });
+
+    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
+
     useEffect(() => {
-        setIsClient(true);
-    }, []);
+        if (prestigeTokenBalanceData) {
+            const balance = parseFloat(formatUnits(prestigeTokenBalanceData, 18));
+            setPrestigeBalance(balance);
+        }
+    }, [prestigeTokenBalanceData]);
+
+    useEffect(() => {
+        if (isPrestigeSuccess) {
+            setToast("¡Prestigio completado! Reiniciando...");
+            // Reset game state
+            setGameState(initialState);
+            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+            setAutoclickers(initialAutoclickers);
+            setUpgrades(initialUpgrades);
+            // Refetch balance to update boost
+            refetchPrestigeBalance();
+        }
+    }, [isPrestigeSuccess, refetchPrestigeBalance]);
+
+    // --- Game Logic ---
+    useEffect(() => { setIsClient(true); }, []);
 
     const saveGameToBackend = useCallback(async (manual = false) => {
-        if (!walletAddress) return;
+        if (!accountAddress) return;
         if (manual) setToast("Guardando...");
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         try {
             const res = await fetch("/api/save-game", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ walletAddress, gameData: fullGameState }),
+                body: JSON.stringify({ walletAddress: accountAddress, gameData: fullGameState }),
             });
             if (!res.ok) throw new Error("Failed to save game data");
             if (manual) setToast("¡Partida guardada!");
@@ -91,7 +126,7 @@ export default function Game() {
             console.error("Failed to save game:", error);
             if (manual) setToast("Error al guardar la partida.");
         }
-    }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
+    }, [accountAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
     const loadGameFromBackend = useCallback(async (address: string) => {
         try {
@@ -115,32 +150,11 @@ export default function Game() {
         }
     }, []);
 
-    const handleConnectWallet = useCallback(async () => {
-        if (!MiniKit.isInstalled()) {
-            return alert("Please open this app in World App to continue.");
+    useEffect(() => {
+        if (isConnected && accountAddress) {
+            loadGameFromBackend(accountAddress);
         }
-        try {
-            const nonce = String(Math.random());
-            const result = await MiniKit.commandsAsync.walletAuth({ nonce });
-    
-            if (result.finalPayload.status === 'error') {
-                throw new Error("Wallet authentication failed.");
-            }
-            
-            const address = result.finalPayload.message.match(/0x[a-fA-F0-9]{40}/)?.[0];
-    
-            if (address) {
-                setWalletAddress(address);
-                loadGameFromBackend(address);
-            } else {
-                throw new Error("Could not parse address from wallet response.");
-            }
-    
-        } catch (error) {
-            console.error("Wallet connection error:", error);
-            alert(`Error connecting wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }, [loadGameFromBackend]);
+    }, [isConnected, accountAddress, loadGameFromBackend]);
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -150,7 +164,7 @@ export default function Game() {
         return `${(num / 1e12).toFixed(2)}T`;
     }, []);
 
-    const prestigeBoost = useMemo(() => prestigeBalance * 0.1, [prestigeBalance]);
+    const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]); // 10% boost per token
 
     const { totalCPS, clickValue } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
@@ -163,13 +177,11 @@ export default function Game() {
             });
         });
         const totalAutoclickerCPS = autoclickers.reduce((total, auto) => total + auto.purchased * auto.tps, 0);
-        const humanityBoost = 1; // World ID boost disabled for now
-        const finalGlobalMultiplier = globalMultiplier * humanityBoost * (1 + prestigeBoost / 100);
+        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
         const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
         const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
-        const finalClickValue = baseClickValue * humanityBoost;
-        return { totalCPS: finalTotalCPS, clickValue: finalClickValue };
-    }, [upgrades, autoclickers, prestigeBoost]);
+        return { totalCPS: finalTotalCPS, clickValue: baseClickValue };
+    }, [upgrades, autoclickers, prestigeBoost, initialState.tokensPerClick]);
 
     // Game loop for passive token generation
     useEffect(() => {
@@ -183,33 +195,20 @@ export default function Game() {
 
     // Game saving loop
     useEffect(() => {
-        if (!walletAddress) return;
+        if (!accountAddress) return;
         const saveInterval = setInterval(() => saveGameToBackend(false), 30000); // Save every 30 seconds
         return () => clearInterval(saveInterval);
-    }, [saveGameToBackend, walletAddress]);
+    }, [saveGameToBackend, accountAddress]);
 
     const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
         if (!req) return true;
-    
-        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) {
-            return false;
-        }
-        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) {
-            return false;
-        }
-        if (req.tps !== undefined && totalCPS < req.tps) {
-            return false;
-        }
+        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
+        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
+        if (req.tps !== undefined && totalCPS < req.tps) return false;
         if (req.autoclickers !== undefined) {
             const auto = autoclickers.find(a => a.id === req.autoclickers!.id);
-            if (!auto || auto.purchased < req.autoclickers.amount) {
-                return false;
-            }
+            if (!auto || auto.purchased < req.autoclickers.amount) return false;
         }
-        if (req.verified !== undefined) {
-            return false; // World ID verification disabled
-        }
-    
         return true;
     }, [stats, totalCPS, autoclickers]);
 
@@ -265,19 +264,30 @@ export default function Game() {
         }
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
+    const handlePrestige = () => {
+        const totalPoints = BigInt(Math.floor(stats.totalTokensEarned));
+        writeContract({
+            address: contractConfig.gameManagerAddress,
+            abi: contractConfig.gameManagerAbi,
+            functionName: 'prestige',
+            args: [totalPoints],
+        });
+    };
+
+    const canPrestige = useMemo(() => {
+        const reward = Math.floor(stats.totalTokensEarned) / 100000;
+        return reward >= 1;
+    }, [stats.totalTokensEarned]);
+
     if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
-    if (!walletAddress) {
+    if (!isConnected || !accountAddress) {
         return (
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
-                <p className="mb-8 text-slate-400">Conecta tu billetera de World App para empezar.</p>
-                <button 
-                    onClick={handleConnectWallet} 
-                    className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
-                >
-                    Conectar Billetera
-                </button>
+                <p className="mb-8 text-slate-400">Conecta tu billetera para empezar.</p>
+                {/* The connect button is usually in a separate component, managed by wagmi/rainbowkit */}
+                <p className="text-sm text-slate-500">Por favor, conecta tu billetera desde el menú principal.</p>
             </div>
         );
     }
@@ -323,8 +333,9 @@ export default function Game() {
                     <PrestigeSection
                         prestigeBoost={prestigeBoost}
                         prestigeBalance={prestigeBalance}
-                        handlePrestige={() => {}} // Placeholder
-                        isPrestigeReady={false} // Placeholder
+                        handlePrestige={handlePrestige}
+                        isPrestigeReady={canPrestige}
+                        isLoading={isPrestigeLoading || isConfirming}
                     />
                     <UpgradesSection
                         upgrades={upgrades}

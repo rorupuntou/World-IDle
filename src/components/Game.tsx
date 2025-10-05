@@ -7,13 +7,15 @@ import { MiniKit } from "@worldcoin/minikit-js";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
 import { 
-    initialState, initialAutoclickers, newsFeed, HUMAN_BOOST_MULTIPLIER 
+    initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed 
 } from "@/app/data";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
+
+const PRICE_INCREASE_RATE = 1.15;
 
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -61,8 +63,8 @@ export default function Game() {
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
     const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
-    const [upgrades, setUpgrades] = useState<Upgrade[]>([]);
-    const [achievements, setAchievements] = useState<Achievement[]>([]);
+    const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
+    const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [prestigeBalance] = useState(0);
     
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
@@ -73,31 +75,41 @@ export default function Game() {
         setIsClient(true);
     }, []);
 
-    const loadGameFromBackend = useCallback(async (address: string) => {
-        const res = await fetch(`/api/load-game?walletAddress=${address}`);
-        const data = await res.json();
-        if (data.success && data.gameData) {
-            const gameData = data.gameData;
-            if (gameData.gameState) setGameState(gameData.gameState);
-            if (gameData.stats) setStats(gameData.stats);
-            if (gameData.autoclickers) setAutoclickers(gameData.autoclickers);
-            if (gameData.upgrades) setUpgrades(gameData.upgrades);
-            if (gameData.achievements) setAchievements(gameData.achievements);
-            setToast("Partida cargada exitosamente!");
-        } else {
-            setToast("¡Bienvenido! Tu aventura comienza ahora.");
-        }
-    }, []);
-
     const saveGameToBackend = useCallback(async () => {
         if (!walletAddress) return;
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
-        await fetch("/api/save-game", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ walletAddress, gameData: fullGameState }),
-        });
+        try {
+            await fetch("/api/save-game", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletAddress, gameData: fullGameState }),
+            });
+        } catch (error) {
+            console.error("Failed to save game:", error);
+        }
     }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
+
+    const loadGameFromBackend = useCallback(async (address: string) => {
+        try {
+            const res = await fetch(`/api/load-game?walletAddress=${address}`);
+            if (!res.ok) throw new Error("Failed to load game data");
+            const data = await res.json();
+            if (data.success && data.gameData) {
+                const gameData = data.gameData;
+                if (gameData.gameState) setGameState(gameData.gameState);
+                if (gameData.stats) setStats(gameData.stats);
+                if (gameData.autoclickers) setAutoclickers(gameData.autoclickers);
+                if (gameData.upgrades) setUpgrades(gameData.upgrades);
+                if (gameData.achievements) setAchievements(gameData.achievements);
+                setToast("Partida cargada exitosamente!");
+            } else {
+                setToast("¡Bienvenido! Tu aventura comienza ahora.");
+            }
+        } catch (error) {
+            console.error("Failed to load game:", error);
+            setToast("No se pudo cargar la partida.");
+        }
+    }, []);
 
     const handleConnectWallet = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
@@ -155,15 +167,48 @@ export default function Game() {
         return { totalCPS: finalTotalCPS, clickValue: finalClickValue };
     }, [upgrades, autoclickers, prestigeBoost]);
 
+    // Game loop for passive token generation
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const tokensToAdd = totalCPS / 10;
+            setGameState(prev => ({ ...prev, tokens: prev.tokens + tokensToAdd }));
+            setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + tokensToAdd }));
+        }, 100);
+        return () => clearInterval(interval);
+    }, [totalCPS]);
+
+    // Game saving loop
     useEffect(() => {
         if (!walletAddress) return;
-        const saveInterval = setInterval(saveGameToBackend, 15000);
-        window.addEventListener('beforeunload', saveGameToBackend);
-        return () => {
-            clearInterval(saveInterval);
-            window.removeEventListener('beforeunload', saveGameToBackend);
-        };
+        const saveInterval = setInterval(saveGameToBackend, 30000); // Save every 30 seconds
+        return () => clearInterval(saveInterval);
     }, [saveGameToBackend, walletAddress]);
+
+    const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
+        if (!req) return true;
+        return Object.entries(req).every(([key, value]) => {
+            switch (key) {
+                case 'totalTokensEarned': return stats.totalTokensEarned >= value;
+                case 'totalClicks': return stats.totalClicks >= value;
+                case 'tps': return totalCPS >= value;
+                case 'autoclickers': return autoclickers.find(a => a.id === value.id)?.purchased >= value.amount;
+                default: return true;
+            }
+        });
+    }, [stats, totalCPS, autoclickers]);
+
+    // Achievement checking loop
+    useEffect(() => {
+        const unlockedAchievements = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
+        const newAchievements = achievements.filter(ach => !ach.unlocked && checkRequirements(ach.req));
+        if (newAchievements.length > 0) {
+            newAchievements.forEach(ach => {
+                setToast(`Achievement Unlocked: ${ach.name}`);
+                unlockedAchievements.add(ach.id);
+            });
+            setAchievements(prev => prev.map(ach => unlockedAchievements.has(ach.id) ? { ...ach, unlocked: true } : ach));
+        }
+    }, [stats, achievements, checkRequirements]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -173,23 +218,36 @@ export default function Game() {
         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
     }, [clickValue, formatNumber]);
 
-    const checkRequirements = useCallback((req: Requirement | undefined) => {
-        if (!req) return true;
-        if (req.totalTokensEarned && stats.totalTokensEarned < req.totalTokensEarned) return false;
-        if (req.totalClicks && stats.totalClicks < req.totalClicks) return false;
-        if (req.tps && totalCPS < req.tps) return false;
-        if (req.verified) return false; // World ID verification disabled
-        if (req.autoclickers) {
-            const auto = autoclickers.find(a => a.id === req.autoclickers?.id);
-            if (!auto || auto.purchased < req.autoclickers.amount) return false;
+    const calculateBulkCost = useCallback((item: Autoclicker, amount: BuyAmount) => {
+        let totalCost = 0;
+        for (let i = 0; i < amount; i++) {
+            totalCost += item.cost * Math.pow(PRICE_INCREASE_RATE, item.purchased + i);
         }
-        return true;
-    }, [stats.totalTokensEarned, stats.totalClicks, totalCPS, autoclickers]);
-
-    const calculateBulkCost = useCallback((autoclicker: Autoclicker, amount: BuyAmount) => {
-        // This is a placeholder for bulk cost calculation
-        return autoclicker.cost * amount;
+        return totalCost;
     }, []);
+
+    const purchaseAutoclicker = useCallback((id: number) => {
+        const autoclicker = autoclickers.find(a => a.id === id);
+        if (!autoclicker) return;
+
+        const cost = calculateBulkCost(autoclicker, buyAmount);
+        if (gameState.tokens >= cost) {
+            setGameState(prev => ({ ...prev, tokens: prev.tokens - cost }));
+            setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount } : a));
+            saveGameToBackend();
+        }
+    }, [autoclickers, gameState.tokens, calculateBulkCost, saveGameToBackend, buyAmount]);
+
+    const purchaseUpgrade = useCallback((id: number) => {
+        const upgrade = upgrades.find(u => u.id === id);
+        if (!upgrade || upgrade.purchased || !checkRequirements(upgrade.req)) return;
+
+        if (gameState.tokens >= upgrade.cost) {
+            setGameState(prev => ({ ...prev, tokens: prev.tokens - upgrade.cost }));
+            setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
+            saveGameToBackend();
+        }
+    }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
     if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
@@ -240,7 +298,7 @@ export default function Game() {
                         gameState={gameState}
                         checkRequirements={checkRequirements}
                         calculateBulkCost={calculateBulkCost}
-                        purchaseAutoclicker={() => {}} // Placeholder
+                        purchaseAutoclicker={purchaseAutoclicker}
                         formatNumber={formatNumber}
                         autoclickerCPSValues={new Map()} // Placeholder
                     />
@@ -256,7 +314,7 @@ export default function Game() {
                         upgrades={upgrades}
                         gameState={gameState}
                         checkRequirements={checkRequirements}
-                        purchaseUpgrade={() => {}} // Placeholder
+                        purchaseUpgrade={purchaseUpgrade}
                         showRequirements={() => {}} // Placeholder
                         formatNumber={formatNumber}
                     />

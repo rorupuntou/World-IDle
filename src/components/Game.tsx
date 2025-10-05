@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
-import { MiniKit } from "@worldcoin/minikit-js";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useConnect } from "wagmi";
 import { formatUnits } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
@@ -279,6 +279,8 @@ export default function Game() {
         return reward >= 1;
     }, [stats.totalTokensEarned]);
 
+    const { connectors, connect } = useConnect();
+
     if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
     if (!isConnected || !accountAddress) {
@@ -286,8 +288,15 @@ export default function Game() {
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
                 <p className="mb-8 text-slate-400">Conecta tu billetera para empezar.</p>
-                {/* The connect button is usually in a separate component, managed by wagmi/rainbowkit */}
-                <p className="text-sm text-slate-500">Por favor, conecta tu billetera desde el menú principal.</p>
+                {connectors.map((connector) => (
+                    <button
+                        key={connector.uid}
+                        onClick={() => connect({ connector })}
+                        className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg mb-4"
+                    >
+                        Conectar Billetera
+                    </button>
+                ))}
             </div>
         );
     }

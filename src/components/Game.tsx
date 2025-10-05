@@ -254,7 +254,13 @@ export default function Game() {
             await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
             const injectedConnector = connectors.find(c => c.id === 'injected');
             if (injectedConnector) {
-                await connect({ connector: injectedConnector });
+                const result = await connect({ connector: injectedConnector });
+                const connectedAddress = result.accounts[0];
+                if (connectedAddress) {
+                    await loadGameFromBackend(connectedAddress);
+                } else {
+                    throw new Error("La conexión con wagmi no devolvió una dirección.");
+                }
             } else {
                 throw new Error("No se encontró el conector de billetera inyectado después de la autenticación.");
             }
@@ -262,7 +268,7 @@ export default function Game() {
             console.error("Error al conectar la billetera:", error);
             alert(`Error al conectar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
-    }, [connect, connectors]);
+    }, [connect, connectors, loadGameFromBackend]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;

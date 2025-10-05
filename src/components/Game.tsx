@@ -281,6 +281,17 @@ export default function Game() {
 
     const { connectors, connect } = useConnect();
 
+    const handleConnect = () => {
+        const injectedConnector = connectors.find(
+            (c) => c.id === 'injected' || c.name === 'Injected'
+        );
+        if (injectedConnector) {
+            connect({ connector: injectedConnector });
+        } else {
+            alert("No se pudo encontrar un proveedor de billetera. Asegúrate de estar en World App.");
+        }
+    };
+
     if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
     if (!isConnected || !accountAddress) {
@@ -288,18 +299,32 @@ export default function Game() {
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
                 <p className="mb-8 text-slate-400">Conecta tu billetera para empezar.</p>
-                {connectors.map((connector) => (
-                    <button
-                        key={connector.uid}
-                        onClick={() => connect({ connector })}
-                        className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg mb-4"
-                    >
-                        Conectar Billetera
-                    </button>
-                ))}
+                <button
+                    onClick={handleConnect}
+                    className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg mb-4"
+                >
+                    Conectar Billetera
+                </button>
             </div>
         );
     }
+
+    const autoclickerCPSValues = useMemo(() => {
+        const purchasedUpgrades = upgrades.filter(u => u.purchased);
+        let globalMultiplier = 1;
+        purchasedUpgrades.forEach(upg => {
+            upg.effect.forEach(eff => {
+                if (eff.type === 'multiplyGlobal') globalMultiplier *= eff.value;
+            });
+        });
+        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
+
+        const cpsMap = new Map<number, number>();
+        autoclickers.forEach(auto => {
+            cpsMap.set(auto.id, auto.tps * finalGlobalMultiplier);
+        });
+        return cpsMap;
+    }, [upgrades, prestigeBoost, autoclickers]);
 
     return (
         <>
@@ -335,7 +360,7 @@ export default function Game() {
                         calculateBulkCost={calculateBulkCost}
                         purchaseAutoclicker={purchaseAutoclicker}
                         formatNumber={formatNumber}
-                        autoclickerCPSValues={new Map()} // Placeholder
+                        autoclickerCPSValues={autoclickerCPSValues}
                     />
                 </div>
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">

@@ -186,15 +186,27 @@ export default function Game() {
 
     const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
         if (!req) return true;
-        return Object.entries(req).every(([key, value]) => {
-            switch (key) {
-                case 'totalTokensEarned': return stats.totalTokensEarned >= value;
-                case 'totalClicks': return stats.totalClicks >= value;
-                case 'tps': return totalCPS >= value;
-                case 'autoclickers': return autoclickers.find(a => a.id === value.id)?.purchased >= value.amount;
-                default: return true;
+    
+        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) {
+            return false;
+        }
+        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) {
+            return false;
+        }
+        if (req.tps !== undefined && totalCPS < req.tps) {
+            return false;
+        }
+        if (req.autoclickers !== undefined) {
+            const auto = autoclickers.find(a => a.id === req.autoclickers!.id);
+            if (!auto || auto.purchased < req.autoclickers.amount) {
+                return false;
             }
-        });
+        }
+        if (req.verified !== undefined) {
+            return false; // World ID verification disabled
+        }
+    
+        return true;
     }, [stats, totalCPS, autoclickers]);
 
     // Achievement checking loop

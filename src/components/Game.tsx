@@ -148,17 +148,6 @@ export default function Game() {
         }
     }, [prestigeTokenBalanceData]);
 
-    useEffect(() => {
-        if (isPrestigeSuccess) {
-            setToast("¡Prestigio completado! Reiniciando...");
-            setGameState(initialState);
-            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
-            setAutoclickers(initialAutoclickers);
-            setUpgrades(initialUpgrades);
-            refetchPrestigeBalance();
-        }
-    }, [isPrestigeSuccess, refetchPrestigeBalance]);
-
     const loadGameFromBackend = useCallback(async (address: string) => {
         try {
             const res = await fetch(`/api/load-game?walletAddress=${address}`);
@@ -180,6 +169,17 @@ export default function Game() {
             setToast("No se pudo cargar la partida.");
         }
     }, []);
+    
+    useEffect(() => {
+        if (isPrestigeSuccess) {
+            setToast("¡Prestigio completado! Reiniciando...");
+            setGameState(initialState);
+            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+            setAutoclickers(initialAutoclickers);
+            setUpgrades(initialUpgrades);
+            refetchPrestigeBalance();
+        }
+    }, [isPrestigeSuccess, refetchPrestigeBalance]);
 
     useEffect(() => {
         if (isConnected && accountAddress) {

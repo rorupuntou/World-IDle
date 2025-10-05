@@ -302,7 +302,13 @@ export default function Game() {
             });
 
             if (finalPayload.status === 'error') {
-                throw new Error((finalPayload as { message?: string }).message || 'Error al enviar la transacción con MiniKit.');
+                console.error("MiniKit transaction error:", finalPayload);
+                const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                let errorMessage = errorPayload.message || 'Error al enviar la transacción con MiniKit.';
+                if (errorPayload.debug_url) {
+                    errorMessage += `\n\nPuedes depurar la transacción aquí: ${errorPayload.debug_url}`;
+                }
+                throw new Error(errorMessage);
             }
 
             if (finalPayload.transaction_id) {

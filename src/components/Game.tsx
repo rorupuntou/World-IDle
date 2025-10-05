@@ -181,7 +181,24 @@ export default function Game() {
         const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
         const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
         return { totalCPS: finalTotalCPS, clickValue: baseClickValue };
-    }, [upgrades, autoclickers, prestigeBoost, initialState.tokensPerClick]);
+    }, [upgrades, autoclickers, prestigeBoost]);
+
+    const autoclickerCPSValues = useMemo(() => {
+        const purchasedUpgrades = upgrades.filter(u => u.purchased);
+        let globalMultiplier = 1;
+        purchasedUpgrades.forEach(upg => {
+            upg.effect.forEach(eff => {
+                if (eff.type === 'multiplyGlobal') globalMultiplier *= eff.value;
+            });
+        });
+        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
+
+        const cpsMap = new Map<number, number>();
+        autoclickers.forEach(auto => {
+            cpsMap.set(auto.id, auto.tps * finalGlobalMultiplier);
+        });
+        return cpsMap;
+    }, [upgrades, prestigeBoost, autoclickers]);
 
     // Game loop for passive token generation
     useEffect(() => {

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useConnect } from "wagmi";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatUnits } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
@@ -62,6 +62,7 @@ const NewsTicker = () => {
 export default function Game() {
     // --- Base States ---
     const [isClient, setIsClient] = useState(false);
+    const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
@@ -82,16 +83,15 @@ export default function Game() {
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [prestigeBalance, setPrestigeBalance] = useState(0);
 
-    // --- Wagmi Hooks ---
-    const { address: accountAddress, isConnected } = useAccount();
-    const { connectors, connect } = useConnect();
+    // --- Wagmi Hooks (for read/write operations) ---
+    const { address: wagmiAccountAddress } = useAccount(); // Used for context, but walletAddress is the source of truth for UI
     const { data: hash, writeContract, isPending: isPrestigeLoading } = useWriteContract();
     const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
         address: contractConfig.prestigeTokenAddress,
         abi: contractConfig.prestigeTokenAbi,
         functionName: 'balanceOf',
-        args: [accountAddress!],
-        query: { enabled: !!accountAddress },
+        args: [walletAddress!],
+        query: { enabled: !!walletAddress },
     });
     const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -147,7 +147,7 @@ export default function Game() {
             setPrestigeBalance(balance);
         }
     }, [prestigeTokenBalanceData]);
-
+    
     const loadGameFromBackend = useCallback(async (address: string) => {
         try {
             const res = await fetch(`/api/load-game?walletAddress=${address}`);
@@ -169,7 +169,7 @@ export default function Game() {
             setToast("No se pudo cargar la partida.");
         }
     }, []);
-    
+
     useEffect(() => {
         if (isPrestigeSuccess) {
             setToast("¡Prestigio completado! Reiniciando...");
@@ -181,21 +181,15 @@ export default function Game() {
         }
     }, [isPrestigeSuccess, refetchPrestigeBalance]);
 
-    useEffect(() => {
-        if (isConnected && accountAddress) {
-            loadGameFromBackend(accountAddress);
-        }
-    }, [isConnected, accountAddress, loadGameFromBackend]);
-
     const saveGameToBackend = useCallback(async (manual = false) => {
-        if (!accountAddress) return;
+        if (!walletAddress) return;
         if (manual) setToast("Guardando...");
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         try {
             const res = await fetch("/api/save-game", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ walletAddress: accountAddress, gameData: fullGameState }),
+                body: JSON.stringify({ walletAddress, gameData: fullGameState }),
             });
             if (!res.ok) throw new Error("Failed to save game data");
             if (manual) setToast("¡Partida guardada!");
@@ -203,7 +197,7 @@ export default function Game() {
             console.error("Failed to save game:", error);
             if (manual) setToast("Error al guardar la partida.");
         }
-    }, [accountAddress, gameState, stats, autoclickers, upgrades, achievements]);
+    }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
     // --- Game Loop Effects ---
     useEffect(() => {
@@ -216,10 +210,10 @@ export default function Game() {
     }, [totalCPS]);
 
     useEffect(() => {
-        if (!accountAddress) return;
+        if (!walletAddress) return;
         const saveInterval = setInterval(() => saveGameToBackend(false), 30000);
         return () => clearInterval(saveInterval);
-    }, [saveGameToBackend, accountAddress]);
+    }, [saveGameToBackend, walletAddress]);
 
     const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
         if (!req) return true;
@@ -251,30 +245,22 @@ export default function Game() {
             return alert("Por favor, abre la aplicación en World App.");
         }
         try {
-            await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
-            const injectedConnector = connectors.find(c => c.id === 'injected');
-            if (injectedConnector) {
-                connect({ connector: injectedConnector }, {
-                    onSuccess: (data) => {
-                        const connectedAddress = data.accounts[0];
-                        if (connectedAddress) {
-                            loadGameFromBackend(connectedAddress);
-                        } else {
-                            alert("La conexión fue exitosa pero no se pudo obtener la dirección.");
-                        }
-                    },
-                    onError: (error) => {
-                        throw error;
-                    }
-                });
+            const result = await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
+            if (result.finalPayload.status === 'error') {
+                throw new Error("La autenticación con World App falló.");
+            }
+            const address = result.finalPayload.message.match(/0x[a-fA-F0-9]{40}/)?.[0] as `0x${string}` | undefined;
+            if (address) {
+                setWalletAddress(address);
+                loadGameFromBackend(address);
             } else {
-                throw new Error("No se encontró el conector de billetera inyectado después de la autenticación.");
+                throw new Error("No se pudo obtener la dirección desde World App.");
             }
         } catch (error) {
             console.error("Error al conectar la billetera:", error);
             alert(`Error al conectar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         }
-    }, [connect, connectors, loadGameFromBackend]);
+    }, [loadGameFromBackend]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -314,6 +300,10 @@ export default function Game() {
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
     const handlePrestige = () => {
+        if (!wagmiAccountAddress) {
+            alert("La billetera de Wagmi no está conectada. No se puede realizar el prestigio.");
+            return;
+        }
         const totalPoints = BigInt(Math.floor(stats.totalTokensEarned));
         writeContract({
             address: contractConfig.gameManagerAddress,
@@ -328,7 +318,7 @@ export default function Game() {
         return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
     }
 
-    if (!isConnected || !accountAddress) {
+    if (!walletAddress) {
         return (
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
                 <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>

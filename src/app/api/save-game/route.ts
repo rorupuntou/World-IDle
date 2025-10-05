@@ -1,4 +1,3 @@
-
 import { type NextRequest, NextResponse } from "next/server";
 import { supabase } from '@/lib/supabaseClient';
 
@@ -9,12 +8,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "walletAddress and gameData are required." }, { status: 400 });
   }
 
+  // Use upsert with the primary key column specified
   const { error } = await supabase
     .from('game_state')
     .upsert({ 
         wallet_address: walletAddress, 
         game_data: gameData 
-    });
+    }, { onConflict: 'wallet_address' });
 
   if (error) {
     console.error("Supabase save error:", error);

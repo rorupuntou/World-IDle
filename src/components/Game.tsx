@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
-
+import { MiniKit } from "@worldcoin/minikit-js";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useConnect } from "wagmi";
 import { formatUnits } from "viem";
 
@@ -60,101 +60,11 @@ const NewsTicker = () => {
 };
 
 export default function Game() {
+    // --- Base States ---
     const [isClient, setIsClient] = useState(false);
-    const { address: accountAddress, isConnected } = useAccount();
-    
-    const [gameState, setGameState] = useState<GameState>(initialState);
-    const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
-    const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
-    const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
-    const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
-    const [prestigeBalance, setPrestigeBalance] = useState(0);
-    
-    const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
-
-    // --- Contract Interactions ---
-    const { data: hash, writeContract, isPending: isPrestigeLoading } = useWriteContract();
-
-    const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
-        address: contractConfig.prestigeTokenAddress,
-        abi: contractConfig.prestigeTokenAbi,
-        functionName: 'balanceOf',
-        args: [accountAddress!],
-        query: { enabled: !!accountAddress },
-    });
-
-    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
-
-    useEffect(() => {
-        if (typeof prestigeTokenBalanceData === 'bigint') {
-            const balance = parseFloat(formatUnits(prestigeTokenBalanceData, 18));
-            setPrestigeBalance(balance);
-        }
-    }, [prestigeTokenBalanceData]);
-
-    useEffect(() => {
-        if (isPrestigeSuccess) {
-            setToast("¡Prestigio completado! Reiniciando...");
-            // Reset game state
-            setGameState(initialState);
-            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
-            setAutoclickers(initialAutoclickers);
-            setUpgrades(initialUpgrades);
-            // Refetch balance to update boost
-            refetchPrestigeBalance();
-        }
-    }, [isPrestigeSuccess, refetchPrestigeBalance]);
-
-    // --- Game Logic ---
-    useEffect(() => { setIsClient(true); }, []);
-
-    const saveGameToBackend = useCallback(async (manual = false) => {
-        if (!accountAddress) return;
-        if (manual) setToast("Guardando...");
-        const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
-        try {
-            const res = await fetch("/api/save-game", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ walletAddress: accountAddress, gameData: fullGameState }),
-            });
-            if (!res.ok) throw new Error("Failed to save game data");
-            if (manual) setToast("¡Partida guardada!");
-        } catch (error) {
-            console.error("Failed to save game:", error);
-            if (manual) setToast("Error al guardar la partida.");
-        }
-    }, [accountAddress, gameState, stats, autoclickers, upgrades, achievements]);
-
-    const loadGameFromBackend = useCallback(async (address: string) => {
-        try {
-            const res = await fetch(`/api/load-game?walletAddress=${address}`);
-            if (!res.ok) throw new Error("Failed to load game data");
-            const data = await res.json();
-            if (data.success && data.gameData) {
-                const gameData = data.gameData;
-                if (gameData.gameState) setGameState(gameData.gameState);
-                if (gameData.stats) setStats(gameData.stats);
-                if (gameData.autoclickers) setAutoclickers(gameData.autoclickers);
-                if (gameData.upgrades) setUpgrades(gameData.upgrades);
-                if (gameData.achievements) setAchievements(gameData.achievements);
-                setToast("Partida cargada exitosamente!");
-            } else {
-                setToast("¡Bienvenido! Tu aventura comienza ahora.");
-            }
-        } catch (error) {
-            console.error("Failed to load game:", error);
-            setToast("No se pudo cargar la partida.");
-        }
-    }, []);
-
-    useEffect(() => {
-        if (isConnected && accountAddress) {
-            loadGameFromBackend(accountAddress);
-        }
-    }, [isConnected, accountAddress, loadGameFromBackend]);
+    const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -164,7 +74,29 @@ export default function Game() {
         return `${(num / 1e12).toFixed(2)}T`;
     }, []);
 
-    const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]); // 10% boost per token
+    // --- Game State ---
+    const [gameState, setGameState] = useState<GameState>(initialState);
+    const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+    const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
+    const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
+    const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
+    const [prestigeBalance, setPrestigeBalance] = useState(0);
+
+    // --- Wagmi Hooks ---
+    const { address: accountAddress, isConnected } = useAccount();
+    const { connectors, connect } = useConnect();
+    const { data: hash, writeContract, isPending: isPrestigeLoading } = useWriteContract();
+    const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
+        address: contractConfig.prestigeTokenAddress,
+        abi: contractConfig.prestigeTokenAbi,
+        functionName: 'balanceOf',
+        args: [accountAddress!],
+        query: { enabled: !!accountAddress },
+    });
+    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
+
+    // --- Memoized Calculations ---
+    const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]);
 
     const { totalCPS, clickValue } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
@@ -192,7 +124,6 @@ export default function Game() {
             });
         });
         const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
-
         const cpsMap = new Map<number, number>();
         autoclickers.forEach(auto => {
             cpsMap.set(auto.id, auto.tps * finalGlobalMultiplier);
@@ -200,13 +131,81 @@ export default function Game() {
         return cpsMap;
     }, [upgrades, prestigeBoost, autoclickers]);
 
-    // Game loop for passive token generation
+    const canPrestige = useMemo(() => {
+        const reward = Math.floor(stats.totalTokensEarned) / 100000;
+        return reward >= 1;
+    }, [stats.totalTokensEarned]);
+
+    // --- Wallet & Data Sync Effects ---
     useEffect(() => {
+        setIsClient(true);
+    }, []);
 
-    return (
-        <>
+    useEffect(() => {
+        if (typeof prestigeTokenBalanceData === 'bigint') {
+            const balance = parseFloat(formatUnits(prestigeTokenBalanceData, 18));
+            setPrestigeBalance(balance);
+        }
+    }, [prestigeTokenBalanceData]);
 
-    // Game loop for passive token generation
+    useEffect(() => {
+        if (isPrestigeSuccess) {
+            setToast("¡Prestigio completado! Reiniciando...");
+            setGameState(initialState);
+            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+            setAutoclickers(initialAutoclickers);
+            setUpgrades(initialUpgrades);
+            refetchPrestigeBalance();
+        }
+    }, [isPrestigeSuccess, refetchPrestigeBalance]);
+
+    const loadGameFromBackend = useCallback(async (address: string) => {
+        try {
+            const res = await fetch(`/api/load-game?walletAddress=${address}`);
+            if (!res.ok) throw new Error("Failed to load game data");
+            const data = await res.json();
+            if (data.success && data.gameData) {
+                const { gameState, stats, autoclickers, upgrades, achievements } = data.gameData;
+                if (gameState) setGameState(gameState);
+                if (stats) setStats(stats);
+                if (autoclickers) setAutoclickers(autoclickers);
+                if (upgrades) setUpgrades(upgrades);
+                if (achievements) setAchievements(achievements);
+                setToast("Partida cargada exitosamente!");
+            } else {
+                setToast("¡Bienvenido! Tu aventura comienza ahora.");
+            }
+        } catch (error) {
+            console.error("Failed to load game:", error);
+            setToast("No se pudo cargar la partida.");
+        }
+    }, []);
+
+    useEffect(() => {
+        if (isConnected && accountAddress) {
+            loadGameFromBackend(accountAddress);
+        }
+    }, [isConnected, accountAddress, loadGameFromBackend]);
+
+    const saveGameToBackend = useCallback(async (manual = false) => {
+        if (!accountAddress) return;
+        if (manual) setToast("Guardando...");
+        const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
+        try {
+            const res = await fetch("/api/save-game", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletAddress: accountAddress, gameData: fullGameState }),
+            });
+            if (!res.ok) throw new Error("Failed to save game data");
+            if (manual) setToast("¡Partida guardada!");
+        } catch (error) {
+            console.error("Failed to save game:", error);
+            if (manual) setToast("Error al guardar la partida.");
+        }
+    }, [accountAddress, gameState, stats, autoclickers, upgrades, achievements]);
+
+    // --- Game Loop Effects ---
     useEffect(() => {
         const interval = setInterval(() => {
             const tokensToAdd = totalCPS / 10;
@@ -216,10 +215,9 @@ export default function Game() {
         return () => clearInterval(interval);
     }, [totalCPS]);
 
-    // Game saving loop
     useEffect(() => {
         if (!accountAddress) return;
-        const saveInterval = setInterval(() => saveGameToBackend(false), 30000); // Save every 30 seconds
+        const saveInterval = setInterval(() => saveGameToBackend(false), 30000);
         return () => clearInterval(saveInterval);
     }, [saveGameToBackend, accountAddress]);
 
@@ -235,7 +233,6 @@ export default function Game() {
         return true;
     }, [stats, totalCPS, autoclickers]);
 
-    // Achievement checking loop
     useEffect(() => {
         const unlockedAchievements = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
         const newAchievements = achievements.filter(ach => !ach.unlocked && checkRequirements(ach.req));
@@ -247,6 +244,25 @@ export default function Game() {
             setAchievements(prev => prev.map(ach => unlockedAchievements.has(ach.id) ? { ...ach, unlocked: true } : ach));
         }
     }, [stats, achievements, checkRequirements]);
+
+    // --- User Action Handlers ---
+    const handleConnect = useCallback(async () => {
+        if (!MiniKit.isInstalled()) {
+            return alert("Por favor, abre la aplicación en World App.");
+        }
+        try {
+            await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
+            const injectedConnector = connectors.find(c => c.id === 'injected');
+            if (injectedConnector) {
+                await connect({ connector: injectedConnector });
+            } else {
+                throw new Error("No se encontró el conector de billetera inyectado después de la autenticación.");
+            }
+        } catch (error) {
+            console.error("Error al conectar la billetera:", error);
+            alert(`Error al conectar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+    }, [connect, connectors]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -267,7 +283,6 @@ export default function Game() {
     const purchaseAutoclicker = useCallback((id: number) => {
         const autoclicker = autoclickers.find(a => a.id === id);
         if (!autoclicker) return;
-
         const cost = calculateBulkCost(autoclicker, buyAmount);
         if (gameState.tokens >= cost) {
             setGameState(prev => ({ ...prev, tokens: prev.tokens - cost }));
@@ -279,7 +294,6 @@ export default function Game() {
     const purchaseUpgrade = useCallback((id: number) => {
         const upgrade = upgrades.find(u => u.id === id);
         if (!upgrade || upgrade.purchased || !checkRequirements(upgrade.req)) return;
-
         if (gameState.tokens >= upgrade.cost) {
             setGameState(prev => ({ ...prev, tokens: prev.tokens - upgrade.cost }));
             setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
@@ -297,25 +311,10 @@ export default function Game() {
         });
     };
 
-    const canPrestige = useMemo(() => {
-        const reward = Math.floor(stats.totalTokensEarned) / 100000;
-        return reward >= 1;
-    }, [stats.totalTokensEarned]);
-
-    const { connectors, connect } = useConnect();
-
-    const handleConnect = () => {
-        const injectedConnector = connectors.find(
-            (c) => c.id === 'injected' || c.name === 'Injected'
-        );
-        if (injectedConnector) {
-            connect({ connector: injectedConnector });
-        } else {
-            alert("No se pudo encontrar un proveedor de billetera. Asegúrate de estar en World App.");
-        }
-    };
-
-    if (!isClient) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    // --- Render Logic ---
+    if (!isClient) {
+        return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    }
 
     if (!isConnected || !accountAddress) {
         return (

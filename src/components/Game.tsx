@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckBadgeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
@@ -75,17 +75,21 @@ export default function Game() {
         setIsClient(true);
     }, []);
 
-    const saveGameToBackend = useCallback(async () => {
+    const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
+        if (manual) setToast("Guardando...");
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         try {
-            await fetch("/api/save-game", {
+            const res = await fetch("/api/save-game", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ walletAddress, gameData: fullGameState }),
             });
+            if (!res.ok) throw new Error("Failed to save game data");
+            if (manual) setToast("¡Partida guardada!");
         } catch (error) {
             console.error("Failed to save game:", error);
+            if (manual) setToast("Error al guardar la partida.");
         }
     }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
@@ -180,7 +184,7 @@ export default function Game() {
     // Game saving loop
     useEffect(() => {
         if (!walletAddress) return;
-        const saveInterval = setInterval(saveGameToBackend, 30000); // Save every 30 seconds
+        const saveInterval = setInterval(() => saveGameToBackend(false), 30000); // Save every 30 seconds
         return () => clearInterval(saveInterval);
     }, [saveGameToBackend, walletAddress]);
 
@@ -246,7 +250,7 @@ export default function Game() {
         if (gameState.tokens >= cost) {
             setGameState(prev => ({ ...prev, tokens: prev.tokens - cost }));
             setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount } : a));
-            saveGameToBackend();
+            saveGameToBackend(false);
         }
     }, [autoclickers, gameState.tokens, calculateBulkCost, saveGameToBackend, buyAmount]);
 
@@ -257,7 +261,7 @@ export default function Game() {
         if (gameState.tokens >= upgrade.cost) {
             setGameState(prev => ({ ...prev, tokens: prev.tokens - upgrade.cost }));
             setUpgrades(prev => prev.map(u => u.id === id ? { ...u, purchased: true } : u));
-            saveGameToBackend();
+            saveGameToBackend(false);
         }
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
@@ -334,6 +338,15 @@ export default function Game() {
                         achievements={achievements}
                         showRequirements={() => {}} // Placeholder
                     />
+                    <div className="mt-4">
+                        <button 
+                            onClick={() => saveGameToBackend(true)}
+                            className="w-full flex items-center justify-center gap-2 bg-slate-500/20 hover:bg-slate-500/40 text-slate-300 font-bold py-2 px-4 rounded-lg"
+                        >
+                            <BookmarkIcon className="w-5 h-5" />
+                            Guardar Partida
+                        </button>
+                    </div>
                 </div>
             </div>
         </>

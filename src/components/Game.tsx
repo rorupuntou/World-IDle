@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { formatUnits } from "viem";
+import { useReadContract } from "wagmi";
+import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
+import { formatUnits, createPublicClient, http, defineChain } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
 import { 
@@ -19,6 +20,25 @@ import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 
 const PRICE_INCREASE_RATE = 1.15;
+
+// Define World Chain for viem
+const worldChain = defineChain({
+    id: contractConfig.worldChainId,
+    name: 'World Chain',
+    nativeCurrency: { name: 'Worldcoin', symbol: 'WRLD', decimals: 18 },
+    rpcUrls: {
+        default: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] },
+    },
+    blockExplorers: {
+        default: { name: 'Worldscan', url: 'https://worldscan.org' },
+    },
+});
+
+// Client for the minikit-react hook
+const client = createPublicClient({
+    chain: worldChain,
+    transport: http(),
+});
 
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -66,6 +86,7 @@ export default function Game() {
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
+    const [prestigeTxId, setPrestigeTxId] = useState<string | undefined>();
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -83,9 +104,7 @@ export default function Game() {
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [prestigeBalance, setPrestigeBalance] = useState(0);
 
-    // --- Wagmi Hooks (for read/write operations) ---
-    const { address: wagmiAccountAddress } = useAccount(); // Used for context, but walletAddress is the source of truth for UI
-    const { data: hash, writeContract, isPending: isPrestigeLoading } = useWriteContract();
+    // --- Read & Observe Hooks ---
     const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
         address: contractConfig.prestigeTokenAddress,
         abi: contractConfig.prestigeTokenAbi,
@@ -93,7 +112,11 @@ export default function Game() {
         args: [walletAddress!],
         query: { enabled: !!walletAddress },
     });
-    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({ hash });
+    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
+        client,
+        appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
+        transactionId: prestigeTxId ?? '',
+    });
 
     // --- Memoized Calculations ---
     const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]);
@@ -178,6 +201,7 @@ export default function Game() {
             setAutoclickers(initialAutoclickers);
             setUpgrades(initialUpgrades);
             refetchPrestigeBalance();
+            setPrestigeTxId(undefined); // Reset ID after success
         }
     }, [isPrestigeSuccess, refetchPrestigeBalance]);
 
@@ -262,6 +286,37 @@ export default function Game() {
         }
     }, [loadGameFromBackend]);
 
+    const handlePrestige = useCallback(async () => {
+        try {
+            const totalPoints = BigInt(Math.floor(stats.totalTokensEarned));
+            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                transaction: [
+                    {
+                        address: contractConfig.gameManagerAddress,
+                        abi: contractConfig.gameManagerAbi,
+                        functionName: 'prestige',
+                        args: [totalPoints],
+                        value: '0x0',
+                    },
+                ],
+            });
+
+            if (finalPayload.status === 'error') {
+                throw new Error((finalPayload as { message?: string }).message || 'Error al enviar la transacción con MiniKit.');
+            }
+
+            if (finalPayload.transaction_id) {
+                setPrestigeTxId(finalPayload.transaction_id);
+                setToast("Transacción enviada. Esperando confirmación...");
+            } else {
+                throw new Error('MiniKit no devolvió un ID de transacción.');
+            }
+        } catch (error) {
+            console.error("Error en el prestigio:", error);
+            alert(`Error en el prestigio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        }
+    }, [stats.totalTokensEarned]);
+
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
         setFloatingNumbers(current => [...current, { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY }]);
@@ -298,20 +353,6 @@ export default function Game() {
             saveGameToBackend(false);
         }
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
-
-    const handlePrestige = () => {
-        if (!wagmiAccountAddress) {
-            alert("La billetera de Wagmi no está conectada. No se puede realizar el prestigio.");
-            return;
-        }
-        const totalPoints = BigInt(Math.floor(stats.totalTokensEarned));
-        writeContract({
-            address: contractConfig.gameManagerAddress,
-            abi: contractConfig.gameManagerAbi,
-            functionName: 'prestige',
-            args: [totalPoints],
-        });
-    };
 
     // --- Render Logic ---
     if (!isClient) {
@@ -376,7 +417,7 @@ export default function Game() {
                         prestigeBalance={prestigeBalance}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isPrestigeLoading || isConfirming}
+                        isLoading={isConfirming || !!prestigeTxId}
                     />
                     <UpgradesSection
                         upgrades={upgrades}

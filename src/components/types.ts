@@ -42,6 +42,7 @@ export type Upgrade = {
   req?: Requirement;
   humanityGemsCost?: number;
   tier?: string;
+  dynamicName?: { key: string; replacements: { [key: string]: string | number } };
 };
 
 export type Achievement = {

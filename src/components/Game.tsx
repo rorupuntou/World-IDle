@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -62,6 +63,7 @@ const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => 
 };
 
 const NewsTicker = () => {
+    const { t } = useLanguage();
     const [news, setNews] = useState(() => choose(newsFeed));
     useEffect(() => {
         const newsInterval = setInterval(() => { setNews(choose(newsFeed)); }, 8000);
@@ -77,7 +79,7 @@ const NewsTicker = () => {
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ duration: 0.5 }}
                     className="text-sm text-slate-300 px-4 whitespace-nowrap w-full text-center"
-                    dangerouslySetInnerHTML={{ __html: news.replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
+                    dangerouslySetInnerHTML={{ __html: t(news).replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
                 />
             </AnimatePresence>
         </div>
@@ -268,19 +270,19 @@ export default function Game() {
                 if (autoclickers) setAutoclickers(autoclickers);
                 if (upgrades) setUpgrades(upgrades);
                 if (achievements) setAchievements(achievements);
-                setToast("Partida cargada exitosamente!");
+                setToast(t("game_loaded"));
             } else {
-                setToast("¡Bienvenido! Tu aventura comienza ahora.");
+                setToast(t("welcome_back"));
             }
         } catch (error) {
             console.error("Failed to load game:", error);
-            setToast("No se pudo cargar la partida.");
+            setToast(t("load_error"));
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         if (isPrestigeSuccess) {
-            setToast("¡Prestigio completado! Reiniciando...");
+            setToast(t("prestige_success"));
             setGameState(prev => ({ ...initialState, permanentBoostBonus: prev.permanentBoostBonus }));
             setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
             setAutoclickers(initialAutoclickers);
@@ -288,11 +290,11 @@ export default function Game() {
             refetchPrestigeBalance();
             setPrestigeTxId(undefined); // Reset ID after success
         }
-    }, [isPrestigeSuccess, refetchPrestigeBalance]);
+    }, [isPrestigeSuccess, refetchPrestigeBalance, t]);
 
     const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
-        if (manual) setToast("Guardando...");
+        if (manual) setToast(t("saving"));
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         try {
             const res = await fetch("/api/save-game", {
@@ -301,12 +303,12 @@ export default function Game() {
                 body: JSON.stringify({ walletAddress, gameData: fullGameState }),
             });
             if (!res.ok) throw new Error("Failed to save game data");
-            if (manual) setToast("¡Partida guardada!");
+            if (manual) setToast(t("game_saved"));
         } catch (error) {
             console.error("Failed to save game:", error);
-            if (manual) setToast("Error al guardar la partida.");
+            if (manual) setToast(t("save_error"));
         }
-    }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
+    }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements, t]);
 
     // --- Game Loop Effects ---
     useEffect(() => {
@@ -329,35 +331,35 @@ export default function Game() {
         const newAchievements = achievements.filter(ach => !ach.unlocked && checkRequirements(ach.req));
         if (newAchievements.length > 0) {
             newAchievements.forEach(ach => {
-                setToast(`Achievement Unlocked: ${ach.name}`);
+                setToast(t("achievement_unlocked", { name: t(ach.name) }));
                 unlockedAchievements.add(ach.id);
             });
             setAchievements(prev => prev.map(ach => unlockedAchievements.has(ach.id) ? { ...ach, unlocked: true } : ach));
         }
-    }, [stats, achievements, checkRequirements]);
+    }, [stats, achievements, checkRequirements, t]);
 
     // --- User Action Handlers ---
     const handleConnect = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
-            return alert("Por favor, abre la aplicación en World App.");
+            return alert(t("wallet_prompt"));
         }
         try {
             const result = await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
             if (result.finalPayload.status === 'error') {
-                throw new Error("La autenticación con World App falló.");
+                throw new Error(t("auth_failed"));
             }
             const address = result.finalPayload.message.match(/0x[a-fA-F0-9]{40}/)?.[0] as `0x${string}` | undefined;
             if (address) {
                 setWalletAddress(address);
                 loadGameFromBackend(address);
             } else {
-                throw new Error("No se pudo obtener la dirección desde World App.");
+                throw new Error(t("no_address"));
             }
         } catch (error) {
             console.error("Error al conectar la billetera:", error);
-            alert(`Error al conectar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            alert(t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
         }
-    }, [loadGameFromBackend]);
+    }, [loadGameFromBackend, t]);
 
     const handlePrestige = useCallback(async () => {
         try {
@@ -386,15 +388,15 @@ export default function Game() {
 
             if (finalPayload.transaction_id) {
                 setPrestigeTxId(finalPayload.transaction_id);
-                setToast("Transacción enviada. Esperando confirmación...");
+                setToast(t("transaction_sent"));
             } else {
-                throw new Error('MiniKit no devolvió un ID de transacción.');
+                throw new Error(t('transaction_error'));
             }
         } catch (error) {
             console.error("Error en el prestigio:", error);
-            alert(`Error en el prestigio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            alert(t("prestige_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
         }
-    }, [stats.totalTokensEarned]);
+    }, [prestigeReward, t]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -434,16 +436,16 @@ export default function Game() {
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
     const handleDevMode = () => {
-        const code = prompt("Enter dev code:");
+        const code = prompt(t("dev_mode_prompt"));
         if (code === "1312") {
             setDevModeActive(true);
-            setToast("Dev mode activated!");
+            setToast(t("dev_mode_activated"));
         }
     };
 
     // --- Render Logic ---
     if (!isClient) {
-        return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+        return <div className="flex items-center justify-center min-h-screen">{t('loading')}</div>;
     }
 
     if (!walletAddress) {

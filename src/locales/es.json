@@ -14,5 +14,332 @@
     "prestige_balance_message": "Se basa en tu saldo de {prestigeBalance} $PRESTIGE.",
     "prestige_reward_message": "Reinicia para obtener {prestigeReward} tokens de prestigio.",
     "prestige_button": "Reiniciar para Prestigio",
-    "processing": "Procesando..."
+    "processing": "Procesando...",
+    "each": "cada uno",
+    "secret_trophy": "Trofeo secreto",
+    "secret_trophy_desc": "Sigue jugando para desbloquear este trofeo secreto.",
+    "loading": "Cargando...",
+    "wclick": "$WCLICK",
+    "per_second": "/s",
+    "buy": "Comprar",
+    "requirements": "Requisitos:",
+    "effect": "Efecto:",
+    "game_loaded": "Partida cargada exitosamente!",
+    "welcome_back": "¡Bienvenido! Tu aventura comienza ahora.",
+    "load_error": "No se pudo cargar la partida.",
+    "prestige_success": "¡Prestigio completado! Reiniciando...",
+    "saving": "Guardando...",
+    "game_saved": "¡Partida guardada!",
+    "save_error": "Error al guardar la partida.",
+    "achievement_unlocked": "Logro Desbloqueado: {name}",
+    "wallet_prompt": "Por favor, abre la aplicación en World App.",
+    "auth_failed": "La autenticación con World App falló.",
+    "no_address": "No se pudo obtener la dirección desde World App.",
+    "connect_error": "Error al conectar: {error}",
+    "transaction_sent": "Transacción enviada. Esperando confirmación...",
+    "transaction_error": "MiniKit no devolvió un ID de transacción.",
+    "prestige_error": "Error en el prestigio: {error}",
+    "dev_mode_prompt": "Introduce el código de desarrollador:",
+    "dev_mode_activated": "¡Modo desarrollador activado!",
+    "permanent_boosts_shop": "Tienda de Mejoras Permanentes",
+    "price": "Precio",
+    "buy_now": "Comprar Ahora",
+    "payment_initiated": "Iniciando pago...",
+    "payment_failed_init": "Fallo al iniciar el pago.",
+    "payment_sent_verifying": "¡Pago enviado! Verificando y aplicando la mejora...",
+    "payment_failed_confirm": "Fallo al confirmar el pago.",
+    "boost_purchased": "¡Mejora comprada con éxito!",
+    "confirmation_failed": "La confirmación falló en el backend.",
+    "payment_cancelled": "El pago fue cancelado o falló en World App.",
+    "purchase_failed": "La compra falló: {error}",
+    "shop": {
+        "boost_10": "10% de Mejora Permanente",
+        "boost_50": "50% de Mejora Permanente",
+        "boost_100": "100% de Mejora Permanente"
+    },
+    "autoclickers_section": {
+        "title": "Autoclickers"
+    },
+    "item_details": {
+        "req_total_tokens": "Haber ganado un total de {amount} $WCLICK.",
+        "req_total_clicks": "Haber hecho {amount} clics.",
+        "req_tps": "Alcanzar {amount} $WCLICK/s.",
+        "req_each_autoclicker": "Tener al menos {amount} de cada autoclicker.",
+        "req_autoclicker_amount": "Tener {amount} {name}.",
+        "req_verified": "Estar verificado con World ID.",
+        "eff_multiply_click": "Multiplica el valor del clic por {value}.",
+        "eff_add_click": "Añade {value} al valor del clic.",
+        "eff_multiply_global": "Multiplica la producción total por {value}.",
+        "eff_multiply_autoclicker": "Multiplica la producción de {name} por {value}.",
+        "eff_add_cps_to_click": "Añade un {percent}% de tu CpS al valor del clic.",
+        "eff_add_cps_from_others": "Añade producción a {name} basado en otros autoclickers.",
+        "eff_multiply_by_other": "Multiplica la producción de {target} por cada {source}.",
+        "eff_add_tps": "Añade {value} a la producción base por segundo.",
+        "eff_unknown": "Efecto desconocido."
+    },
+    "autoclicker": {
+        "cursor": {
+            "name": "Cursor",
+            "desc": "El comienzo de todo. Un simple clic."
+        },
+        "dataminer": {
+            "name": "Dato-Minero",
+            "desc": "Extrae datos de la red en busca de $WCLICK."
+        },
+        "quantumcore": {
+            "name": "Quantum-Core",
+            "desc": "Un núcleo cuántico que procesa realidades paralelas."
+        },
+        "droneswarm": {
+            "name": "Enjambre de Drones",
+            "desc": "Drones autónomos que recorren el mundo en busca de $WCLICK."
+        },
+        "serverfarm": {
+            "name": "Granja de Servidores",
+            "desc": "Un centro de datos masivo dedicado a la minería."
+        },
+        "planetarynode": {
+            "name": "Nodo Planetario",
+            "desc": "Una red de computación que abarca todo un planeta."
+        },
+        "computationalorbital": {
+            "name": "Orbital de Cómputo",
+            "desc": "Una estación espacial que utiliza la energía estelar para computar."
+        },
+        "interdimensionalportal": {
+            "name": "Portal Interdimensional",
+            "desc": "Abre portales a otras dimensiones para obtener sus riquezas."
+        },
+        "timemachine": {
+            "name": "Máquina del Tiempo",
+            "desc": "Viaja al futuro para traer los $WCLICK que aún no se han minado."
+        },
+        "humanitycondenser": {
+            "name": "Condensador de Humanidad",
+            "desc": "Convierte la conciencia colectiva en $WCLICK."
+        },
+        "transcendentsingularity": {
+            "name": "Singularidad Trascendente",
+            "desc": "El punto final de la computación. Reescribe la realidad."
+        },
+        "blackholegenerator": {
+            "name": "Generador de Agujeros Negros",
+            "desc": "Comprime la realidad para generar $WCLICK."
+        },
+        "realityforge": {
+            "name": "Forja de Realidades",
+            "desc": "Crea universos de bolsillo para farmear $WCLICK."
+        },
+        "devprocessor": {
+            "name": "Dev Processor",
+            "desc": "Herramienta de desarrollo para generar tokens rápidamente."
+        }
+    },
+    "upgrade": {
+        "reinforcedCursor": {
+            "name": "Cursor Reforzado",
+            "desc": "Clics y cursores x2"
+        },
+        "titaniumMouse": {
+            "name": "Mouse de Titanio",
+            "desc": "Clics x2"
+        },
+        "thousandFingers": {
+            "name": "Mil Dedos",
+            "desc": "Cursores ganan +0.1 por cada Autoclicker que no sea un cursor."
+        },
+        "millionFingers": {
+            "name": "Un Millón de Dedos",
+            "desc": "Cursores ganan +0.5 por cada Autoclicker que no sea un cursor."
+        },
+        "assistedClicks": {
+            "name": "Clics Asistidos",
+            "desc": "Los clics ganan un 1% de tu CpS total."
+        },
+        "exponentialClicks": {
+            "name": "Clics Exponenciales",
+            "desc": "Los clics ganan un 1% adicional de tu CpS total."
+        },
+        "synergyProtocol": {
+            "name": "Protocolo de Sinergia",
+            "desc": "Producción total +5%"
+        },
+        "globalOptimization": {
+            "name": "Optimización Global",
+            "desc": "Producción total +10%"
+        },
+        "decentralizedNeuralNetwork": {
+            "name": "Red Neuronal Descentralizada",
+            "desc": "Producción total +15%"
+        },
+        "minerFarmSynergy": {
+            "name": "Sinergia Minero-Granja",
+            "desc": "Dato-Mineros ganan +1% de producción por cada Granja de Servidores."
+        },
+        "portalTimeSynergy": {
+            "name": "Sinergia Portal-Tiempo",
+            "desc": "Portales ganan +1% de producción por cada Máquina del Tiempo."
+        },
+        "tiered_dataminer": {
+            "name": "Mineros Eficientes x{amount}",
+            "desc": "Duplica la producción de Dato-Minero."
+        },
+        "tiered_quantumcore": {
+            "name": "Núcleos Optimizados x{amount}",
+            "desc": "Duplica la producción de Quantum-Core."
+        },
+        "tiered_droneswarm": {
+            "name": "Logística de Enjambre x{amount}",
+            "desc": "Duplica la producción de Enjambre de Drones."
+        },
+        "tiered_serverfarm": {
+            "name": "Refrigeración Líquida x{amount}",
+            "desc": "Duplica la producción de Granja de Servidores."
+        },
+        "tiered_planetarynode": {
+            "name": "Ancho de Banda Galáctico x{amount}",
+            "desc": "Duplica la producción de Nodo Planetario."
+        },
+        "tiered_computationalorbital": {
+            "name": "Computronium Estable x{amount}",
+            "desc": "Duplica la producción de Orbital de Cómputo."
+        },
+        "tiered_interdimensionalportal": {
+            "name": "Sincronización Dimensional x{amount}",
+            "desc": "Duplica la producción de Portal Interdimensional."
+        },
+        "tiered_timemachine": {
+            "name": "Paradojas Estabilizadas x{amount}",
+            "desc": "Duplica la producción de Máquina del Tiempo."
+        },
+        "tiered_humanitycondenser": {
+            "name": "Conciencia Colectiva x{amount}",
+            "desc": "Duplica la producción de Condensador de Humanidad."
+        },
+        "tiered_transcendentsingularity": {
+            "name": "Leyes Físicas Editables x{amount}",
+            "desc": "Duplica la producción de Singularidad Trascendente."
+        },
+        "tiered_blackholegenerator": {
+            "name": "Horizonte de Sucesos Estable x{amount}",
+            "desc": "Duplica la producción de Generador de Agujeros Negros."
+        },
+        "tiered_realityforge": {
+            "name": "Multiversos Productivos x{amount}",
+            "desc": "Duplica la producción de Forja de Realidades."
+        }
+    },
+    "achievement": {
+        "journeyBegins": {
+            "name": "El Viaje Comienza",
+            "desc": "Gana tu primer $WCLICK"
+        },
+        "smallCapitalist": {
+            "name": "Pequeño Capitalista",
+            "desc": "Alcanza 1,000 $WCLICK"
+        },
+        "digitalTycoon": {
+            "name": "Magnate Digital",
+            "desc": "Alcanza 1,000,000 $WCLICK"
+        },
+        "bitBillionaire": {
+            "name": "Billonario de Bits",
+            "desc": "Alcanza 1,000,000,000 $WCLICK"
+        },
+        "transcendentTrillionaire": {
+            "name": "Trillonario Trascendente",
+            "desc": "Alcanza 1,000,000,000,000 $WCLICK"
+        },
+        "cosmicQuadrillionaire": {
+            "name": "Cuatrillonario Cósmico",
+            "desc": "Alcanza 1e15 $WCLICK"
+        },
+        "quantumQuintillionaire": {
+            "name": "Quintillonario Quántico",
+            "desc": "Alcanza 1e18 $WCLICK"
+        },
+        "beginnerClicker": {
+            "name": "Clicker Principiante",
+            "desc": "Haz 100 clics"
+        },
+        "clickFrenzy": {
+            "name": "Frenesí de Clics",
+            "desc": "Haz 5,000 clics"
+        },
+        "compulsiveClicker": {
+            "name": "Clicker Compulsivo",
+            "desc": "Haz 100,000 clics"
+        },
+        "divineFinger": {
+            "name": "Dedo Divino",
+            "desc": "Haz 1,000,000 de clics"
+        },
+        "steadyFlow": {
+            "name": "Flujo Constante",
+            "desc": "Alcanza 10 $WCLICK/s"
+        },
+        "dataHighway": {
+            "name": "Autopista de Datos",
+            "desc": "Alcanza 1,000 $WCLICK/s"
+        },
+        "lightSpeed": {
+            "name": "Velocidad de la Luz",
+            "desc": "Alcanza 100,000 $WCLICK/s"
+        },
+        "economicSingularity": {
+            "name": "Singularidad Económica",
+            "desc": "Alcanza 1,000,000 $WCLICK/s"
+        },
+        "beyondPhysics": {
+            "name": "Más Allá de la Física",
+            "desc": "Alcanza 1e9 $WCLICK/s"
+        },
+        "diversification": {
+            "name": "Diversificación",
+            "desc": "Posee al menos un autoclicker de cada tipo."
+        },
+        "clickArmy": {
+            "name": "Ejército de Clics",
+            "desc": "Posee 100 Cursors."
+        },
+        "largeScaleMining": {
+            "name": "Minería a Gran Escala",
+            "desc": "Posee 100 Dato-Mineros."
+        },
+        "totalComputing": {
+            "name": "Computación Total",
+            "desc": "Posee 50 de cada autoclicker."
+        },
+        "worldArchitect": {
+            "name": "Arquitecto de Mundos",
+            "desc": "Posee 100 de cada autoclicker."
+        },
+        "realityBuilder": {
+            "name": "Constructor de Realidades",
+            "desc": "Posee 150 de cada autoclicker."
+        },
+        "proofOfHumanity": {
+            "name": "Prueba de Humanidad",
+            "desc": "Verifícate con World ID"
+        },
+        "obsession": {
+            "name": "Obsesión",
+            "desc": "Posee 500 cursores."
+        },
+        "minimalist": {
+            "name": "Minimalista",
+            "desc": "Haz prestigio con exactamente 1 punto de prestigio para reclamar."
+        }
+    },
+    "news": [
+        "Noticia: Se sospecha que las granjas de datos emplean mano de obra de IA no declarada.",
+        "Noticia: Científico advierte que los núcleos cuánticos liberan 'demasiada verdad' en los ríos de información.",
+        "Noticia: Hombre roba un banco, lo invierte todo en Autoclickers.",
+        "Noticia: 'Francamente, toda esta historia de los $WCLICK es un poco sospechosa', dice un idiota confundido.",
+        "Noticia: La epidemia de procrastinación golpea a la nación; los expertos culpan a los videos de gatos.",
+        "<q>Humedad de datos.</q><sig>IA Autónoma</sig>",
+        "<q>Estamos observando.</q><sig>IA Autónoma</sig>",
+        "Noticia: El valor de $WCLICK se dispara después de que se rumorea que 'es bueno para la economía'.",
+        "Noticia: La verificación de humanidad ahora es más popular que el pan rebanado, según una encuesta."
+    ]
 }

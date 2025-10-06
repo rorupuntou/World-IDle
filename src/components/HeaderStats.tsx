@@ -1,5 +1,6 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { BeakerIcon, CursorArrowRaysIcon, ArrowTrendingUpIcon } from "@heroicons/react/24/outline";
 
@@ -20,12 +21,13 @@ export default function HeaderStats({
     permanentBoostBonus,
     formatNumber
 }: HeaderStatsProps) {
+    const { t } = useLanguage();
     return (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl text-center border border-slate-700 sticky top-4 z-20">
             <h2 className="text-5xl font-mono tracking-wider">{formatNumber(tokens)}</h2>
-            <p className="text-sm text-slate-400">$WCLICK</p>
+            <p className="text-sm text-slate-400">{t('wclick')}</p>
             <div className="flex justify-center items-center gap-6 mt-2">
-                <p className="text-md text-lime-400">+{formatNumber(tokensPerSecond)}/s</p>
+                <p className="text-md text-lime-400">+{formatNumber(tokensPerSecond)}{t('per_second')}</p>
                 <div className="flex items-center gap-2 text-cyan-400">
                     <CursorArrowRaysIcon className="w-5 h-5" />
                     <p className="font-mono text-lg">{formatNumber(totalClicks)}</p>

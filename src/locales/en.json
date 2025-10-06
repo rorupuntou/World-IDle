@@ -14,5 +14,332 @@
     "prestige_balance_message": "It is based on your balance of {prestigeBalance} $PRESTIGE.",
     "prestige_reward_message": "Reset to get {prestigeReward} prestige tokens.",
     "prestige_button": "Reset for Prestige",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "each": "each",
+    "secret_trophy": "Secret Trophy",
+    "secret_trophy_desc": "Keep playing to unlock this secret trophy.",
+    "loading": "Loading...",
+    "wclick": "$WCLICK",
+    "per_second": "/s",
+    "buy": "Buy",
+    "requirements": "Requirements:",
+    "effect": "Effect:",
+    "game_loaded": "Game loaded successfully!",
+    "welcome_back": "Welcome! Your adventure starts now.",
+    "load_error": "Could not load game.",
+    "prestige_success": "Prestige complete! Resetting...",
+    "saving": "Saving...",
+    "game_saved": "Game saved!",
+    "save_error": "Error saving game.",
+    "achievement_unlocked": "Achievement Unlocked: {name}",
+    "wallet_prompt": "Please open this app in World App.",
+    "auth_failed": "Authentication with World App failed.",
+    "no_address": "Could not get address from World App.",
+    "connect_error": "Error connecting: {error}",
+    "transaction_sent": "Transaction sent. Awaiting confirmation...",
+    "transaction_error": "MiniKit did not return a transaction ID.",
+    "prestige_error": "Error during prestige: {error}",
+    "dev_mode_prompt": "Enter dev code:",
+    "dev_mode_activated": "Dev mode activated!",
+    "permanent_boosts_shop": "Permanent Boosts Shop",
+    "price": "Price",
+    "buy_now": "Buy Now",
+    "payment_initiated": "Initiating payment...",
+    "payment_failed_init": "Failed to initiate payment.",
+    "payment_sent_verifying": "Payment sent! Verifying and applying boost...",
+    "payment_failed_confirm": "Failed to confirm payment.",
+    "boost_purchased": "Boost purchased successfully!",
+    "confirmation_failed": "Confirmation failed on the backend.",
+    "payment_cancelled": "Payment was cancelled or failed in World App.",
+    "purchase_failed": "Purchase failed: {error}",
+    "shop": {
+        "boost_10": "10% Permanent Boost",
+        "boost_50": "50% Permanent Boost",
+        "boost_100": "100% Permanent Boost"
+    },
+    "autoclickers_section": {
+        "title": "Autoclickers"
+    },
+    "item_details": {
+        "req_total_tokens": "Have earned a total of {amount} $WCLICK.",
+        "req_total_clicks": "Have made {amount} clicks.",
+        "req_tps": "Reach {amount} $WCLICK/s.",
+        "req_each_autoclicker": "Have at least {amount} of each autoclicker.",
+        "req_autoclicker_amount": "Own {amount} {name}.",
+        "req_verified": "Be verified with World ID.",
+        "eff_multiply_click": "Multiplies click value by {value}.",
+        "eff_add_click": "Adds {value} to click value.",
+        "eff_multiply_global": "Multiplies total production by {value}.",
+        "eff_multiply_autoclicker": "Multiplies production of {name} by {value}.",
+        "eff_add_cps_to_click": "Adds {percent}% of your CpS to click value.",
+        "eff_add_cps_from_others": "Adds production to {name} based on other autoclickers.",
+        "eff_multiply_by_other": "Multiplies production of {target} for each {source}.",
+        "eff_add_tps": "Adds {value} to base production per second.",
+        "eff_unknown": "Unknown effect."
+    },
+    "autoclicker": {
+        "cursor": {
+            "name": "Cursor",
+            "desc": "The beginning of everything. A simple click."
+        },
+        "dataminer": {
+            "name": "Data-Miner",
+            "desc": "Mines the network for $WCLICK."
+        },
+        "quantumcore": {
+            "name": "Quantum-Core",
+            "desc": "A quantum core that processes parallel realities."
+        },
+        "droneswarm": {
+            "name": "Drone Swarm",
+            "desc": "Autonomous drones that scour the world for $WCLICK."
+        },
+        "serverfarm": {
+            "name": "Server Farm",
+            "desc": "A massive data center dedicated to mining."
+        },
+        "planetarynode": {
+            "name": "Planetary Node",
+            "desc": "A planet-spanning computation network."
+        },
+        "computationalorbital": {
+            "name": "Computational Orbital",
+            "desc": "A space station that uses stellar energy to compute."
+        },
+        "interdimensionalportal": {
+            "name": "Interdimensional Portal",
+            "desc": "Opens portals to other dimensions to obtain their riches."
+        },
+        "timemachine": {
+            "name": "Time Machine",
+            "desc": "Travels to the future to bring back $WCLICK that hasn't been mined yet."
+        },
+        "humanitycondenser": {
+            "name": "Humanity Condenser",
+            "desc": "Converts collective consciousness into $WCLICK."
+        },
+        "transcendentsingularity": {
+            "name": "Transcendent Singularity",
+            "desc": "The final point of computation. It rewrites reality."
+        },
+        "blackholegenerator": {
+            "name": "Black Hole Generator",
+            "desc": "Compresses reality to generate $WCLICK."
+        },
+        "realityforge": {
+            "name": "Reality Forge",
+            "desc": "Creates pocket universes to farm $WCLICK."
+        },
+        "devprocessor": {
+            "name": "Dev Processor",
+            "desc": "Development tool to generate tokens quickly."
+        }
+    },
+    "upgrade": {
+        "reinforcedCursor": {
+            "name": "Reinforced Cursor",
+            "desc": "Clicks and cursors x2"
+        },
+        "titaniumMouse": {
+            "name": "Titanium Mouse",
+            "desc": "Clicks x2"
+        },
+        "thousandFingers": {
+            "name": "Thousand Fingers",
+            "desc": "Cursors gain +0.1 for each non-cursor Autoclicker."
+        },
+        "millionFingers": {
+            "name": "A Million Fingers",
+            "desc": "Cursors gain +0.5 for each non-cursor Autoclicker."
+        },
+        "assistedClicks": {
+            "name": "Assisted Clicks",
+            "desc": "Clicks gain 1% of your total CpS."
+        },
+        "exponentialClicks": {
+            "name": "Exponential Clicks",
+            "desc": "Clicks gain an additional 1% of your total CpS."
+        },
+        "synergyProtocol": {
+            "name": "Synergy Protocol",
+            "desc": "Total production +5%"
+        },
+        "globalOptimization": {
+            "name": "Global Optimization",
+            "desc": "Total production +10%"
+        },
+        "decentralizedNeuralNetwork": {
+            "name": "Decentralized Neural Network",
+            "desc": "Total production +15%"
+        },
+        "minerFarmSynergy": {
+            "name": "Miner-Farm Synergy",
+            "desc": "Data-Miners gain +1% production for each Server Farm."
+        },
+        "portalTimeSynergy": {
+            "name": "Portal-Time Synergy",
+            "desc": "Portals gain +1% production for each Time Machine."
+        },
+        "tiered_dataminer": {
+            "name": "Efficient Miners x{amount}",
+            "desc": "Doubles the production of Data-Miner."
+        },
+        "tiered_quantumcore": {
+            "name": "Optimized Cores x{amount}",
+            "desc": "Doubles the production of Quantum-Core."
+        },
+        "tiered_droneswarm": {
+            "name": "Swarm Logistics x{amount}",
+            "desc": "Doubles the production of Drone Swarm."
+        },
+        "tiered_serverfarm": {
+            "name": "Liquid Cooling x{amount}",
+            "desc": "Doubles the production of Server Farm."
+        },
+        "tiered_planetarynode": {
+            "name": "Galactic Bandwidth x{amount}",
+            "desc": "Doubles the production of Planetary Node."
+        },
+        "tiered_computationalorbital": {
+            "name": "Stable Computronium x{amount}",
+            "desc": "Doubles the production of Computational Orbital."
+        },
+        "tiered_interdimensionalportal": {
+            "name": "Dimensional Synchronization x{amount}",
+            "desc": "Doubles the production of Interdimensional Portal."
+        },
+        "tiered_timemachine": {
+            "name": "Stabilized Paradoxes x{amount}",
+            "desc": "Doubles the production of Time Machine."
+        },
+        "tiered_humanitycondenser": {
+            "name": "Collective Consciousness x{amount}",
+            "desc": "Doubles the production of Humanity Condenser."
+        },
+        "tiered_transcendentsingularity": {
+            "name": "Editable Physical Laws x{amount}",
+            "desc": "Doubles the production of Transcendent Singularity."
+        },
+        "tiered_blackholegenerator": {
+            "name": "Stable Event Horizon x{amount}",
+            "desc": "Doubles the production of Black Hole Generator."
+        },
+        "tiered_realityforge": {
+            "name": "Productive Multiverses x{amount}",
+            "desc": "Doubles the production of Reality Forge."
+        }
+    },
+    "achievement": {
+        "journeyBegins": {
+            "name": "The Journey Begins",
+            "desc": "Earn your first $WCLICK"
+        },
+        "smallCapitalist": {
+            "name": "Small Capitalist",
+            "desc": "Reach 1,000 $WCLICK"
+        },
+        "digitalTycoon": {
+            "name": "Digital Tycoon",
+            "desc": "Reach 1,000,000 $WCLICK"
+        },
+        "bitBillionaire": {
+            "name": "Bit Billionaire",
+            "desc": "Reach 1,000,000,000 $WCLICK"
+        },
+        "transcendentTrillionaire": {
+            "name": "Transcendent Trillionaire",
+            "desc": "Reach 1,000,000,000,000 $WCLICK"
+        },
+        "cosmicQuadrillionaire": {
+            "name": "Cosmic Quadrillionaire",
+            "desc": "Reach 1e15 $WCLICK"
+        },
+        "quantumQuintillionaire": {
+            "name": "Quantum Quintillionaire",
+            "desc": "Reach 1e18 $WCLICK"
+        },
+        "beginnerClicker": {
+            "name": "Beginner Clicker",
+            "desc": "Make 100 clicks"
+        },
+        "clickFrenzy": {
+            "name": "Click Frenzy",
+            "desc": "Make 5,000 clicks"
+        },
+        "compulsiveClicker": {
+            "name": "Compulsive Clicker",
+            "desc": "Make 100,000 clicks"
+        },
+        "divineFinger": {
+            "name": "Divine Finger",
+            "desc": "Make 1,000,000 clicks"
+        },
+        "steadyFlow": {
+            "name": "Steady Flow",
+            "desc": "Reach 10 $WCLICK/s"
+        },
+        "dataHighway": {
+            "name": "Data Highway",
+            "desc": "Reach 1,000 $WCLICK/s"
+        },
+        "lightSpeed": {
+            "name": "Light Speed",
+            "desc": "Reach 100,000 $WCLICK/s"
+        },
+        "economicSingularity": {
+            "name": "Economic Singularity",
+            "desc": "Reach 1,000,000 $WCLICK/s"
+        },
+        "beyondPhysics": {
+            "name": "Beyond Physics",
+            "desc": "Reach 1e9 $WCLICK/s"
+        },
+        "diversification": {
+            "name": "Diversification",
+            "desc": "Own at least one of each type of autoclicker."
+        },
+        "clickArmy": {
+            "name": "Click Army",
+            "desc": "Own 100 Cursors."
+        },
+        "largeScaleMining": {
+            "name": "Large-Scale Mining",
+            "desc": "Own 100 Data-Miners."
+        },
+        "totalComputing": {
+            "name": "Total Computing",
+            "desc": "Own 50 of each autoclicker."
+        },
+        "worldArchitect": {
+            "name": "World Architect",
+            "desc": "Own 100 of each autoclicker."
+        },
+        "realityBuilder": {
+            "name": "Reality Builder",
+            "desc": "Own 150 of each autoclicker."
+        },
+        "proofOfHumanity": {
+            "name": "Proof of Humanity",
+            "desc": "Verify with World ID"
+        },
+        "obsession": {
+            "name": "Obsession",
+            "desc": "Own 500 cursors."
+        },
+        "minimalist": {
+            "name": "Minimalist",
+            "desc": "Prestige with exactly 1 prestige point to claim."
+        }
+    },
+    "news": [
+        "News: Data farms suspected of employing undeclared AI labor.",
+        "News: Scientist warns quantum cores are leaking 'too much truth' into information streams.",
+        "News: Man robs bank, invests everything in Autoclickers.",
+        "News: 'Frankly, this whole $WCLICK thing is a bit suspicious,' says confused idiot.",
+        "News: Procrastination epidemic hits nation; experts blame cat videos.",
+        "<q>Data dampness.</q><sig>Autonomous AI</sig>",
+        "<q>We are watching.</q><sig>Autonomous AI</sig>",
+        "News: $WCLICK value skyrockets after it's rumored to be 'good for the economy.'",
+        "News: Humanity verification now more popular than sliced bread, poll finds."
+    ]
 }

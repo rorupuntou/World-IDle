@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { CpuChipIcon, BeakerIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
@@ -30,6 +31,7 @@ export default function AutoclickersSection({
     autoclickerCPSValues,
     devModeActive
 }: AutoclickersSectionProps) {
+    const { t } = useLanguage();
 
     const visibleAutoclickers = useMemo(() => {
         const regularAutoclickers = autoclickers.filter(a => !a.devOnly);
@@ -45,7 +47,7 @@ export default function AutoclickersSection({
     return (
         <div className="space-y-3">
             <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6" />Autoclickers</h3>
+                <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6" />{t('autoclickers_section.title')}</h3>
                 <div className="flex items-center bg-slate-500/10 border border-slate-700 rounded-lg">
                     {([1, 10, 100] as BuyAmount[]).map(amount => (
                         <button
@@ -62,6 +64,8 @@ export default function AutoclickersSection({
                 if (!checkRequirements(auto.req)) return null;
                 const totalTokenCost = calculateBulkCost(auto, buyAmount);
                 const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
+                const translatedName = t(auto.name);
+                const translatedDesc = t(auto.desc);
                 return (
                     <div key={auto.id} className="w-full flex items-center bg-slate-500/10 backdrop-blur-sm rounded-lg border border-slate-700 hover:bg-slate-500/20 transition-colors">
                         <motion.button 
@@ -70,9 +74,9 @@ export default function AutoclickersSection({
                             className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <div className="text-left">
-                                <p className={`font-bold ${auto.devOnly ? 'text-yellow-400' : ''}`}>{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
-                                <p className="text-xs text-slate-400 italic">{auto.desc}</p>
-                                <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}/s cada uno</p>
+                                <p className={`font-bold ${auto.devOnly ? 'text-yellow-400' : ''}`}>{translatedName} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                                <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
+                                <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}{t('per_second')} {t('each')}</p>
                             </div>
                             <div className="text-right font-mono text-yellow-400">
                                 <p>{formatNumber(totalTokenCost)}</p>
@@ -80,7 +84,7 @@ export default function AutoclickersSection({
                             </div>
                         </motion.button>
                         <button 
-                            onClick={() => showRequirements({ name: auto.name, desc: auto.desc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] }, 'autoclicker')}
+                            onClick={() => showRequirements({ name: translatedName, desc: translatedDesc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] }, 'autoclicker')}
                             className="p-3 text-slate-400 hover:text-white border-l border-slate-700"
                         >
                             <InformationCircleIcon className="w-5 h-5" />

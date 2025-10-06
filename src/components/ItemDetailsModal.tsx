@@ -1,3 +1,4 @@
+import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Requirement, Effect, Autoclicker } from './types';
@@ -16,50 +17,51 @@ interface ItemDetailsModalProps {
     isPurchasable?: boolean;
 }
 
-function formatRequirement(req: Requirement, autoclickers: Autoclicker[]): string[] {
+function formatRequirement(req: Requirement, autoclickers: Autoclicker[], t: (key: string, replacements?: { [key: string]: string | number }) => string): string[] {
     const requirements: string[] = [];
-    if (req.totalTokensEarned) requirements.push(`Haber ganado un total de ${req.totalTokensEarned.toLocaleString()} $WCLICK.`);
-    if (req.totalClicks) requirements.push(`Haber hecho ${req.totalClicks.toLocaleString()} clics.`);
-    if (req.tps) requirements.push(`Alcanzar ${req.tps.toLocaleString()} $WCLICK/s.`);
-    if (req.eachAutoclickerAmount) requirements.push(`Tener al menos ${req.eachAutoclickerAmount} de cada autoclicker.`);
+    if (req.totalTokensEarned) requirements.push(t('item_details.req_total_tokens', { amount: req.totalTokensEarned.toLocaleString() }));
+    if (req.totalClicks) requirements.push(t('item_details.req_total_clicks', { amount: req.totalClicks.toLocaleString() }));
+    if (req.tps) requirements.push(t('item_details.req_tps', { amount: req.tps.toLocaleString() }));
+    if (req.eachAutoclickerAmount) requirements.push(t('item_details.req_each_autoclicker', { amount: req.eachAutoclickerAmount }));
     if (req.autoclickers) {
         const autoReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
         autoReqs.forEach(r => {
             const auto = autoclickers.find(a => a.id === r.id);
-            requirements.push(`Tener ${r.amount} ${auto ? auto.name : `autoclicker con ID ${r.id}`}.`);
+            requirements.push(t('item_details.req_autoclicker_amount', { amount: r.amount, name: auto ? t(auto.name) : `ID ${r.id}` }));
         });
     }
-    if (req.verified) requirements.push("Estar verificado con World ID.");
+    if (req.verified) requirements.push(t('item_details.req_verified'));
     return requirements;
 }
 
-function formatEffect(effects: Effect[], autoclickers: Autoclicker[]): string[] {
+function formatEffect(effects: Effect[], autoclickers: Autoclicker[], t: (key: string, replacements?: { [key: string]: string | number }) => string): string[] {
     return effects.map(e => {
         switch (e.type) {
-            case 'multiplyClick': return `Multiplica el valor del clic por ${e.value}.`;
-            case 'addClick': return `Añade ${e.value} al valor del clic.`;
-            case 'multiplyGlobal': return `Multiplica la producción total por ${e.value}.`;
+            case 'multiplyClick': return t('item_details.eff_multiply_click', { value: e.value });
+            case 'addClick': return t('item_details.eff_add_click', { value: e.value });
+            case 'multiplyGlobal': return t('item_details.eff_multiply_global', { value: e.value });
             case 'multiplyAutoclicker': {
                 const auto = autoclickers.find(a => a.id === e.targetId);
-                return `Multiplica la producción de ${auto ? auto.name : `autoclicker con ID ${e.targetId}`} por ${e.value}.`;
+                return t('item_details.eff_multiply_autoclicker', { name: auto ? t(auto.name) : `ID ${e.targetId}`, value: e.value });
             }
-            case 'addCpSToClick': return `Añade un ${e.percent * 100}% de tu CpS al valor del clic.`;
+            case 'addCpSToClick': return t('item_details.eff_add_cps_to_click', { percent: e.percent * 100 });
             case 'addCpSToAutoclickerFromOthers': {
                 const auto = autoclickers.find(a => a.id === e.targetId);
-                return `Añade producción a ${auto ? auto.name : `autoclicker con ID ${e.targetId}`} basado en otros autoclickers.`;
+                return t('item_details.eff_add_cps_from_others', { name: auto ? t(auto.name) : `ID ${e.targetId}` });
             }
             case 'multiplyAutoclickerByOtherCount': {
                 const target = autoclickers.find(a => a.id === e.targetId);
                 const source = autoclickers.find(a => a.id === e.sourceId);
-                return `Multiplica la producción de ${target ? target.name : `ID ${e.targetId}`} por cada ${source ? source.name : `ID ${e.sourceId}`}.`;
+                return t('item_details.eff_multiply_by_other', { target: target ? t(target.name) : `ID ${e.targetId}`, source: source ? t(source.name) : `ID ${e.sourceId}` });
             }
-            case 'addTps': return `Añade ${e.value} a la producción base por segundo.`;
-            default: return "Efecto desconocido.";
+            case 'addTps': return t('item_details.eff_add_tps', { value: e.value });
+            default: return t('item_details.eff_unknown');
         }
     });
 }
 
 export default function ItemDetailsModal({ item, autoclickers, onClose, onPurchase, isPurchasable }: ItemDetailsModalProps) {
+    const { t } = useLanguage();
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -85,18 +87,18 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                 
                 {item.req && (
                     <div className="mb-4">
-                        <h3 className="font-bold mb-1 text-slate-200">Requisitos:</h3>
+                        <h3 className="font-bold mb-1 text-slate-200">{t('requirements')}</h3>
                         <ul className="list-disc list-inside text-slate-300 space-y-1">
-                            {formatRequirement(item.req, autoclickers).map((r, i) => <li key={i}>{r}</li>)}
+                            {formatRequirement(item.req, autoclickers, t).map((r, i) => <li key={i}>{r}</li>)}
                         </ul>
                     </div>
                 )}
 
                 {item.effect && item.effect.length > 0 && (
                     <div className="mb-4">
-                        <h3 className="font-bold mb-1 text-lime-300">Efecto:</h3>
+                        <h3 className="font-bold mb-1 text-lime-300">{t('effect')}</h3>
                         <ul className="list-disc list-inside text-lime-400 space-y-1">
-                            {formatEffect(item.effect, autoclickers).map((e, i) => <li key={i}>{e}</li>)}
+                            {formatEffect(item.effect, autoclickers, t).map((e, i) => <li key={i}>{e}</li>)}
                         </ul>
                     </div>
                 )}
@@ -106,7 +108,7 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                         onClick={() => onPurchase(item.id!)}
                         className="w-full mt-4 bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg"
                     >
-                        Comprar
+                        {t('buy')}
                     </button>
                 )}
             </motion.div>

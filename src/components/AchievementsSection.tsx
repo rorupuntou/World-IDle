@@ -14,7 +14,9 @@ export default function AchievementsSection({ achievements, showRequirements }: 
     <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
         <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrophyIcon className="w-6 h-6"/>Logros</h3>
         <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-3">
-        {achievements.map((ach) => (
+        {achievements.map((ach) => {
+          if (ach.type === 'shadow' && !ach.unlocked) return null;
+          return (
           <motion.div 
             key={ach.id} 
             initial={{ opacity: 0 }} 
@@ -25,7 +27,7 @@ export default function AchievementsSection({ achievements, showRequirements }: 
           >
             <div className="text-3xl">{ach.unlocked ? '🏆' : '🔒'}</div>
           </motion.div>
-        ))}
+        );})}
         </div>
     </div>
   );

@@ -2,7 +2,8 @@ export type GameStatus = "DETECTING" | "MINIKIT_UNAVAILABLE" | "MINIKIT_AVAILABL
 
 export type Requirement = {
   totalTokensEarned?: number;
-  autoclickers?: { id: number; amount: number };
+  autoclickers?: { id: number; amount: number } | { id: number; amount: number }[];
+  eachAutoclickerAmount?: number;
   totalClicks?: number;
   tps?: number;
   verified?: boolean;
@@ -14,11 +15,13 @@ export type Effect =
   | { type: 'multiplyGlobal'; value: number }
   | { type: 'multiplyAutoclicker'; targetId: number; value: number }
   | { type: 'addCpSToClick'; percent: number }
-  | { type: 'addCpSToAutoclickerFromOthers'; targetId: number; value: number };
+  | { type: 'addCpSToAutoclickerFromOthers'; targetId: number; value: number }
+  | { type: 'multiplyAutoclickerByOtherCount'; targetId: number; sourceId: number; value: number };
 
 export type Autoclicker = {
   id: number;
   name: string;
+  desc: string;
   cost: number;
   tps: number;
   purchased: number;
@@ -44,6 +47,7 @@ export type Achievement = {
   unlocked: boolean;
   req: Requirement;
   reward?: { humanityGems: number };
+  type?: 'shadow';
 };
 
 export type BuyAmount = 1 | 10 | 100;

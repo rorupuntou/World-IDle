@@ -121,38 +121,72 @@ export default function Game() {
     // --- Memoized Calculations ---
     const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]);
 
-    const { totalCPS, clickValue } = useMemo(() => {
+    const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
-        let clickMultiplier = 1, clickAddition = 0, globalMultiplier = 1;
-        purchasedUpgrades.forEach(upg => {
-            upg.effect.forEach(eff => {
-                if (eff.type === 'multiplyClick') clickMultiplier *= eff.value;
-                if (eff.type === 'addClick') clickAddition += eff.value;
-                if (eff.type === 'multiplyGlobal') globalMultiplier *= eff.value;
-            });
-        });
-        const totalAutoclickerCPS = autoclickers.reduce((total, auto) => total + auto.purchased * auto.tps, 0);
-        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
-        const finalTotalCPS = totalAutoclickerCPS * finalGlobalMultiplier;
-        const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
-        return { totalCPS: finalTotalCPS, clickValue: baseClickValue };
-    }, [upgrades, autoclickers, prestigeBoost]);
-
-    const autoclickerCPSValues = useMemo(() => {
-        const purchasedUpgrades = upgrades.filter(u => u.purchased);
+        let clickMultiplier = 1;
+        let clickAddition = 0;
         let globalMultiplier = 1;
+        let cpsToClickPercent = 0;
+
+        const autoclickerMultipliers = new Map<number, number>();
+        autoclickers.forEach(a => autoclickerMultipliers.set(a.id, 1));
+
+        const autoclickerAdditions = new Map<number, number>();
+        autoclickers.forEach(a => autoclickerAdditions.set(a.id, 0));
+
         purchasedUpgrades.forEach(upg => {
             upg.effect.forEach(eff => {
-                if (eff.type === 'multiplyGlobal') globalMultiplier *= eff.value;
+                switch (eff.type) {
+                    case 'multiplyClick':
+                        clickMultiplier *= eff.value;
+                        break;
+                    case 'addClick':
+                        clickAddition += eff.value;
+                        break;
+                    case 'multiplyGlobal':
+                        globalMultiplier *= eff.value;
+                        break;
+                    case 'multiplyAutoclicker':
+                        autoclickerMultipliers.set(eff.targetId, (autoclickerMultipliers.get(eff.targetId) || 1) * eff.value);
+                        break;
+                    case 'addCpSToClick':
+                        cpsToClickPercent += eff.percent;
+                        break;
+                    case 'multiplyAutoclickerByOtherCount': {
+                        const sourceAutoclicker = autoclickers.find(a => a.id === eff.sourceId);
+                        const sourceCount = sourceAutoclicker ? sourceAutoclicker.purchased : 0;
+                        const multiplier = 1 + sourceCount * eff.value;
+                        autoclickerMultipliers.set(eff.targetId, (autoclickerMultipliers.get(eff.targetId) || 1) * multiplier);
+                        break;
+                    }
+                    case 'addCpSToAutoclickerFromOthers': {
+                        const otherAutoclickersCount = autoclickers.reduce((sum, a) => a.id === eff.targetId ? sum : sum + a.purchased, 0);
+                        autoclickerAdditions.set(eff.targetId, (autoclickerAdditions.get(eff.targetId) || 0) + otherAutoclickersCount * eff.value);
+                        break;
+                    }
+                }
             });
         });
+
         const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
-        const cpsMap = new Map<number, number>();
+
+        const autoclickerCPSValues = new Map<number, number>();
+        let totalAutoclickerCPS = 0;
+
         autoclickers.forEach(auto => {
-            cpsMap.set(auto.id, auto.tps * finalGlobalMultiplier);
+            const baseCPS = auto.purchased * auto.tps;
+            const multipliedCPS = baseCPS * (autoclickerMultipliers.get(auto.id) || 1);
+            const addedCPS = (autoclickerAdditions.get(auto.id) || 0);
+            const finalIndividualCPS = (multipliedCPS + addedCPS) * finalGlobalMultiplier;
+            autoclickerCPSValues.set(auto.id, finalIndividualCPS);
+            totalAutoclickerCPS += finalIndividualCPS;
         });
-        return cpsMap;
-    }, [upgrades, prestigeBoost, autoclickers]);
+
+        const baseClickValue = (initialState.tokensPerClick * clickMultiplier) + clickAddition;
+        const finalClickValue = baseClickValue + (totalAutoclickerCPS * cpsToClickPercent);
+
+        return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
+    }, [upgrades, autoclickers, prestigeBoost, initialState.tokensPerClick]);
 
     const canPrestige = useMemo(() => {
         const reward = Math.floor(stats.totalTokensEarned) / 100000;
@@ -245,8 +279,18 @@ export default function Game() {
         if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
         if (req.tps !== undefined && totalCPS < req.tps) return false;
         if (req.autoclickers !== undefined) {
-            const auto = autoclickers.find(a => a.id === req.autoclickers!.id);
-            if (!auto || auto.purchased < req.autoclickers.amount) return false;
+            const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
+            for (const autoReq of autoclickerReqs) {
+                const auto = autoclickers.find(a => a.id === autoReq.id);
+                if (!auto || auto.purchased < autoReq.amount) return false;
+            }
+        }
+        if (req.eachAutoclickerAmount !== undefined) {
+            for (const auto of autoclickers) {
+                if (auto.purchased < req.eachAutoclickerAmount) {
+                    return false;
+                }
+            }
         }
         return true;
     }, [stats, totalCPS, autoclickers]);

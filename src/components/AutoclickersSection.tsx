@@ -51,6 +51,7 @@ export default function AutoclickersSection({
                     <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
                         <div className="text-left">
                             <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                            <p className="text-xs text-slate-400 italic">{auto.desc}</p>
                             <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}/s cada uno</p>
                         </div>
                         <div className="text-right font-mono text-yellow-400">

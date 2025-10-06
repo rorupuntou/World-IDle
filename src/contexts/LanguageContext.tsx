@@ -14,6 +14,7 @@ interface LanguageContextType {
     t: (key: string, replacements?: { [key: string]: string | number }) => string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const translations: { [key: string]: any } = { es, en };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);

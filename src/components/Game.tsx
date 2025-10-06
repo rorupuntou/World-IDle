@@ -18,6 +18,7 @@ import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
+import ShopSection from "./ShopSection";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
@@ -182,7 +183,7 @@ export default function Game() {
             });
         });
 
-        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100);
+        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100) * (1 + (gameState.permanentBoostBonus || 0));
 
         const autoclickerCPSValues = new Map<number, number>();
         let totalAutoclickerCPS = 0;
@@ -200,7 +201,7 @@ export default function Game() {
         const finalClickValue = baseClickValue + (totalAutoclickerCPS * cpsToClickPercent);
 
         return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
-    }, [upgrades, autoclickers, prestigeBoost]);
+    }, [upgrades, autoclickers, prestigeBoost, gameState.permanentBoostBonus]);
 
     const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
         if (!req) return true;
@@ -528,6 +529,7 @@ export default function Game() {
                         achievements={achievements}
                         showRequirements={showItemDetails}
                     />
+                    <ShopSection walletAddress={walletAddress} setGameState={setGameState} setToast={setToast} />
                     <div className="mt-4">
                         <button 
                             onClick={() => saveGameToBackend(true)}

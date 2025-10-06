@@ -186,7 +186,7 @@ export default function Game() {
         const finalClickValue = baseClickValue + (totalAutoclickerCPS * cpsToClickPercent);
 
         return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
-    }, [upgrades, autoclickers, prestigeBoost, initialState.tokensPerClick]);
+    }, [upgrades, autoclickers, prestigeBoost]);
 
     const canPrestige = useMemo(() => {
         const reward = Math.floor(stats.totalTokensEarned) / 100000;

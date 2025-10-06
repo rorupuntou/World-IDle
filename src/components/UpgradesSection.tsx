@@ -9,7 +9,7 @@ interface UpgradesSectionProps {
   gameState: GameState;
   checkRequirements: (req: Requirement | undefined) => boolean;
   purchaseUpgrade: (id: number) => void;
-  showRequirements: (item: { name: string, desc: string, req?: Requirement, effect?: Effect[] }) => void;
+  showRequirements: (item: Upgrade, itemType: 'upgrade') => void;
   formatNumber: (num: number) => string;
 }
 
@@ -20,6 +20,8 @@ export default function UpgradesSection({ upgrades, gameState, checkRequirements
         <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-3">
         {upgrades.map((upg) => {
           const requirementsMet = checkRequirements(upg.req);
+          const isAffordable = gameState.tokens >= upg.cost && gameState.humanityGems >= (upg.humanityGemsCost || 0);
+          const isPurchasable = requirementsMet && isAffordable;
           if (upg.purchased) return null;
           return (
             <motion.button 
@@ -28,12 +30,11 @@ export default function UpgradesSection({ upgrades, gameState, checkRequirements
               animate={{ opacity: 1, scale: 1 }} 
               whileHover={{ scale: 1.1 }} 
               whileTap={{ scale: 0.9 }} 
-              onClick={() => requirementsMet ? purchaseUpgrade(upg.id) : showRequirements(upg)} 
-              disabled={!requirementsMet || gameState.tokens < upg.cost || !!(upg.humanityGemsCost && gameState.humanityGems < upg.humanityGemsCost)}
-              className={`aspect-square flex flex-col justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-all ${!requirementsMet && 'grayscale opacity-50'}`} 
+              onClick={() => showRequirements(upg, 'upgrade')} 
+              className={`aspect-square flex flex-col justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-all ${!isPurchasable ? 'grayscale opacity-50' : ''}`} 
               title={`${upg.name} - ${upg.desc}`}
             >
-              <div className={`text-3xl ${requirementsMet ? 'text-cyan-400' : 'text-slate-500'}`}>{requirementsMet ? '✧' : <QuestionMarkCircleIcon className="w-8 h-8"/>}</div>
+              <div className={`text-3xl ${isPurchasable ? 'text-cyan-400' : 'text-slate-500'}`}>{isPurchasable ? '✧' : <QuestionMarkCircleIcon className="w-8 h-8"/>}</div>
               <div className="text-xs font-mono text-yellow-400 mt-1">
                 {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
                 {upg.humanityGemsCost && <p className="text-sm flex items-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}

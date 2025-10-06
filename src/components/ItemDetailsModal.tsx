@@ -4,6 +4,7 @@ import { Requirement, Effect, Autoclicker } from './types';
 
 interface ItemDetailsModalProps {
     item: {
+        id?: number;
         name: string;
         desc?: string;
         req?: Requirement;
@@ -11,6 +12,8 @@ interface ItemDetailsModalProps {
     };
     autoclickers: Autoclicker[];
     onClose: () => void;
+    onPurchase?: (id: number) => void;
+    isPurchasable?: boolean;
 }
 
 function formatRequirement(req: Requirement, autoclickers: Autoclicker[]): string[] {
@@ -56,7 +59,7 @@ function formatEffect(effects: Effect[], autoclickers: Autoclicker[]): string[] 
     });
 }
 
-export default function ItemDetailsModal({ item, autoclickers, onClose }: ItemDetailsModalProps) {
+export default function ItemDetailsModal({ item, autoclickers, onClose, onPurchase, isPurchasable }: ItemDetailsModalProps) {
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -90,12 +93,21 @@ export default function ItemDetailsModal({ item, autoclickers, onClose }: ItemDe
                 )}
 
                 {item.effect && item.effect.length > 0 && (
-                    <div>
+                    <div className="mb-4">
                         <h3 className="font-bold mb-1 text-lime-300">Efecto:</h3>
                         <ul className="list-disc list-inside text-lime-400 space-y-1">
                             {formatEffect(item.effect, autoclickers).map((e, i) => <li key={i}>{e}</li>)}
                         </ul>
                     </div>
+                )}
+
+                {isPurchasable && onPurchase && item.id !== undefined && (
+                    <button 
+                        onClick={() => onPurchase(item.id!)}
+                        className="w-full mt-4 bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg"
+                    >
+                        Comprar
+                    </button>
                 )}
             </motion.div>
         </motion.div>

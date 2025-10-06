@@ -8,7 +8,7 @@ interface AutoclickersSectionProps {
     setBuyAmount: (amount: BuyAmount) => void;
     gameState: GameState;
     checkRequirements: (req: Requirement | undefined) => boolean;
-    showRequirements: (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }) => void;
+    showRequirements: (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }, itemType: 'autoclicker') => void;
     calculateBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
@@ -65,7 +65,7 @@ export default function AutoclickersSection({
                             </div>
                         </motion.button>
                         <button 
-                            onClick={() => showRequirements({ name: auto.name, desc: auto.desc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] })}
+                            onClick={() => showRequirements({ name: auto.name, desc: auto.desc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] }, 'autoclicker')}
                             className="p-3 text-slate-400 hover:text-white border-l border-slate-700"
                         >
                             <InformationCircleIcon className="w-5 h-5" />

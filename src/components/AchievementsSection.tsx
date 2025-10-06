@@ -6,7 +6,7 @@ import { Achievement, Requirement } from "@/components/types";
 
 interface AchievementsSectionProps {
   achievements: Achievement[];
-  showRequirements: (item: { name: string, req?: Requirement }) => void;
+  showRequirements: (item: Achievement, itemType: 'achievement') => void;
 }
 
 export default function AchievementsSection({ achievements, showRequirements }: AchievementsSectionProps) {
@@ -23,7 +23,7 @@ export default function AchievementsSection({ achievements, showRequirements }: 
             animate={{ opacity: 1 }} 
             className={`aspect-square flex justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-opacity cursor-pointer ${ach.unlocked ? 'opacity-100' : 'opacity-20'}`} 
             title={ach.unlocked ? `${ach.name} - ${ach.desc}`: ach.name}
-            onClick={() => !ach.unlocked && showRequirements({name: ach.name, req: ach.req})}
+            onClick={() => showRequirements(ach, 'achievement')}
           >
             <div className="text-3xl">{ach.unlocked ? '🏆' : '🔒'}</div>
           </motion.div>

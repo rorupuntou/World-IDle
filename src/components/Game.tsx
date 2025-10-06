@@ -89,10 +89,10 @@ export default function Game() {
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [prestigeTxId, setPrestigeTxId] = useState<string | undefined>();
-    const [selectedItem, setSelectedItem] = useState<{ name: string, desc?: string, req?: Requirement, effect?: Effect[] } | null>(null);
+    const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
 
-    const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }) => {
-        setSelectedItem(item);
+    const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
+        setSelectedItem({ ...item, itemType });
     };
 
     const closeItemDetails = () => {
@@ -455,7 +455,20 @@ export default function Game() {
                     </motion.div>
                 ))}
                 {toast && <Toast message={toast} onDone={() => setToast(null)} />}
-                {selectedItem && <ItemDetailsModal item={selectedItem} autoclickers={autoclickers} onClose={closeItemDetails} />}
+                {selectedItem && (
+                    <ItemDetailsModal 
+                        item={selectedItem} 
+                        autoclickers={autoclickers} 
+                        onClose={closeItemDetails} 
+                        isPurchasable={selectedItem.itemType === 'upgrade' && checkRequirements(selectedItem.req) && selectedItem.cost !== undefined && gameState.tokens >= selectedItem.cost}
+                        onPurchase={(id) => {
+                            if (selectedItem.itemType === 'upgrade') {
+                                purchaseUpgrade(id);
+                                closeItemDetails();
+                            }
+                        }}
+                    />
+                )}
             </AnimatePresence>
             <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
                 <div className="w-full lg:w-2/3 flex flex-col gap-6">

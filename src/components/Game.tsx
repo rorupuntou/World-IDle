@@ -231,10 +231,13 @@ export default function Game() {
         });
     }, [upgrades, gameState.tokens, checkRequirements]);
 
-    const canPrestige = useMemo(() => {
-        const reward = Math.floor(stats.totalTokensEarned) / 100000;
-        return reward >= 1;
+    const prestigeReward = useMemo(() => {
+        return Math.floor(stats.totalTokensEarned / 100000);
     }, [stats.totalTokensEarned]);
+
+    const canPrestige = useMemo(() => {
+        return prestigeReward >= 1;
+    }, [prestigeReward]);
 
     // --- Wallet & Data Sync Effects ---
     useEffect(() => {
@@ -502,6 +505,7 @@ export default function Game() {
                     <PrestigeSection
                         prestigeBoost={prestigeBoost}
                         prestigeBalance={prestigeBalance}
+                        prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
                         isLoading={isConfirming || !!prestigeTxId}

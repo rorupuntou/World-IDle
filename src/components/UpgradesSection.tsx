@@ -82,7 +82,7 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, che
               title={`${upg.name} - ${upg.desc}`}
             >
               <div className={`text-3xl ${isPurchasable ? 'text-cyan-400' : 'text-slate-500'}`}>
-                {isPurchasable ? <IconComponent className="w-8 h-8" /> : <QuestionMarkCircleIcon className="w-8 h-8"/>}
+                {requirementsMet ? <IconComponent className="w-8 h-8" /> : <QuestionMarkCircleIcon className="w-8 h-8"/>}
               </div>
               <div className="text-xs font-mono text-yellow-400 mt-1">
                 {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}

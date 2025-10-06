@@ -7,6 +7,7 @@ import { StarIcon } from '@heroicons/react/24/outline';
 interface PrestigeSectionProps {
     prestigeBoost: number;
     prestigeBalance: number;
+    prestigeReward: number;
     handlePrestige: () => void;
     isPrestigeReady: boolean;
     isLoading: boolean;
@@ -15,6 +16,7 @@ interface PrestigeSectionProps {
 export default function PrestigeSection({
     prestigeBoost,
     prestigeBalance,
+    prestigeReward,
     handlePrestige,
     isPrestigeReady,
     isLoading
@@ -26,6 +28,13 @@ export default function PrestigeSection({
                 Tu bonus de prestigio actual es de <b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b> a todas tus ganancias.
             </p>
             <p className="text-xs text-slate-400 mt-1">Se basa en tu saldo de {prestigeBalance.toLocaleString()} $PRESTIGE.</p>
+            
+            {isPrestigeReady && (
+                <p className="text-center text-sm mt-3 text-yellow-200">
+                    Reinicia para obtener <b>{prestigeReward.toLocaleString()}</b> tokens de prestigio.
+                </p>
+            )}
+
             <motion.button
                 onClick={handlePrestige}
                 disabled={!isPrestigeReady || isLoading}

@@ -356,14 +356,14 @@ export default function Game() {
 
     const handlePrestige = useCallback(async () => {
         try {
-            const totalPoints = BigInt(Math.floor(stats.totalTokensEarned));
+            const amountToMintInWei = BigInt(prestigeReward) * BigInt(10**18);
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
                         address: contractConfig.gameManagerAddress,
                         abi: contractConfig.gameManagerAbi,
                         functionName: 'prestige',
-                        args: [totalPoints],
+                        args: [amountToMintInWei],
                         value: '0x0',
                     },
                 ],

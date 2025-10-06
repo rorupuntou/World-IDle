@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { CpuChipIcon, BeakerIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { Autoclicker, BuyAmount, GameState, Requirement, Effect } from "@/components/types";
@@ -29,7 +30,17 @@ export default function AutoclickersSection({
     autoclickerCPSValues,
     devModeActive
 }: AutoclickersSectionProps) {
-    const visibleAutoclickers = devModeActive ? autoclickers : autoclickers.filter(a => !a.devOnly);
+
+    const visibleAutoclickers = useMemo(() => {
+        const regularAutoclickers = autoclickers.filter(a => !a.devOnly);
+        if (devModeActive) {
+            const devAutoclicker = autoclickers.find(a => a.devOnly);
+            if (devAutoclicker) {
+                return [devAutoclicker, ...regularAutoclickers];
+            }
+        }
+        return regularAutoclickers;
+    }, [autoclickers, devModeActive]);
 
     return (
         <div className="space-y-3">

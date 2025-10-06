@@ -1,0 +1,18 @@
+{
+    "app_title": "World Idle",
+    "welcome_message": "Welcome to World Idle",
+    "connect_wallet": "Connect Wallet",
+    "connect_wallet_prompt": "Connect your wallet to get started.",
+    "upgrades": "Upgrades",
+    "achievements": "Achievements",
+    "prestige": "Prestige",
+    "autoclickers": "Autoclickers",
+    "save_game": "Save Game",
+    "click": "Click!",
+    "prestige_bonus_part1": "Your current prestige bonus is ",
+    "prestige_bonus_part2": " to all your earnings.",
+    "prestige_balance_message": "It is based on your balance of {prestigeBalance} $PRESTIGE.",
+    "prestige_reward_message": "Reset to get {prestigeReward} prestige tokens.",
+    "prestige_button": "Reset for Prestige",
+    "processing": "Processing..."
+}

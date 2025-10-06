@@ -19,7 +19,9 @@ import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 
+import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
+import LanguageSelector from "./LanguageSelector";
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -82,6 +84,7 @@ const NewsTicker = () => {
 };
 
 export default function Game() {
+    const { t } = useLanguage();
     // --- Base States ---
     const [isClient, setIsClient] = useState(false);
     const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
@@ -436,13 +439,14 @@ export default function Game() {
     if (!walletAddress) {
         return (
             <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
-                <h1 className="text-4xl font-bold mb-4">Bienvenido a World Idle</h1>
-                <p className="mb-8 text-slate-400">Conecta tu billetera para empezar.</p>
+                <LanguageSelector />
+                <h1 className="text-4xl font-bold mb-4">{t('welcome_message')}</h1>
+                <p className="mb-8 text-slate-400">{t('connect_wallet_prompt')}</p>
                 <button
                     onClick={handleConnect}
                     className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg mb-4"
                 >
-                    Conectar Billetera
+                    {t('connect_wallet')}
                 </button>
             </div>
         );
@@ -450,6 +454,7 @@ export default function Game() {
 
     return (
         <>
+            <LanguageSelector />
             <NewsTicker />
             <AnimatePresence>
                 {floatingNumbers.map(num => (
@@ -476,7 +481,7 @@ export default function Game() {
             <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
                 <div className="w-full lg:w-2/3 flex flex-col gap-6">
                     <div className="text-center">
-                        <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">World Idle</h1>
+                        <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">{t('app_title')}</h1>
                     </div>
                     <HeaderStats
                         tokens={gameState.tokens}
@@ -486,7 +491,7 @@ export default function Game() {
                         formatNumber={formatNumber}
                     />
                     <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
-                        Click! (+{formatNumber(clickValue)})
+                        {t('click')} (+{formatNumber(clickValue)})
                     </motion.button>
                     <AutoclickersSection
                         autoclickers={autoclickers}
@@ -529,7 +534,7 @@ export default function Game() {
                             className="w-full flex items-center justify-center gap-2 bg-slate-500/20 hover:bg-slate-500/40 text-slate-300 font-bold py-2 px-4 rounded-lg"
                         >
                             <BookmarkIcon className="w-5 h-5" />
-                            Guardar Partida
+                            {t('save_game')}
                         </button>
                     </div>
                 </div>

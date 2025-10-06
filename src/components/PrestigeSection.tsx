@@ -3,6 +3,7 @@
 
 import { motion } from "framer-motion";
 import { StarIcon } from '@heroicons/react/24/outline';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PrestigeSectionProps {
     prestigeBoost: number;
@@ -21,17 +22,19 @@ export default function PrestigeSection({
     isPrestigeReady,
     isLoading
 }: PrestigeSectionProps) {
+    const { t } = useLanguage();
+
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-            <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400" />Prestigio</h3>
+            <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
             <p className="text-sm text-slate-300">
-                Tu bonus de prestigio actual es de <b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b> a todas tus ganancias.
+                {t('prestige_bonus_part1')}<b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b>{t('prestige_bonus_part2')}
             </p>
-            <p className="text-xs text-slate-400 mt-1">Se basa en tu saldo de {prestigeBalance.toLocaleString()} $PRESTIGE.</p>
+            <p className="text-xs text-slate-400 mt-1">{t('prestige_balance_message', { prestigeBalance: prestigeBalance.toLocaleString() })}</p>
             
             {isPrestigeReady && (
                 <p className="text-center text-sm mt-3 text-yellow-200">
-                    Reinicia para obtener <b>{prestigeReward.toLocaleString()}</b> tokens de prestigio.
+                    {t('prestige_reward_message', { prestigeReward: prestigeReward.toLocaleString() })}
                 </p>
             )}
 
@@ -47,9 +50,9 @@ export default function PrestigeSection({
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Procesando...
+                        {t('processing')}
                     </>
-                ) : 'Reiniciar para Prestigio'}
+                ) : t('prestige_button')}
             </motion.button>
         </div>
     );

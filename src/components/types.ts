@@ -29,6 +29,7 @@ export type Autoclicker = {
   req?: Requirement;
   humanityGemsCost?: number;
   icon?: string;
+  devOnly?: boolean;
 };
 
 export type Upgrade = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckBadgeIcon, XMarkIcon, BookmarkIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import { MiniKit } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
@@ -94,6 +94,7 @@ export default function Game() {
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [prestigeTxId, setPrestigeTxId] = useState<string | undefined>();
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
+    const [devModeActive, setDevModeActive] = useState(false);
 
     const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
         setSelectedItem({ ...item, itemType });
@@ -432,6 +433,14 @@ export default function Game() {
         }
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
+    const handleDevMode = () => {
+        const code = prompt("Enter dev code:");
+        if (code === "1312") {
+            setDevModeActive(true);
+            setToast("Dev mode activated!");
+        }
+    };
+
     // --- Render Logic ---
     if (!isClient) {
         return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -489,6 +498,7 @@ export default function Game() {
                         tokensPerSecond={totalCPS}
                         humanityGems={gameState.humanityGems}
                         totalClicks={stats.totalClicks}
+                        permanentBoostBonus={gameState.permanentBoostBonus || 0}
                         formatNumber={formatNumber}
                     />
                     <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
@@ -505,6 +515,7 @@ export default function Game() {
                         purchaseAutoclicker={purchaseAutoclicker}
                         formatNumber={formatNumber}
                         autoclickerCPSValues={autoclickerCPSValues}
+                        devModeActive={devModeActive}
                     />
                 </div>
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
@@ -541,6 +552,9 @@ export default function Game() {
                     </div>
                 </div>
             </div>
+            <button onClick={handleDevMode} className="fixed bottom-2 right-2 p-2 text-transparent hover:text-yellow-400">
+                <Cog6ToothIcon className="w-5 h-5" />
+            </button>
         </>
     );
 }

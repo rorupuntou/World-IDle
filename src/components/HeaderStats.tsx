@@ -1,13 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BeakerIcon, CursorArrowRaysIcon } from "@heroicons/react/24/outline";
+import { BeakerIcon, CursorArrowRaysIcon, ArrowTrendingUpIcon } from "@heroicons/react/24/outline";
 
 interface HeaderStatsProps {
     tokens: number;
     tokensPerSecond: number;
     humanityGems: number;
     totalClicks: number;
+    permanentBoostBonus: number;
     formatNumber: (num: number) => string;
 }
 
@@ -16,6 +17,7 @@ export default function HeaderStats({
     tokensPerSecond,
     humanityGems,
     totalClicks,
+    permanentBoostBonus,
     formatNumber
 }: HeaderStatsProps) {
     return (
@@ -32,6 +34,12 @@ export default function HeaderStats({
                     <BeakerIcon className="w-5 h-5" />
                     <p className="font-mono text-lg">{humanityGems}</p>
                 </div>
+                {permanentBoostBonus > 0 && (
+                    <div className="flex items-center gap-2 text-purple-400">
+                        <ArrowTrendingUpIcon className="w-5 h-5" />
+                        <p className="font-mono text-lg">+{permanentBoostBonus * 100}%</p>
+                    </div>
+                )}
             </div>
         </motion.div>
     );

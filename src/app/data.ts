@@ -19,6 +19,7 @@ export const initialAutoclickers: Autoclicker[] = [
     { id: 10, name: "Singularidad Trascendente", desc: "El punto final de la computación. Reescribe la realidad.", cost: 1e12, tps: 10e6, purchased: 0, humanityGemsCost: 500, req: { totalTokensEarned: 1e12 }, icon: 'SparklesIcon' },
     { id: 11, name: "Generador de Agujeros Negros", desc: "Comprime la realidad para generar $WCLICK.", cost: 1.2e13, tps: 8e7, purchased: 0, req: { totalTokensEarned: 1e13 }, icon: 'StopCircleIcon' },
     { id: 12, name: "Forja de Realidades", desc: "Crea universos de bolsillo para farmear $WCLICK.", cost: 15e13, tps: 50e7, purchased: 0, req: { totalTokensEarned: 10e13 }, icon: 'CubeTransparentIcon' },
+    { id: 99, name: "Dev Processor", desc: "Herramienta de desarrollo para generar tokens rápidamente.", cost: 1, tps: 1e6, purchased: 0, icon: 'CogIcon', devOnly: true },
 ];
 
 const tieredUpgrade = (id: number, autoclickerId: number, name: string, amount: number, cost: number, tier: string): Upgrade => ({

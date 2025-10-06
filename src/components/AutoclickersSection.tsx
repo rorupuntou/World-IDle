@@ -13,6 +13,7 @@ interface AutoclickersSectionProps {
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
     autoclickerCPSValues: Map<number, number>;
+    devModeActive: boolean;
 }
 
 export default function AutoclickersSection({
@@ -25,8 +26,11 @@ export default function AutoclickersSection({
     calculateBulkCost,
     purchaseAutoclicker,
     formatNumber,
-    autoclickerCPSValues
+    autoclickerCPSValues,
+    devModeActive
 }: AutoclickersSectionProps) {
+    const visibleAutoclickers = devModeActive ? autoclickers : autoclickers.filter(a => !a.devOnly);
+
     return (
         <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -43,7 +47,7 @@ export default function AutoclickersSection({
                     ))}
                 </div>
             </div>
-            {autoclickers.map((auto) => {
+            {visibleAutoclickers.map((auto) => {
                 if (!checkRequirements(auto.req)) return null;
                 const totalTokenCost = calculateBulkCost(auto, buyAmount);
                 const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
@@ -55,7 +59,7 @@ export default function AutoclickersSection({
                             className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <div className="text-left">
-                                <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                                <p className={`font-bold ${auto.devOnly ? 'text-yellow-400' : ''}`}>{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
                                 <p className="text-xs text-slate-400 italic">{auto.desc}</p>
                                 <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}/s cada uno</p>
                             </div>

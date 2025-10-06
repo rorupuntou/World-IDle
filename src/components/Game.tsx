@@ -281,7 +281,7 @@ export default function Game() {
     useEffect(() => {
         if (isPrestigeSuccess) {
             setToast("¡Prestigio completado! Reiniciando...");
-            setGameState(initialState);
+            setGameState(prev => ({ ...initialState, permanentBoostBonus: prev.permanentBoostBonus }));
             setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
             setAutoclickers(initialAutoclickers);
             setUpgrades(initialUpgrades);

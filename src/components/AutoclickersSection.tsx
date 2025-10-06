@@ -1,8 +1,6 @@
-"use client";
-
 import { motion } from "framer-motion";
-import { CpuChipIcon, BeakerIcon } from '@heroicons/react/24/outline';
-import { Autoclicker, BuyAmount, GameState, Requirement } from "@/components/types";
+import { CpuChipIcon, BeakerIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { Autoclicker, BuyAmount, GameState, Requirement, Effect } from "@/components/types";
 
 interface AutoclickersSectionProps {
     autoclickers: Autoclicker[];
@@ -10,6 +8,7 @@ interface AutoclickersSectionProps {
     setBuyAmount: (amount: BuyAmount) => void;
     gameState: GameState;
     checkRequirements: (req: Requirement | undefined) => boolean;
+    showRequirements: (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }) => void;
     calculateBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
@@ -22,6 +21,7 @@ export default function AutoclickersSection({
     setBuyAmount,
     gameState,
     checkRequirements,
+    showRequirements,
     calculateBulkCost,
     purchaseAutoclicker,
     formatNumber,
@@ -48,17 +48,29 @@ export default function AutoclickersSection({
                 const totalTokenCost = calculateBulkCost(auto, buyAmount);
                 const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
                 return (
-                    <motion.button key={auto.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => purchaseAutoclicker(auto.id)} disabled={gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost} className="w-full flex justify-between items-center bg-slate-500/10 backdrop-blur-sm p-3 rounded-lg border border-slate-700 hover:bg-slate-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-500/10">
-                        <div className="text-left">
-                            <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
-                            <p className="text-xs text-slate-400 italic">{auto.desc}</p>
-                            <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}/s cada uno</p>
-                        </div>
-                        <div className="text-right font-mono text-yellow-400">
-                            <p>{formatNumber(totalTokenCost)}</p>
-                            {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4" />{totalGemCost}</p>}
-                        </div>
-                    </motion.button>
+                    <div key={auto.id} className="w-full flex items-center bg-slate-500/10 backdrop-blur-sm rounded-lg border border-slate-700 hover:bg-slate-500/20 transition-colors">
+                        <motion.button 
+                            onClick={() => purchaseAutoclicker(auto.id)} 
+                            disabled={gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost}
+                            className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <div className="text-left">
+                                <p className="font-bold">{auto.name} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                                <p className="text-xs text-slate-400 italic">{auto.desc}</p>
+                                <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}/s cada uno</p>
+                            </div>
+                            <div className="text-right font-mono text-yellow-400">
+                                <p>{formatNumber(totalTokenCost)}</p>
+                                {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4" />{totalGemCost}</p>}
+                            </div>
+                        </motion.button>
+                        <button 
+                            onClick={() => showRequirements({ name: auto.name, desc: auto.desc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] })}
+                            className="p-3 text-slate-400 hover:text-white border-l border-slate-700"
+                        >
+                            <InformationCircleIcon className="w-5 h-5" />
+                        </button>
+                    </div>
                 )
             })}
         </div>

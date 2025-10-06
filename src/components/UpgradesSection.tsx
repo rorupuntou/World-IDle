@@ -2,14 +2,14 @@
 
 import { motion } from "framer-motion";
 import { BeakerIcon, BoltIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import { Upgrade, GameState, Requirement } from "@/components/types";
+import { Upgrade, GameState, Requirement, Effect } from "@/components/types";
 
 interface UpgradesSectionProps {
   upgrades: Upgrade[];
   gameState: GameState;
   checkRequirements: (req: Requirement | undefined) => boolean;
   purchaseUpgrade: (id: number) => void;
-  showRequirements: (item: { name: string, req?: Requirement }) => void;
+  showRequirements: (item: { name: string, desc: string, req?: Requirement, effect?: Effect[] }) => void;
   formatNumber: (num: number) => string;
 }
 

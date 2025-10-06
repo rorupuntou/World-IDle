@@ -50,6 +50,7 @@ function formatEffect(effects: Effect[], autoclickers: Autoclicker[]): string[] 
                 const source = autoclickers.find(a => a.id === e.sourceId);
                 return `Multiplica la producción de ${target ? target.name : `ID ${e.targetId}`} por cada ${source ? source.name : `ID ${e.sourceId}`}.`;
             }
+            case 'addTps': return `Añade ${e.value} a la producción base por segundo.`;
             default: return "Efecto desconocido.";
         }
     });

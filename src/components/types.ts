@@ -16,7 +16,8 @@ export type Effect =
   | { type: 'multiplyAutoclicker'; targetId: number; value: number }
   | { type: 'addCpSToClick'; percent: number }
   | { type: 'addCpSToAutoclickerFromOthers'; targetId: number; value: number }
-  | { type: 'multiplyAutoclickerByOtherCount'; targetId: number; sourceId: number; value: number };
+  | { type: 'multiplyAutoclickerByOtherCount'; targetId: number; sourceId: number; value: number }
+  | { type: 'addTps'; value: number };
 
 export type Autoclicker = {
   id: number;

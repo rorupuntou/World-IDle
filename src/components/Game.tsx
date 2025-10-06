@@ -199,6 +199,38 @@ export default function Game() {
         return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
     }, [upgrades, autoclickers, prestigeBoost]);
 
+    const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
+        if (!req) return true;
+        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
+        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
+        if (req.tps !== undefined && totalCPS < req.tps) return false;
+        if (req.autoclickers !== undefined) {
+            const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
+            for (const autoReq of autoclickerReqs) {
+                const auto = autoclickers.find(a => a.id === autoReq.id);
+                if (!auto || auto.purchased < autoReq.amount) return false;
+            }
+        }
+        if (req.eachAutoclickerAmount !== undefined) {
+            for (const auto of autoclickers) {
+                if (auto.purchased < req.eachAutoclickerAmount) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }, [stats, totalCPS, autoclickers]);
+
+    const sortedUpgrades = useMemo(() => {
+        return [...upgrades].sort((a, b) => {
+            const aAvailable = checkRequirements(a.req) && gameState.tokens >= a.cost;
+            const bAvailable = checkRequirements(b.req) && gameState.tokens >= b.cost;
+            if (aAvailable && !bAvailable) return -1;
+            if (!aAvailable && bAvailable) return 1;
+            return a.cost - b.cost;
+        });
+    }, [upgrades, gameState.tokens, checkRequirements]);
+
     const canPrestige = useMemo(() => {
         const reward = Math.floor(stats.totalTokensEarned) / 100000;
         return reward >= 1;
@@ -283,28 +315,6 @@ export default function Game() {
         const saveInterval = setInterval(() => saveGameToBackend(false), 30000);
         return () => clearInterval(saveInterval);
     }, [saveGameToBackend, walletAddress]);
-
-    const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
-        if (!req) return true;
-        if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
-        if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
-        if (req.tps !== undefined && totalCPS < req.tps) return false;
-        if (req.autoclickers !== undefined) {
-            const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
-            for (const autoReq of autoclickerReqs) {
-                const auto = autoclickers.find(a => a.id === autoReq.id);
-                if (!auto || auto.purchased < autoReq.amount) return false;
-            }
-        }
-        if (req.eachAutoclickerAmount !== undefined) {
-            for (const auto of autoclickers) {
-                if (auto.purchased < req.eachAutoclickerAmount) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }, [stats, totalCPS, autoclickers]);
 
     useEffect(() => {
         const unlockedAchievements = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
@@ -467,6 +477,7 @@ export default function Game() {
                         setBuyAmount={setBuyAmount}
                         gameState={gameState}
                         checkRequirements={checkRequirements}
+                        showRequirements={showItemDetails}
                         calculateBulkCost={calculateBulkCost}
                         purchaseAutoclicker={purchaseAutoclicker}
                         formatNumber={formatNumber}
@@ -482,7 +493,7 @@ export default function Game() {
                         isLoading={isConfirming || !!prestigeTxId}
                     />
                     <UpgradesSection
-                        upgrades={upgrades}
+                        upgrades={sortedUpgrades}
                         gameState={gameState}
                         checkRequirements={checkRequirements}
                         purchaseUpgrade={purchaseUpgrade}

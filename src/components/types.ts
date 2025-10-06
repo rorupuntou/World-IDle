@@ -28,6 +28,7 @@ export type Autoclicker = {
   purchased: number;
   req?: Requirement;
   humanityGemsCost?: number;
+  icon?: string;
 };
 
 export type Upgrade = {
@@ -39,6 +40,7 @@ export type Upgrade = {
   effect: Effect[];
   req?: Requirement;
   humanityGemsCost?: number;
+  tier?: string;
 };
 
 export type Achievement = {

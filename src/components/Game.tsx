@@ -479,6 +479,7 @@ export default function Game() {
                         tokens={gameState.tokens}
                         tokensPerSecond={totalCPS}
                         humanityGems={gameState.humanityGems}
+                        totalClicks={stats.totalClicks}
                         formatNumber={formatNumber}
                     />
                     <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
@@ -507,6 +508,7 @@ export default function Game() {
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}
+                        autoclickers={autoclickers}
                         gameState={gameState}
                         checkRequirements={checkRequirements}
                         purchaseUpgrade={purchaseUpgrade}

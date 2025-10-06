@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BeakerIcon } from "@heroicons/react/24/outline";
+import { BeakerIcon, CursorArrowRaysIcon } from "@heroicons/react/24/outline";
 
 interface HeaderStatsProps {
     tokens: number;
     tokensPerSecond: number;
     humanityGems: number;
+    totalClicks: number;
     formatNumber: (num: number) => string;
 }
 
@@ -14,6 +15,7 @@ export default function HeaderStats({
     tokens,
     tokensPerSecond,
     humanityGems,
+    totalClicks,
     formatNumber
 }: HeaderStatsProps) {
     return (
@@ -22,6 +24,10 @@ export default function HeaderStats({
             <p className="text-sm text-slate-400">$WCLICK</p>
             <div className="flex justify-center items-center gap-6 mt-2">
                 <p className="text-md text-lime-400">+{formatNumber(tokensPerSecond)}/s</p>
+                <div className="flex items-center gap-2 text-cyan-400">
+                    <CursorArrowRaysIcon className="w-5 h-5" />
+                    <p className="font-mono text-lg">{formatNumber(totalClicks)}</p>
+                </div>
                 <div className="flex items-center gap-2 text-yellow-400">
                     <BeakerIcon className="w-5 h-5" />
                     <p className="font-mono text-lg">{humanityGems}</p>

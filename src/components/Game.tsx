@@ -19,6 +19,8 @@ import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 
+import ItemDetailsModal from "./ItemDetailsModal";
+
 const PRICE_INCREASE_RATE = 1.15;
 
 // Define World Chain for viem
@@ -87,6 +89,15 @@ export default function Game() {
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [prestigeTxId, setPrestigeTxId] = useState<string | undefined>();
+    const [selectedItem, setSelectedItem] = useState<{ name: string, desc?: string, req?: Requirement, effect?: Effect[] } | null>(null);
+
+    const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }) => {
+        setSelectedItem(item);
+    };
+
+    const closeItemDetails = () => {
+        setSelectedItem(null);
+    };
 
     const formatNumber = useCallback((num: number) => {
         if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -434,6 +445,7 @@ export default function Game() {
                     </motion.div>
                 ))}
                 {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+                {selectedItem && <ItemDetailsModal item={selectedItem} autoclickers={autoclickers} onClose={closeItemDetails} />}
             </AnimatePresence>
             <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
                 <div className="w-full lg:w-2/3 flex flex-col gap-6">
@@ -474,12 +486,12 @@ export default function Game() {
                         gameState={gameState}
                         checkRequirements={checkRequirements}
                         purchaseUpgrade={purchaseUpgrade}
-                        showRequirements={() => {}} // Placeholder
+                        showRequirements={showItemDetails}
                         formatNumber={formatNumber}
                     />
                     <AchievementsSection
                         achievements={achievements}
-                        showRequirements={() => {}} // Placeholder
+                        showRequirements={showItemDetails}
                     />
                     <div className="mt-4">
                         <button 

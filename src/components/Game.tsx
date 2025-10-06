@@ -8,7 +8,7 @@ import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { formatUnits, createPublicClient, http, defineChain } from "viem";
 
-import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState } from "./types";
+import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
     initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed 
 } from "@/app/data";

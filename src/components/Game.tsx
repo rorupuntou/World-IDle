@@ -78,7 +78,7 @@ const NewsTicker = () => {
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ duration: 0.5 }}
                     className="text-sm text-slate-300 px-4 whitespace-nowrap w-full text-center"
-                    dangerouslySetInnerHTML={{ __html: t(news).replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
+                    dangerouslySetInnerHTML={{ __html: t(news).replace(/<q>(.*?) Quoted Text <\/q><sig>(.*?) Signature <\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
                 />
             </AnimatePresence>
         </div>
@@ -393,7 +393,7 @@ export default function Game() {
             });
 
             if (finalPayload.status === 'error') {
-                console.error("MiniKit transaction error:", finalPayload);
+                console.error("FULL PRESTIGE ERROR:", JSON.stringify(finalPayload, null, 2));
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
                 let errorMessage = errorPayload.message || 'Error al enviar la transacción con MiniKit.';
                 if (errorPayload.debug_url) {
@@ -471,6 +471,7 @@ export default function Game() {
             });
 
             if (finalPayload.status === 'error') {
+                console.error("FULL PRESTIGE PURCHASE ERROR:", JSON.stringify(finalPayload, null, 2));
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
                 throw new Error(errorPayload.message || 'Error sending transaction with MiniKit.');
             }

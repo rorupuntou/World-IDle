@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -94,7 +93,8 @@ export default function Game() {
     const [toast, setToast] = useState<string | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
-    const [prestigeTxId, setPrestigeTxId] = useState<string | undefined>();
+    const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
+    const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
 
@@ -130,10 +130,17 @@ export default function Game() {
         args: [walletAddress!],
         query: { enabled: !!walletAddress },
     });
-    const { isLoading: isConfirming, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
+
+    const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
         client,
         appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
-        transactionId: prestigeTxId ?? '',
+        transactionId: pendingPrestigeTxId ?? '',
+    });
+
+    const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } = useWaitForTransactionReceipt({
+        client,
+        appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
+        transactionId: pendingPurchaseTx?.txId ?? '',
     });
 
     // --- Memoized Calculations ---
@@ -288,7 +295,7 @@ export default function Game() {
             setAutoclickers(initialAutoclickers);
             setUpgrades(initialUpgrades);
             refetchPrestigeBalance();
-            setPrestigeTxId(undefined); // Reset ID after success
+            setPendingPrestigeTxId(undefined); // Reset ID after success
         }
     }, [isPrestigeSuccess, refetchPrestigeBalance, t]);
 
@@ -387,7 +394,7 @@ export default function Game() {
             }
 
             if (finalPayload.transaction_id) {
-                setPrestigeTxId(finalPayload.transaction_id);
+                setPendingPrestigeTxId(finalPayload.transaction_id);
                 setToast(t("transaction_sent"));
             } else {
                 throw new Error(t('transaction_error'));
@@ -414,16 +421,79 @@ export default function Game() {
         return totalCost;
     }, []);
 
-    const purchaseAutoclicker = useCallback((id: number) => {
+    const purchaseAutoclickerWithTokens = useCallback((id: number) => {
         const autoclicker = autoclickers.find(a => a.id === id);
         if (!autoclicker) return;
         const cost = calculateBulkCost(autoclicker, buyAmount);
         if (gameState.tokens >= cost) {
             setGameState(prev => ({ ...prev, tokens: prev.tokens - cost }));
             setAutoclickers(prev => prev.map(a => a.id === id ? { ...a, purchased: a.purchased + buyAmount } : a));
-            saveGameToBackend(false);
         }
-    }, [autoclickers, gameState.tokens, calculateBulkCost, saveGameToBackend, buyAmount]);
+    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount]);
+
+    useEffect(() => {
+        if (isPurchaseSuccess && pendingPurchaseTx) {
+            const item = autoclickers.find(a => a.id === pendingPurchaseTx.itemId);
+            if (item) {
+                setToast(t("purchase_success", { name: t(item.name) }));
+                purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
+                refetchPrestigeBalance();
+            }
+            setPendingPurchaseTx(null);
+        }
+    }, [isPurchaseSuccess, pendingPurchaseTx, autoclickers, purchaseAutoclickerWithTokens, refetchPrestigeBalance, t]);
+
+    const handlePrestigePurchase = useCallback(async (item: Autoclicker) => {
+        if (!item.prestigeCost) return;
+
+        try {
+            const amountToBurnInWei = BigInt(item.prestigeCost) * BigInt(10 ** 18);
+            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                transaction: [
+                    {
+                        address: contractConfig.prestigeTokenAddress,
+                        abi: contractConfig.prestigeTokenAbi,
+                        functionName: 'transfer',
+                        args: ['0x0000000000000000000000000000000000000000', amountToBurnInWei.toString()],
+                        value: '0x0',
+                    },
+                ],
+            });
+
+            if (finalPayload.status === 'error') {
+                const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                throw new Error(errorPayload.message || 'Error sending transaction with MiniKit.');
+            }
+
+            if (finalPayload.transaction_id) {
+                setPendingPurchaseTx({ txId: finalPayload.transaction_id, itemId: item.id });
+                setToast(t("transaction_sent"));
+            } else {
+                throw new Error(t('transaction_error'));
+            }
+        } catch (error) {
+            console.error("Prestige purchase error:", error);
+            alert(t("purchase_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
+        }
+    }, [t]);
+
+    const purchaseAutoclicker = useCallback((id: number) => {
+        const autoclicker = autoclickers.find(a => a.id === id);
+        if (!autoclicker) return;
+
+        const cost = calculateBulkCost(autoclicker, buyAmount);
+        if (gameState.tokens < cost) return;
+
+        if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
+            if (prestigeBalance >= autoclicker.prestigeCost) {
+                handlePrestigePurchase(autoclicker);
+            } else {
+                setToast(t("not_enough_prestige_tokens"));
+            }
+        } else {
+            purchaseAutoclickerWithTokens(id);
+        }
+    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount, prestigeBalance, handlePrestigePurchase, purchaseAutoclickerWithTokens, t]);
 
     const purchaseUpgrade = useCallback((id: number) => {
         const upgrade = upgrades.find(u => u.id === id);
@@ -518,6 +588,8 @@ export default function Game() {
                         formatNumber={formatNumber}
                         autoclickerCPSValues={autoclickerCPSValues}
                         devModeActive={devModeActive}
+                        isConfirmingPurchase={isConfirmingPurchase}
+                        pendingPurchaseTx={pendingPurchaseTx}
                     />
                 </div>
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">
@@ -527,7 +599,7 @@ export default function Game() {
                         prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isConfirming || !!prestigeTxId}
+                        isLoading={isConfirmingPrestige || isConfirmingPurchase}
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}

@@ -27,6 +27,7 @@ export type Autoclicker = {
   tps: number;
   purchased: number;
   req?: Requirement;
+  prestigeCost?: number; // Added for ERC20 token cost
   humanityGemsCost?: number;
   icon?: string;
   devOnly?: boolean;

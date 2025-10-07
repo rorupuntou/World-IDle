@@ -15,10 +15,10 @@ export const initialAutoclickers: Autoclicker[] = [
     { id: 6, name: "autoclicker.computationalorbital.name", desc: "autoclicker.computationalorbital.desc", cost: 20e6, tps: 7800, purchased: 0, req: { totalTokensEarned: 10e6 }, icon: 'CloudIcon' },
     { id: 7, name: "autoclicker.interdimensionalportal.name", desc: "autoclicker.interdimensionalportal.desc", cost: 330e6, tps: 44000, purchased: 0, req: { totalTokensEarned: 100e6 }, icon: 'ArrowsRightLeftIcon' },
     { id: 8, name: "autoclicker.timemachine.name", desc: "autoclicker.timemachine.desc", cost: 5.1e9, tps: 260000, purchased: 0, req: { totalTokensEarned: 1e9 }, icon: 'ClockIcon' },
-    { id: 9, name: "autoclicker.humanitycondenser.name", desc: "autoclicker.humanitycondenser.desc", cost: 75e9, tps: 1.6e6, purchased: 0, humanityGemsCost: 100, req: { totalTokensEarned: 50e9 }, icon: 'UserGroupIcon' },
-    { id: 10, name: "autoclicker.transcendentsingularity.name", desc: "autoclicker.transcendentsingularity.desc", cost: 1e12, tps: 10e6, purchased: 0, humanityGemsCost: 500, req: { totalTokensEarned: 1e12 }, icon: 'SparklesIcon' },
-    { id: 11, name: "autoclicker.blackholegenerator.name", desc: "autoclicker.blackholegenerator.desc", cost: 1.2e13, tps: 8e7, purchased: 0, req: { totalTokensEarned: 1e13 }, icon: 'StopCircleIcon' },
-    { id: 12, name: "autoclicker.realityforge.name", desc: "autoclicker.realityforge.desc", cost: 15e13, tps: 50e7, purchased: 0, req: { totalTokensEarned: 10e13 }, icon: 'CubeTransparentIcon' },
+    { id: 9, name: "autoclicker.humanitycondenser.name", desc: "autoclicker.humanitycondenser.desc", cost: 75e9, tps: 1.6e6, purchased: 0, prestigeCost: 1, req: { totalTokensEarned: 50e9 }, icon: 'UserGroupIcon' },
+    { id: 10, name: "autoclicker.transcendentsingularity.name", desc: "autoclicker.transcendentsingularity.desc", cost: 1e12, tps: 10e6, purchased: 0, prestigeCost: 5, req: { totalTokensEarned: 1e12 }, icon: 'SparklesIcon' },
+    { id: 11, name: "autoclicker.blackholegenerator.name", desc: "autoclicker.blackholegenerator.desc", cost: 1.2e13, tps: 8e7, purchased: 0, prestigeCost: 25, req: { totalTokensEarned: 1e13 }, icon: 'StopCircleIcon' },
+    { id: 12, name: "autoclicker.realityforge.name", desc: "autoclicker.realityforge.desc", cost: 15e13, tps: 50e7, purchased: 0, prestigeCost: 100, req: { totalTokensEarned: 10e13 }, icon: 'CubeTransparentIcon' },
     { id: 99, name: "autoclicker.devprocessor.name", desc: "autoclicker.devprocessor.desc", cost: 1, tps: 1e6, purchased: 0, icon: 'CogIcon', devOnly: true },
 ];
 

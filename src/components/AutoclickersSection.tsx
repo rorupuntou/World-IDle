@@ -1,7 +1,8 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { CpuChipIcon, BeakerIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
+import { CpuChipIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { Autoclicker, BuyAmount, GameState, Requirement, Effect } from "@/components/types";
 
 interface AutoclickersSectionProps {
@@ -16,6 +17,8 @@ interface AutoclickersSectionProps {
     formatNumber: (num: number) => string;
     autoclickerCPSValues: Map<number, number>;
     devModeActive: boolean;
+    isConfirmingPurchase: boolean;
+    pendingPurchaseTx: { txId: string; itemId: number } | null;
 }
 
 export default function AutoclickersSection({
@@ -29,7 +32,9 @@ export default function AutoclickersSection({
     purchaseAutoclicker,
     formatNumber,
     autoclickerCPSValues,
-    devModeActive
+    devModeActive,
+    isConfirmingPurchase,
+    pendingPurchaseTx
 }: AutoclickersSectionProps) {
     const { t } = useLanguage();
 
@@ -62,15 +67,17 @@ export default function AutoclickersSection({
             </div>
             {visibleAutoclickers.map((auto) => {
                 if (!checkRequirements(auto.req)) return null;
-                const totalTokenCost = calculateBulkCost(auto, buyAmount);
-                const totalGemCost = (auto.humanityGemsCost || 0) * buyAmount;
+                const isThisItemPending = pendingPurchaseTx?.itemId === auto.id;
+                const isBulkBuyForPrestige = !!(auto.prestigeCost && auto.prestigeCost > 0 && buyAmount !== 1);
+                const totalTokenCost = calculateBulkCost(auto, isBulkBuyForPrestige ? 1 : buyAmount);
                 const translatedName = t(auto.name);
                 const translatedDesc = t(auto.desc);
+
                 return (
                     <div key={auto.id} className="w-full flex items-center bg-slate-500/10 backdrop-blur-sm rounded-lg border border-slate-700 hover:bg-slate-500/20 transition-colors">
                         <motion.button 
                             onClick={() => purchaseAutoclicker(auto.id)} 
-                            disabled={gameState.tokens < totalTokenCost || gameState.humanityGems < totalGemCost}
+                            disabled={!!(gameState.tokens < totalTokenCost || isConfirmingPurchase || isThisItemPending || isBulkBuyForPrestige)}
                             className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <div className="text-left">
@@ -80,7 +87,13 @@ export default function AutoclickersSection({
                             </div>
                             <div className="text-right font-mono text-yellow-400">
                                 <p>{formatNumber(totalTokenCost)}</p>
-                                {auto.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1"><BeakerIcon className="w-4 h-4" />{totalGemCost}</p>}
+                                {auto.prestigeCost && (
+                                    <p className="text-sm flex items-center justify-end gap-1">
+                                        <Image src="/prestige-token-icon.svg" alt="Prestige Token" width={16} height={16} />
+                                        {auto.prestigeCost}
+                                    </p>
+                                )}
+                                {isBulkBuyForPrestige && <p className="text-xs text-red-400">{t('bulk_buy_prestige_disabled')}</p>}
                             </div>
                         </motion.button>
                         <button 

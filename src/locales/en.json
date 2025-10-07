@@ -52,6 +52,9 @@
     "confirmation_failed": "Confirmation failed on the backend.",
     "payment_cancelled": "Payment was cancelled or failed in World App.",
     "purchase_failed": "Purchase failed: {error}",
+    "purchase_success": "Purchase successful: {name}",
+    "not_enough_prestige_tokens": "Not enough Prestige Tokens.",
+    "bulk_buy_prestige_disabled": "Bulk buy disabled for Prestige items.",
     "shop": {
         "boost_10": "10% Permanent Boost",
         "boost_50": "50% Permanent Boost",

@@ -52,6 +52,9 @@
     "confirmation_failed": "La confirmación falló en el backend.",
     "payment_cancelled": "El pago fue cancelado o falló en World App.",
     "purchase_failed": "La compra falló: {error}",
+    "purchase_success": "Compra exitosa: {name}",
+    "not_enough_prestige_tokens": "No tienes suficientes Prestige Tokens.",
+    "bulk_buy_prestige_disabled": "La compra múltiple está deshabilitada para items con Prestigio.",
     "shop": {
         "boost_10": "10% de Mejora Permanente",
         "boost_50": "50% de Mejora Permanente",

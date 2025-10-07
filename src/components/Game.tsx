@@ -131,6 +131,13 @@ export default function Game() {
         query: { enabled: !!walletAddress },
     });
 
+    const { data: tokenDecimalsData } = useReadContract({
+        address: contractConfig.prestigeTokenAddress,
+        abi: contractConfig.prestigeTokenAbi,
+        functionName: 'decimals',
+        query: { enabled: !!walletAddress },
+    });
+
     const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
         client,
         appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
@@ -259,11 +266,12 @@ export default function Game() {
     }, []);
 
     useEffect(() => {
+        const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
         if (typeof prestigeTokenBalanceData === 'bigint') {
-            const balance = parseFloat(formatUnits(prestigeTokenBalanceData, 18));
+            const balance = parseFloat(formatUnits(prestigeTokenBalanceData, decimals));
             setPrestigeBalance(balance);
         }
-    }, [prestigeTokenBalanceData]);
+    }, [prestigeTokenBalanceData, tokenDecimalsData]);
     
     const loadGameFromBackend = useCallback(async (address: string) => {
         try {
@@ -370,7 +378,8 @@ export default function Game() {
 
     const handlePrestige = useCallback(async () => {
         try {
-            const amountToMintInWei = BigInt(prestigeReward) * BigInt(10**18);
+            const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
+            const amountToMintInWei = BigInt(prestigeReward) * BigInt(10**decimals);
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
@@ -403,7 +412,7 @@ export default function Game() {
             console.error("Error en el prestigio:", error);
             alert(t("prestige_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
         }
-    }, [prestigeReward, t]);
+    }, [prestigeReward, t, tokenDecimalsData]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -447,7 +456,8 @@ export default function Game() {
         if (!item.prestigeCost) return;
 
         try {
-            const amountToBurnInWei = BigInt(item.prestigeCost) * BigInt(10 ** 18);
+            const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
+            const amountToBurnInWei = BigInt(item.prestigeCost) * BigInt(10 ** decimals);
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
@@ -475,7 +485,7 @@ export default function Game() {
             console.error("Prestige purchase error:", error);
             alert(t("purchase_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
         }
-    }, [t]);
+    }, [t, tokenDecimalsData]);
 
     const purchaseAutoclicker = useCallback((id: number) => {
         const autoclicker = autoclickers.find(a => a.id === id);

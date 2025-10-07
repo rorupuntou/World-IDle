@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -460,7 +459,7 @@ export default function Game() {
                         address: contractConfig.prestigeTokenAddress,
                         abi: contractConfig.prestigeTokenAbi,
                         functionName: 'transfer',
-                        args: ['0x0000000000000000000000000000000000000000', amountToBurnInWei.toString()],
+                        args: ['0x000000000000000000000000000000000000dEaD', amountToBurnInWei.toString()],
                         value: '0x0',
                     },
                 ],

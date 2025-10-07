@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -78,7 +79,7 @@ const NewsTicker = () => {
                     exit={{ opacity: 0, y: 20 }}
                     transition={{ duration: 0.5 }}
                     className="text-sm text-slate-300 px-4 whitespace-nowrap w-full text-center"
-                    dangerouslySetInnerHTML={{ __html: t(news).replace(/<q>(.*?) Quoted Text <\/q><sig>(.*?) Signature <\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
+                    dangerouslySetInnerHTML={{ __html: t(news).replace(/<q>(.*?)<\/q><sig>(.*?)<\/sig>/g, '"$1" &ndash; <i>$2</i>') }}
                 />
             </AnimatePresence>
         </div>
@@ -386,20 +387,16 @@ export default function Game() {
                         address: contractConfig.gameManagerAddress,
                         abi: contractConfig.gameManagerAbi,
                         functionName: 'prestige',
-                        args: [amountToMintInWei],
+                        args: [amountToMintInWei.toString()],
                         value: '0x0',
                     },
                 ],
             });
 
             if (finalPayload.status === 'error') {
-                console.error("FULL PRESTIGE ERROR:", JSON.stringify(finalPayload, null, 2));
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                let errorMessage = errorPayload.message || 'Error al enviar la transacción con MiniKit.';
-                if (errorPayload.debug_url) {
-                    errorMessage += `\n\nPuedes depurar la transacción aquí: ${errorPayload.debug_url}`;
-                }
-                throw new Error(errorMessage);
+                alert('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
+                throw new Error(errorPayload.message || 'Error al enviar la transacción con MiniKit.');
             }
 
             if (finalPayload.transaction_id) {
@@ -409,8 +406,7 @@ export default function Game() {
                 throw new Error(t('transaction_error'));
             }
         } catch (error) {
-            console.error("Error en el prestigio:", error);
-            alert(t("prestige_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
+            alert('DEBUG: ' + JSON.stringify(error, null, 2));
         }
     }, [prestigeReward, t, tokenDecimalsData]);
 
@@ -471,8 +467,8 @@ export default function Game() {
             });
 
             if (finalPayload.status === 'error') {
-                console.error("FULL PRESTIGE PURCHASE ERROR:", JSON.stringify(finalPayload, null, 2));
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                alert('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
                 throw new Error(errorPayload.message || 'Error sending transaction with MiniKit.');
             }
 
@@ -483,8 +479,7 @@ export default function Game() {
                 throw new Error(t('transaction_error'));
             }
         } catch (error) {
-            console.error("Prestige purchase error:", error);
-            alert(t("purchase_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
+            alert('DEBUG: ' + JSON.stringify(error, null, 2));
         }
     }, [t, tokenDecimalsData]);
 

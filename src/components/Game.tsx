@@ -140,13 +140,13 @@ export default function Game() {
 
     const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
         client,
-        appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
+        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingPrestigeTxId ?? '',
     });
 
     const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } = useWaitForTransactionReceipt({
         client,
-        appConfig: { app_id: 'app_3b83f308b9f7ef9a01e4042f1f48721d' },
+        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingPurchaseTx?.txId ?? '',
     });
 

@@ -344,5 +344,16 @@
         "<q>We are watching.</q><sig>Autonomous AI</sig>",
         "News: $WCLICK value skyrockets after it's rumored to be 'good for the economy.'",
         "News: Humanity verification now more popular than sliced bread, poll finds."
-    ]
+    ],
+    "boost_modal.title": "How are your earnings calculated?",
+    "boost_modal.intro": "Your token production is based on several factors that multiply each other:",
+    "boost_modal.base_production_title": "Base Production",
+    "boost_modal.base_production_desc": "The sum of the Tokens per Second (TPS) of all your autoclickers.",
+    "boost_modal.upgrades_title": "Upgrades",
+    "boost_modal.upgrades_desc": "The upgrades you buy apply multipliers to your autoclickers or your global production.",
+    "boost_modal.prestige_boost_title": "Prestige Boost",
+    "boost_modal.prestige_boost_desc": "Your Prestige Tokens (ERC-20) grant you a global bonus to all your production. It has diminishing returns, so the first ones are the most powerful!",
+    "boost_modal.permanent_boost_title": "Permanent Boost",
+    "boost_modal.permanent_boost_desc": "Bonus purchased from the shop with Humanity Gems.",
+    "boost_modal.formula_title": "Final Production"
 }

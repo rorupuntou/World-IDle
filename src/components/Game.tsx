@@ -6,7 +6,7 @@ import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroico
 import { MiniKit } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
-import { formatUnits, createPublicClient, http, defineChain } from "viem";
+import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -253,7 +253,8 @@ export default function Game() {
     }, [upgrades, gameState.tokens, checkRequirements]);
 
     const prestigeReward = useMemo(() => {
-        return Math.floor(Math.sqrt(stats.totalTokensEarned / 150000));
+        if (stats.totalTokensEarned <= 0) return 0;
+        return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000));
     }, [stats.totalTokensEarned]);
 
     const canPrestige = useMemo(() => {
@@ -377,9 +378,10 @@ export default function Game() {
     }, [loadGameFromBackend, t]);
 
     const handlePrestige = useCallback(async () => {
+        if (prestigeReward <= 0) return;
         try {
-            const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
-            const amountToMintInWei = BigInt(prestigeReward) * BigInt(10**decimals);
+            // The amount to mint is the number of prestige tokens, converted to WEI (18 decimals)
+            const amountToMintInWei = parseUnits(prestigeReward.toString(), 18);
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
@@ -407,7 +409,7 @@ export default function Game() {
         } catch (error) {
             alert('DEBUG: ' + JSON.stringify(error, null, 2));
         }
-    }, [prestigeReward, t, tokenDecimalsData]);
+    }, [prestigeReward, t]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;

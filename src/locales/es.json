@@ -344,5 +344,16 @@
         "<q>Estamos observando.</q><sig>IA Autónoma</sig>",
         "Noticia: El valor de $WCLICK se dispara después de que se rumorea que 'es bueno para la economía'.",
         "Noticia: La verificación de humanidad ahora es más popular que el pan rebanado, según una encuesta."
-    ]
+    ],
+    "boost_modal.title": "¿Cómo se calculan tus ganancias?",
+    "boost_modal.intro": "Tu producción de tokens se basa en varios factores que se multiplican entre sí:",
+    "boost_modal.base_production_title": "Producción Base",
+    "boost_modal.base_production_desc": "La suma de los Tokens por Segundo (TPS) de todos tus autoclickers.",
+    "boost_modal.upgrades_title": "Mejoras",
+    "boost_modal.upgrades_desc": "Las mejoras que compras aplican multiplicadores a tus autoclickers o a tu producción global.",
+    "boost_modal.prestige_boost_title": "Boost de Prestigio",
+    "boost_modal.prestige_boost_desc": "Tus Tokens de Prestigio (ERC-20) te otorgan un bonus global a toda tu producción. ¡Tiene rendimientos decrecientes, así que los primeros son los más potentes!",
+    "boost_modal.permanent_boost_title": "Boost Permanente",
+    "boost_modal.permanent_boost_desc": "Bonus comprado en la tienda con Gemas de Humanidad.",
+    "boost_modal.formula_title": "Producción Final"
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
-import { MiniKit } from "@worldcoin/minikit-js";
+import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "viem";
@@ -95,6 +95,7 @@ export default function Game() {
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
+    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
 
@@ -148,6 +149,12 @@ export default function Game() {
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingPurchaseTx?.txId ?? '',
+    });
+
+    const { isLoading: isConfirmingTimeWarp, isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
+        client,
+        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+        transactionId: pendingTimeWarpTx?.txId ?? '',
     });
 
     // --- Memoized Calculations ---
@@ -308,6 +315,16 @@ export default function Game() {
         }
     }, [isPrestigeSuccess, refetchPrestigeBalance, t]);
 
+    useEffect(() => {
+        if (isTimeWarpSuccess && pendingTimeWarpTx) {
+            setToast(t("time_warp_success"));
+            setGameState(prev => ({ ...prev, tokens: prev.tokens + pendingTimeWarpTx.reward }));
+            setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward }));
+            refetchPrestigeBalance(); // Refetch balance if prestige tokens were used
+            setPendingTimeWarpTx(null);
+        }
+    }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t]);
+
     const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
         if (manual) setToast(t("saving"));
@@ -410,6 +427,87 @@ export default function Game() {
             alert('DEBUG: ' + JSON.stringify(error, null, 2));
         }
     }, [prestigeReward, t]);
+
+    const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
+        const reward = totalCPS * 86400;
+        if (type === 'prestige') {
+            const cost = 25;
+            if (prestigeBalance < cost) {
+                setToast(t("not_enough_prestige_tokens"));
+                return;
+            }
+            try {
+                const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
+                const amountToBurnInWei = BigInt(cost) * BigInt(10 ** decimals);
+                const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                    transaction: [
+                        {
+                            address: contractConfig.prestigeTokenAddress,
+                            abi: contractConfig.prestigeTokenAbi,
+                            functionName: 'transfer',
+                            args: ['0x000000000000000000000000000000000000dEaD', amountToBurnInWei.toString()],
+                            value: '0x0',
+                        },
+                    ],
+                });
+
+                if (finalPayload.status === 'error') {
+                    throw new Error((finalPayload as MiniAppSendTransactionErrorPayload).error_code || 'Error sending transaction');
+                }
+
+                if (finalPayload.transaction_id) {
+                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward });
+                    setToast(t("transaction_sent"));
+                } else {
+                    throw new Error(t('transaction_error'));
+                }
+            } catch (error) {
+                setToast(t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }));
+            }
+        } else if (type === 'wld') {
+            try {
+                const initRes = await fetch('/api/initiate-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress, boostId: 'timewarp_24h' }),
+                });
+        
+                if (!initRes.ok) throw new Error(t("payment_failed_init"));
+                const { reference } = await initRes.json();
+
+                const payload: PayCommandInput = {
+                    reference,
+                    to: '0x536bB672A282df8c89DDA57E79423cC505750E52',
+                    tokens: [{ symbol: Tokens.WLD, token_amount: tokenToDecimals(0.1, Tokens.WLD).toString() }],
+                    description: t('time_warp_purchase_desc'),
+                };
+
+                const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
+
+                if (finalPayload.status === 'success' && finalPayload.transaction_id) {
+                    setToast(t("payment_sent_verifying"));
+                    const res = await fetch('/api/confirm-timewarp-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ txId: finalPayload.transaction_id, rewardAmount: reward }),
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                        setGameState(prev => ({ ...prev, tokens: prev.tokens + data.rewardAmount }));
+                        setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + data.rewardAmount }));
+                        setToast(t("time_warp_success"));
+                    } else {
+                        throw new Error(data.error || t("confirmation_failed"));
+                    }
+                } else {
+                    throw new Error((finalPayload as MiniAppPaymentErrorPayload).error_code || t("payment_cancelled"));
+                }
+            } catch (error) {
+                setToast(t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }));
+            }
+        }
+    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -620,7 +718,7 @@ export default function Game() {
                         prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isConfirmingPrestige || isConfirmingPurchase}
+                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp}
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}
@@ -635,7 +733,15 @@ export default function Game() {
                         achievements={achievements}
                         showRequirements={showItemDetails}
                     />
-                    <ShopSection walletAddress={walletAddress} setGameState={setGameState} setToast={setToast} />
+                    <ShopSection 
+                        walletAddress={walletAddress} 
+                        setGameState={setGameState} 
+                        setToast={setToast} 
+                        totalCPS={totalCPS}
+                        prestigeBalance={prestigeBalance}
+                        handleTimeWarpPurchase={handleTimeWarpPurchase}
+                        formatNumber={formatNumber}
+                    />
                     <div className="mt-4">
                         <button 
                             onClick={() => saveGameToBackend(true)}

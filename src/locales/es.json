@@ -60,6 +60,14 @@
         "boost_50": "50% de Mejora Permanente",
         "boost_100": "100% de Mejora Permanente"
     },
+    "time_warps": "Saltos Temporales",
+    "time_warp_24h": "Salto Temporal de 24 Horas",
+    "time_warp_desc": "Obtén 24 horas de producción al instante.",
+    "reward": "Recompensa",
+    "buy_with_prestige": "Comprar con {price} Prestigio",
+    "buy_with_wld": "Comprar con {price} WLD",
+    "time_warp_success": "¡Salto temporal exitoso!",
+    "time_warp_purchase_desc": "Comprar un salto temporal de 24 horas",
     "autoclickers_section": {
         "title": "Autoclickers"
     },

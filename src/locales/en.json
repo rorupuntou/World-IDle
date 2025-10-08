@@ -60,6 +60,14 @@
         "boost_50": "50% Permanent Boost",
         "boost_100": "100% Permanent Boost"
     },
+    "time_warps": "Time Warps",
+    "time_warp_24h": "24-Hour Time Warp",
+    "time_warp_desc": "Get 24 hours of production instantly.",
+    "reward": "Reward",
+    "buy_with_prestige": "Buy with {price} Prestige",
+    "buy_with_wld": "Buy with {price} WLD",
+    "time_warp_success": "Time warp successful!",
+    "time_warp_purchase_desc": "Purchase a 24-hour time warp",
     "autoclickers_section": {
         "title": "Autoclickers"
     },

@@ -10,6 +10,10 @@ interface ShopSectionProps {
   walletAddress: string | null;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   setToast: (message: string | null) => void;
+  totalCPS: number;
+  prestigeBalance: number;
+  handleTimeWarpPurchase: (type: 'prestige' | 'wld') => void;
+  formatNumber: (num: number) => string;
 }
 
 const boosts = [
@@ -19,11 +23,15 @@ const boosts = [
 ];
 
 const PAYMENT_RECIPIENT_ADDRESS = '0x536bB672A282df8c89DDA57E79423cC505750E52';
+const TIME_WARP_PRICE_WLD = 0.1;
+const TIME_WARP_PRICE_PRESTIGE = 25;
 
-const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setToast }) => {
+const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setToast, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber }) => {
   const { t } = useLanguage();
 
-  const handlePurchase = async (boostId: string) => {
+  const timeWarpReward = totalCPS * 86400; // 24 hours of production
+
+  const handleBoostPurchase = async (boostId: string) => {
     if (!walletAddress) {
       setToast(t("wallet_prompt"));
       return;
@@ -39,7 +47,6 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
     setToast(t("payment_initiated"));
 
     try {
-      // 1. Initiate payment on the backend to get a reference ID
       const initRes = await fetch('/api/initiate-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +56,6 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
       if (!initRes.ok) throw new Error(t("payment_failed_init"));
       const { reference } = await initRes.json();
 
-      // 2. Prepare and send the payment command to World App
       const payload: PayCommandInput = {
         reference,
         to: PAYMENT_RECIPIENT_ADDRESS,
@@ -64,11 +70,9 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
 
       const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
 
-      // 3. Handle the response from World App
       if (finalPayload.status === 'success') {
         setToast(t("payment_sent_verifying"));
 
-        // 4. Confirm payment on the backend
         const confirmRes = await fetch('/api/confirm-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -79,7 +83,6 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
         const { success, newBonus, error } = await confirmRes.json();
 
         if (success) {
-          // 5. Update local game state
           setGameState(prev => ({
             ...prev,
             permanentBoostBonus: newBonus,
@@ -89,7 +92,6 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
           throw new Error(error || t("confirmation_failed"));
         }
       } else {
-        // Handle error payload safely
         const errorPayload = finalPayload as MiniAppPaymentErrorPayload;
         console.error("Payment failed in World App:", errorPayload);
         throw new Error(t("payment_cancelled"));
@@ -101,24 +103,52 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg">
-      <h2 className="text-xl font-bold mb-4">{t('permanent_boosts_shop')}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {boosts.map((boost) => (
-          <div key={boost.id} className="bg-gray-700 p-4 rounded-lg flex flex-col justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{t(boost.name)}</h3>
-              <p className="text-gray-400">{t('price')}: {boost.price} WLD</p>
+    <div className="bg-gray-800 p-4 rounded-lg flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-bold mb-4">{t('permanent_boosts_shop')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {boosts.map((boost) => (
+            <div key={boost.id} className="bg-gray-700 p-4 rounded-lg flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">{t(boost.name)}</h3>
+                <p className="text-gray-400">{t('price')}: {boost.price} WLD</p>
+              </div>
+              <button
+                onClick={() => handleBoostPurchase(boost.id)}
+                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+                disabled={!walletAddress}
+              >
+                {t('buy_now')}
+              </button>
             </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h2 className="text-xl font-bold mb-4">{t('time_warps')}</h2>
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold">{t('time_warp_24h')}</h3>
+          <p className="text-gray-400 mb-2">{t('time_warp_desc')}</p>
+          <p className="text-lime-400 font-bold text-lg mb-4">
+            {t('reward')}: +{formatNumber(timeWarpReward)} $WCLICK
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => handlePurchase(boost.id)}
-              className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+              onClick={() => handleTimeWarpPurchase('prestige')}
+              className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+              disabled={!walletAddress || prestigeBalance < TIME_WARP_PRICE_PRESTIGE}
+            >
+              {t('buy_with_prestige', { price: TIME_WARP_PRICE_PRESTIGE })}
+            </button>
+            <button
+              onClick={() => handleTimeWarpPurchase('wld')}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
               disabled={!walletAddress}
             >
-              {t('buy_now')}
+              {t('buy_with_wld', { price: TIME_WARP_PRICE_WLD })}
             </button>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );

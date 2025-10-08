@@ -151,7 +151,7 @@ export default function Game() {
     });
 
     // --- Memoized Calculations ---
-    const prestigeBoost = useMemo(() => prestigeBalance * 10, [prestigeBalance]);
+    const prestigeBoost = useMemo(() => 15 * Math.log10(prestigeBalance + 1), [prestigeBalance]);
 
     const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
@@ -253,7 +253,7 @@ export default function Game() {
     }, [upgrades, gameState.tokens, checkRequirements]);
 
     const prestigeReward = useMemo(() => {
-        return Math.floor(stats.totalTokensEarned / 100000);
+        return Math.floor(Math.sqrt(stats.totalTokensEarned / 150000));
     }, [stats.totalTokensEarned]);
 
     const canPrestige = useMemo(() => {
@@ -425,6 +425,17 @@ export default function Game() {
         return totalCost;
     }, []);
 
+    const calculatePrestigeBulkCost = useCallback((item: Autoclicker, amount: BuyAmount) => {
+        if (!item.prestigeCost) return 0;
+        let totalCost = 0;
+        for (let i = 0; i < amount; i++) {
+            // The cost for each subsequent item increases exponentially and is rounded up.
+            const costForItem = Math.ceil(item.prestigeCost * Math.pow(PRICE_INCREASE_RATE, item.purchased + i));
+            totalCost += costForItem;
+        }
+        return totalCost;
+    }, []);
+
     const purchaseAutoclickerWithTokens = useCallback((id: number) => {
         const autoclicker = autoclickers.find(a => a.id === id);
         if (!autoclicker) return;
@@ -447,12 +458,12 @@ export default function Game() {
         }
     }, [isPurchaseSuccess, pendingPurchaseTx, autoclickers, purchaseAutoclickerWithTokens, refetchPrestigeBalance, t]);
 
-    const handlePrestigePurchase = useCallback(async (item: Autoclicker) => {
-        if (!item.prestigeCost) return;
+    const handlePrestigePurchase = useCallback(async (item: Autoclicker, totalPrestigeCost: number) => {
+        if (!totalPrestigeCost) return;
 
         try {
             const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
-            const amountToBurnInWei = BigInt(item.prestigeCost) * BigInt(10 ** decimals);
+            const amountToBurnInWei = BigInt(totalPrestigeCost) * BigInt(10 ** decimals);
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
@@ -486,19 +497,20 @@ export default function Game() {
         const autoclicker = autoclickers.find(a => a.id === id);
         if (!autoclicker) return;
 
-        const cost = calculateBulkCost(autoclicker, buyAmount);
-        if (gameState.tokens < cost) return;
+        const tokenCost = calculateBulkCost(autoclicker, buyAmount);
+        if (gameState.tokens < tokenCost) return;
 
         if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
-            if (prestigeBalance >= autoclicker.prestigeCost) {
-                handlePrestigePurchase(autoclicker);
+            const prestigeCost = calculatePrestigeBulkCost(autoclicker, buyAmount);
+            if (prestigeBalance >= prestigeCost) {
+                handlePrestigePurchase(autoclicker, prestigeCost);
             } else {
                 setToast(t("not_enough_prestige_tokens"));
             }
         } else {
             purchaseAutoclickerWithTokens(id);
         }
-    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount, prestigeBalance, handlePrestigePurchase, purchaseAutoclickerWithTokens, t]);
+    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount, prestigeBalance, handlePrestigePurchase, purchaseAutoclickerWithTokens, t, calculatePrestigeBulkCost]);
 
     const purchaseUpgrade = useCallback((id: number) => {
         const upgrade = upgrades.find(u => u.id === id);
@@ -589,12 +601,14 @@ export default function Game() {
                         checkRequirements={checkRequirements}
                         showRequirements={showItemDetails}
                         calculateBulkCost={calculateBulkCost}
+                        calculatePrestigeBulkCost={calculatePrestigeBulkCost}
                         purchaseAutoclicker={purchaseAutoclicker}
                         formatNumber={formatNumber}
                         autoclickerCPSValues={autoclickerCPSValues}
                         devModeActive={devModeActive}
                         isConfirmingPurchase={isConfirmingPurchase}
                         pendingPurchaseTx={pendingPurchaseTx}
+                        prestigeBalance={prestigeBalance}
                     />
                 </div>
                 <div className="w-full lg:w-1/3 flex flex-col gap-6">

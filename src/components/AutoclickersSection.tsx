@@ -13,12 +13,14 @@ interface AutoclickersSectionProps {
     checkRequirements: (req: Requirement | undefined) => boolean;
     showRequirements: (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }, itemType: 'autoclicker') => void;
     calculateBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
+    calculatePrestigeBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
     autoclickerCPSValues: Map<number, number>;
     devModeActive: boolean;
     isConfirmingPurchase: boolean;
     pendingPurchaseTx: { txId: string; itemId: number } | null;
+    prestigeBalance: number;
 }
 
 export default function AutoclickersSection({
@@ -29,12 +31,14 @@ export default function AutoclickersSection({
     checkRequirements,
     showRequirements,
     calculateBulkCost,
+    calculatePrestigeBulkCost,
     purchaseAutoclicker,
     formatNumber,
     autoclickerCPSValues,
     devModeActive,
     isConfirmingPurchase,
-    pendingPurchaseTx
+    pendingPurchaseTx,
+    prestigeBalance
 }: AutoclickersSectionProps) {
     const { t } = useLanguage();
 
@@ -68,16 +72,18 @@ export default function AutoclickersSection({
             {visibleAutoclickers.map((auto) => {
                 if (!checkRequirements(auto.req)) return null;
                 const isThisItemPending = pendingPurchaseTx?.itemId === auto.id;
-                const isBulkBuyForPrestige = !!(auto.prestigeCost && auto.prestigeCost > 0 && buyAmount !== 1);
-                const totalTokenCost = calculateBulkCost(auto, isBulkBuyForPrestige ? 1 : buyAmount);
+                const totalTokenCost = calculateBulkCost(auto, buyAmount);
+                const totalPrestigeCost = auto.prestigeCost ? calculatePrestigeBulkCost(auto, buyAmount) : 0;
                 const translatedName = t(auto.name);
                 const translatedDesc = t(auto.desc);
+
+                const canAfford = gameState.tokens >= totalTokenCost && prestigeBalance >= totalPrestigeCost;
 
                 return (
                     <div key={auto.id} className="w-full flex items-center bg-slate-500/10 backdrop-blur-sm rounded-lg border border-slate-700 hover:bg-slate-500/20 transition-colors">
                         <motion.button 
                             onClick={() => purchaseAutoclicker(auto.id)} 
-                            disabled={!!(gameState.tokens < totalTokenCost || isConfirmingPurchase || isThisItemPending || isBulkBuyForPrestige)}
+                            disabled={!canAfford || isConfirmingPurchase || isThisItemPending}
                             className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <div className="text-left">
@@ -87,13 +93,12 @@ export default function AutoclickersSection({
                             </div>
                             <div className="text-right font-mono text-yellow-400">
                                 <p>{formatNumber(totalTokenCost)}</p>
-                                {auto.prestigeCost && (
+                                {totalPrestigeCost > 0 && (
                                     <p className="text-sm flex items-center justify-end gap-1">
                                         <Image src="/prestige-token-icon.svg" alt="Prestige Token" width={16} height={16} />
-                                        {auto.prestigeCost}
+                                        {formatNumber(totalPrestigeCost)}
                                     </p>
                                 )}
-                                {isBulkBuyForPrestige && <p className="text-xs text-red-400">{t('bulk_buy_prestige_disabled')}</p>}
                             </div>
                         </motion.button>
                         <button 

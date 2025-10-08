@@ -4,5 +4,7 @@
     "geminicodeassist.codeGenerationPaneViewEnabled": true,
     "geminicodeassist.updateChannel": "Default",
     "geminicodeassist.verboseLogging": true,
-    "geminicodeassist.inlineSuggestions.nextEditPredictions": true
+    "geminicodeassist.inlineSuggestions.nextEditPredictions": true,
+    "search.useGlobalIgnoreFiles": true,
+    "search.useParentIgnoreFiles": true
 }

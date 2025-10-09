@@ -9,11 +9,12 @@ import { GameState } from './types';
 interface ShopSectionProps {
   walletAddress: string | null;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  setToast: (message: string | null) => void;
+  setNotification: (notification: { message: string; type: 'success' | 'error' } | null) => void;
   totalCPS: number;
   prestigeBalance: number;
   handleTimeWarpPurchase: (type: 'prestige' | 'wld') => void;
   formatNumber: (num: number) => string;
+  timeWarpPrestigeCost: number;
 }
 
 const boosts = [
@@ -24,27 +25,26 @@ const boosts = [
 
 const PAYMENT_RECIPIENT_ADDRESS = '0x536bB672A282df8c89DDA57E79423cC505750E52';
 const TIME_WARP_PRICE_WLD = 0.1;
-const TIME_WARP_PRICE_PRESTIGE = 25;
 
-const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setToast, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber }) => {
+const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost }) => {
   const { t } = useLanguage();
 
   const timeWarpReward = totalCPS * 86400; // 24 hours of production
 
   const handleBoostPurchase = async (boostId: string) => {
     if (!walletAddress) {
-      setToast(t("wallet_prompt"));
+      setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
     if (!MiniKit.isInstalled()) {
-      setToast(t("wallet_prompt"));
+      setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
 
     const selectedBoost = boosts.find(b => b.id === boostId);
     if (!selectedBoost) return;
 
-    setToast(t("payment_initiated"));
+    setNotification({ message: t("payment_initiated"), type: 'success' });
 
     try {
       const initRes = await fetch('/api/initiate-payment', {
@@ -71,7 +71,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
       const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
 
       if (finalPayload.status === 'success') {
-        setToast(t("payment_sent_verifying"));
+        setNotification({ message: t("payment_sent_verifying"), type: 'success' });
 
         const confirmRes = await fetch('/api/confirm-payment', {
           method: 'POST',
@@ -87,7 +87,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
             ...prev,
             permanentBoostBonus: newBonus,
           }));
-          setToast(t("boost_purchased"));
+          setNotification({ message: t("boost_purchased"), type: 'success' });
         } else {
           throw new Error(error || t("confirmation_failed"));
         }
@@ -98,7 +98,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
       }
     } catch (error) {
       console.error("Purchase failed:", error);
-      setToast(t("purchase_failed", { error: error instanceof Error ? error.message : 'An unknown error occurred.' }));
+      setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'An unknown error occurred.' }), type: 'error' });
     }
   };
 
@@ -136,9 +136,9 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
             <button
               onClick={() => handleTimeWarpPurchase('prestige')}
               className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
-              disabled={!walletAddress || prestigeBalance < TIME_WARP_PRICE_PRESTIGE}
+              disabled={!walletAddress || prestigeBalance < timeWarpPrestigeCost}
             >
-              {t('buy_with_prestige', { price: TIME_WARP_PRICE_PRESTIGE })}
+              {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
             </button>
             <button
               onClick={() => handleTimeWarpPurchase('wld')}

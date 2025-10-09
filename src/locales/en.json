@@ -67,6 +67,9 @@
     "buy_with_prestige": "Buy with {price} Prestige",
     "buy_with_wld": "Buy with {price} WLD",
     "time_warp_success": "Time warp successful!",
+    "offline_gains_title": "Welcome Back!",
+    "offline_gains_desc": "You earned the following amount of tokens while you were away. Claim them now!",
+    "offline_gains_confirm": "Claim Reward",
     "offline_gains": "You earned {amount} tokens while you were away!",
     "time_warp_purchase_desc": "Purchase a 24-hour time warp",
     "autoclickers_section": {

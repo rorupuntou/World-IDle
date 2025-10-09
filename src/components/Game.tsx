@@ -47,14 +47,21 @@ const client = createPublicClient({
 
 function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
-const Toast = ({ message, onDone }: { message: string, onDone: () => void }) => {
+const Toast = ({ message, type, onDone }: { message: string, type: 'success' | 'error', onDone: () => void }) => {
     useEffect(() => {
         const timer = setTimeout(onDone, 4000);
         return () => clearTimeout(timer);
     }, [onDone]);
+
+    const isSuccess = type === 'success';
+
     return (
-        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-lime-400/90 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50">
-            <CheckBadgeIcon className="w-6 h-6" />
+        <motion.div 
+            initial={{ opacity: 0, y: 50 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: 20 }} 
+            className={`fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? 'bg-lime-400/90' : 'bg-red-500/90'}`}>
+            {isSuccess ? <CheckBadgeIcon className="w-6 h-6" /> : <XMarkIcon className="w-6 h-6" />}
             <span>{message}</span>
             <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><XMarkIcon className="w-4 h-4" /></button>
         </motion.div>
@@ -90,12 +97,12 @@ export default function Game() {
     // --- Base States ---
     const [isClient, setIsClient] = useState(false);
     const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
-    const [toast, setToast] = useState<string | null>(null);
+    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
-    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
+    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number; type: 'prestige' | 'wld' } | null>(null);
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
@@ -160,6 +167,12 @@ export default function Game() {
 
     // --- Memoized Calculations ---
     const prestigeBoost = useMemo(() => 15 * Math.log10(prestigeBalance + 1), [prestigeBalance]);
+
+    const timeWarpPrestigeCost = useMemo(() => {
+        const baseCost = 25;
+        const purchasedCount = gameState.prestigeTimeWarpsPurchased || 0;
+        return Math.ceil(baseCost * Math.pow(PRICE_INCREASE_RATE, purchasedCount));
+    }, [gameState.prestigeTimeWarpsPurchased]);
 
     const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
@@ -294,20 +307,20 @@ export default function Game() {
                 if (autoclickers) setAutoclickers(autoclickers);
                 if (upgrades) setUpgrades(upgrades);
                 if (achievements) setAchievements(achievements);
-                setToast(t("game_loaded"));
+                setNotification({ message: t("game_loaded"), type: 'success' });
                 setGameJustLoaded(true); // Trigger offline progress calculation
             } else {
-                setToast(t("welcome_back"));
+                setNotification({ message: t("welcome_back"), type: 'success' });
             }
         } catch (error) {
             console.error("Failed to load game:", error);
-            setToast(t("load_error"));
+            setNotification({ message: t("load_error"), type: 'error' });
         }
     }, [t]);
 
     useEffect(() => {
         if (isPrestigeSuccess) {
-            setToast(t("prestige_success"));
+            setNotification({ message: t("prestige_success"), type: 'success' });
             setGameState(prev => ({ ...initialState, permanentBoostBonus: prev.permanentBoostBonus }));
             setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
             setAutoclickers(initialAutoclickers);
@@ -319,8 +332,17 @@ export default function Game() {
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
-            setToast(t("time_warp_success"));
-            setGameState(prev => ({ ...prev, tokens: prev.tokens + pendingTimeWarpTx.reward }));
+            setNotification({ message: t("time_warp_success"), type: 'success' });
+            setGameState(prev => {
+                const newGameState = { 
+                    ...prev, 
+                    tokens: prev.tokens + pendingTimeWarpTx.reward,
+                };
+                if (pendingTimeWarpTx.type === 'prestige') {
+                    newGameState.prestigeTimeWarpsPurchased = (prev.prestigeTimeWarpsPurchased || 0) + 1;
+                }
+                return newGameState;
+            });
             setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward }));
             refetchPrestigeBalance(); // Refetch balance if prestige tokens were used
             setPendingTimeWarpTx(null);
@@ -329,7 +351,7 @@ export default function Game() {
 
     const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
-        if (manual) setToast(t("saving"));
+        if (manual) setNotification({ message: t("saving"), type: 'success' });
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
         fullGameState.gameState.lastSaved = Date.now();
         try {
@@ -339,10 +361,10 @@ export default function Game() {
                 body: JSON.stringify({ walletAddress, gameData: fullGameState }),
             });
             if (!res.ok) throw new Error("Failed to save game data");
-            if (manual) setToast(t("game_saved"));
+            if (manual) setNotification({ message: t("game_saved"), type: 'success' });
         } catch (error) {
             console.error("Failed to save game:", error);
-            if (manual) setToast(t("save_error"));
+            if (manual) setNotification({ message: t("save_error"), type: 'error' });
         }
     }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements, t]);
 
@@ -361,7 +383,7 @@ export default function Game() {
                 if (offlineGains > 1) { // Only show if gains are significant
                     setGameState(prev => ({ ...prev, tokens: prev.tokens + offlineGains }));
                     setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + offlineGains }));
-                    setToast(t("offline_gains", { amount: formatNumber(offlineGains) }));
+                    setNotification({ message: t("offline_gains", { amount: formatNumber(offlineGains) }), type: 'success' });
                 }
             }
             setGameJustLoaded(false); // Reset the flag
@@ -379,7 +401,7 @@ export default function Game() {
 
     useEffect(() => {
         if (!walletAddress) return;
-        const saveInterval = setInterval(() => saveGameToBackend(false), 30000);
+        const saveInterval = setInterval(() => saveGameToBackend(false), 15000); // Save every 15 seconds
         return () => clearInterval(saveInterval);
     }, [saveGameToBackend, walletAddress]);
 
@@ -388,7 +410,7 @@ export default function Game() {
         const newAchievements = achievements.filter(ach => !ach.unlocked && checkRequirements(ach.req));
         if (newAchievements.length > 0) {
             newAchievements.forEach(ach => {
-                setToast(t("achievement_unlocked", { name: t(ach.name) }));
+                setNotification({ message: t("achievement_unlocked", { name: t(ach.name) }), type: 'success' });
                 unlockedAchievements.add(ach.id);
             });
             setAchievements(prev => prev.map(ach => unlockedAchievements.has(ach.id) ? { ...ach, unlocked: true } : ach));
@@ -398,7 +420,7 @@ export default function Game() {
     // --- User Action Handlers ---
     const handleConnect = useCallback(async () => {
         if (!MiniKit.isInstalled()) {
-            return alert(t("wallet_prompt"));
+            return setNotification({ message: t("wallet_prompt"), type: 'error' });
         }
         try {
             const result = await MiniKit.commandsAsync.walletAuth({ nonce: String(Math.random()) });
@@ -414,7 +436,7 @@ export default function Game() {
             }
         } catch (error) {
             console.error("Error al conectar la billetera:", error);
-            alert(t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }));
+            setNotification({ message: t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
         }
     }, [loadGameFromBackend, t]);
 
@@ -437,27 +459,27 @@ export default function Game() {
 
             if (finalPayload.status === 'error') {
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                alert('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
+                console.error('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
                 throw new Error(errorPayload.message || 'Error al enviar la transacción con MiniKit.');
             }
 
             if (finalPayload.transaction_id) {
                 setPendingPrestigeTxId(finalPayload.transaction_id);
-                setToast(t("transaction_sent"));
+                setNotification({ message: t("transaction_sent"), type: 'success' });
             } else {
                 throw new Error(t('transaction_error'));
             }
         } catch (error) {
-            alert('DEBUG: ' + JSON.stringify(error, null, 2));
+            setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
         }
     }, [prestigeReward, t]);
 
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;
         if (type === 'prestige') {
-            const cost = 25;
+            const cost = timeWarpPrestigeCost;
             if (prestigeBalance < cost) {
-                setToast(t("not_enough_prestige_tokens"));
+                setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' });
                 return;
             }
             try {
@@ -480,13 +502,13 @@ export default function Game() {
                 }
 
                 if (finalPayload.transaction_id) {
-                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward });
-                    setToast(t("transaction_sent"));
+                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward, type: 'prestige' });
+                    setNotification({ message: t("transaction_sent"), type: 'success' });
                 } else {
                     throw new Error(t('transaction_error'));
                 }
             } catch (error) {
-                setToast(t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }));
+                setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
             }
         } else if (type === 'wld') {
             try {
@@ -509,7 +531,7 @@ export default function Game() {
                 const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
 
                 if (finalPayload.status === 'success' && finalPayload.transaction_id) {
-                    setToast(t("payment_sent_verifying"));
+                    setNotification({ message: t("payment_sent_verifying"), type: 'success' });
                     const res = await fetch('/api/confirm-timewarp-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -520,7 +542,7 @@ export default function Game() {
                     if (data.success) {
                         setGameState(prev => ({ ...prev, tokens: prev.tokens + data.rewardAmount }));
                         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + data.rewardAmount }));
-                        setToast(t("time_warp_success"));
+                        setNotification({ message: t("time_warp_success"), type: 'success' });
                     } else {
                         throw new Error(data.error || t("confirmation_failed"));
                     }
@@ -528,10 +550,10 @@ export default function Game() {
                     throw new Error((finalPayload as MiniAppPaymentErrorPayload).error_code || t("payment_cancelled"));
                 }
             } catch (error) {
-                setToast(t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }));
+                setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
             }
         }
-    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress]);
+    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -574,7 +596,7 @@ export default function Game() {
         if (isPurchaseSuccess && pendingPurchaseTx) {
             const item = autoclickers.find(a => a.id === pendingPurchaseTx.itemId);
             if (item) {
-                setToast(t("purchase_success", { name: t(item.name) }));
+                setNotification({ message: t("purchase_success", { name: t(item.name) }), type: 'success' });
                 purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
                 refetchPrestigeBalance();
             }
@@ -602,18 +624,18 @@ export default function Game() {
 
             if (finalPayload.status === 'error') {
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                alert('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
+                console.error('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
                 throw new Error(errorPayload.message || 'Error sending transaction with MiniKit.');
             }
 
             if (finalPayload.transaction_id) {
                 setPendingPurchaseTx({ txId: finalPayload.transaction_id, itemId: item.id });
-                setToast(t("transaction_sent"));
+                setNotification({ message: t("transaction_sent"), type: 'success' });
             } else {
                 throw new Error(t('transaction_error'));
             }
         } catch (error) {
-            alert('DEBUG: ' + JSON.stringify(error, null, 2));
+            setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
         }
     }, [t, tokenDecimalsData]);
 
@@ -629,7 +651,7 @@ export default function Game() {
             if (prestigeBalance >= prestigeCost) {
                 handlePrestigePurchase(autoclicker, prestigeCost);
             } else {
-                setToast(t("not_enough_prestige_tokens"));
+                setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' });
             }
         } else {
             purchaseAutoclickerWithTokens(id);
@@ -650,7 +672,7 @@ export default function Game() {
         const code = prompt(t("dev_mode_prompt"));
         if (code === "1312") {
             setDevModeActive(true);
-            setToast(t("dev_mode_activated"));
+            setNotification({ message: t("dev_mode_activated"), type: 'success' });
         }
     };
 
@@ -685,7 +707,7 @@ export default function Game() {
                         {num.value}
                     </motion.div>
                 ))}
-                {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+                {notification && <Toast message={notification.message} type={notification.type} onDone={() => setNotification(null)} />}
                 {selectedItem && (
                     <ItemDetailsModal 
                         item={selectedItem} 
@@ -742,7 +764,7 @@ export default function Game() {
                         prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isConfirmingPrestige || isConfirmingPurchase}
+                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp}
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}
@@ -760,11 +782,12 @@ export default function Game() {
                     <ShopSection 
                         walletAddress={walletAddress} 
                         setGameState={setGameState} 
-                        setToast={setToast} 
+                        setNotification={setNotification} 
                         totalCPS={totalCPS}
                         prestigeBalance={prestigeBalance}
                         handleTimeWarpPurchase={handleTimeWarpPurchase}
                         formatNumber={formatNumber}
+                        timeWarpPrestigeCost={timeWarpPrestigeCost}
                     />
                     <div className="mt-4">
                         <button 

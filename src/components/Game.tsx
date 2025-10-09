@@ -261,7 +261,7 @@ export default function Game() {
 
     const prestigeReward = useMemo(() => {
         if (stats.totalTokensEarned <= 0) return 0;
-        return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000));
+        return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000)) * 1000;
     }, [stats.totalTokensEarned]);
 
     const canPrestige = useMemo(() => {
@@ -718,7 +718,7 @@ export default function Game() {
                         prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp}
+                        isLoading={isConfirmingPrestige || isConfirmingPurchase}
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}

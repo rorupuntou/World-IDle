@@ -67,6 +67,7 @@
     "buy_with_prestige": "Comprar con {price} Prestigio",
     "buy_with_wld": "Comprar con {price} WLD",
     "time_warp_success": "¡Salto temporal exitoso!",
+    "offline_gains": "¡Ganaste {amount} tokens mientras no estabas!",
     "time_warp_purchase_desc": "Comprar un salto temporal de 24 horas",
     "autoclickers_section": {
         "title": "Autoclickers"

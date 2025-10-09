@@ -98,6 +98,7 @@ export default function Game() {
     const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
+    const [gameJustLoaded, setGameJustLoaded] = useState(false);
 
     const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
         setSelectedItem({ ...item, itemType });
@@ -294,6 +295,7 @@ export default function Game() {
                 if (upgrades) setUpgrades(upgrades);
                 if (achievements) setAchievements(achievements);
                 setToast(t("game_loaded"));
+                setGameJustLoaded(true); // Trigger offline progress calculation
             } else {
                 setToast(t("welcome_back"));
             }
@@ -329,6 +331,7 @@ export default function Game() {
         if (!walletAddress) return;
         if (manual) setToast(t("saving"));
         const fullGameState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
+        fullGameState.gameState.lastSaved = Date.now();
         try {
             const res = await fetch("/api/save-game", {
                 method: "POST",
@@ -344,6 +347,27 @@ export default function Game() {
     }, [walletAddress, gameState, stats, autoclickers, upgrades, achievements, t]);
 
     // --- Game Loop Effects ---
+    useEffect(() => {
+        if (gameJustLoaded) {
+            const lastSaved = gameState.lastSaved || Date.now();
+            const elapsedSeconds = (Date.now() - lastSaved) / 1000;
+
+            // Only calculate if offline for more than 60 seconds
+            if (elapsedSeconds > 60) {
+                const maxOfflineSeconds = 86400; // 24 hours
+                const secondsToReward = Math.min(elapsedSeconds, maxOfflineSeconds);
+                const offlineGains = secondsToReward * totalCPS;
+
+                if (offlineGains > 1) { // Only show if gains are significant
+                    setGameState(prev => ({ ...prev, tokens: prev.tokens + offlineGains }));
+                    setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + offlineGains }));
+                    setToast(t("offline_gains", { amount: formatNumber(offlineGains) }));
+                }
+            }
+            setGameJustLoaded(false); // Reset the flag
+        }
+    }, [gameJustLoaded, totalCPS, gameState.lastSaved, t, formatNumber]);
+
     useEffect(() => {
         const interval = setInterval(() => {
             const tokensToAdd = totalCPS / 10;

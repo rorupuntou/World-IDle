@@ -63,6 +63,7 @@ export type GameState = {
   humanityGems: number;
   tokensPerClick: number;
   permanentBoostBonus: number;
+  lastSaved?: number;
 };
 
 export type StatsState = {

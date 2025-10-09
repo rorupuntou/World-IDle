@@ -15,6 +15,7 @@ interface ShopSectionProps {
   handleTimeWarpPurchase: (type: 'prestige' | 'wld') => void;
   formatNumber: (num: number) => string;
   timeWarpPrestigeCost: number;
+  timeWarpWldCost: number;
 }
 
 const boosts = [
@@ -24,9 +25,8 @@ const boosts = [
 ];
 
 const PAYMENT_RECIPIENT_ADDRESS = '0x536bB672A282df8c89DDA57E79423cC505750E52';
-const TIME_WARP_PRICE_WLD = 0.1;
 
-const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost }) => {
+const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost, timeWarpWldCost }) => {
   const { t } = useLanguage();
 
   const timeWarpReward = totalCPS * 86400; // 24 hours of production
@@ -145,7 +145,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
               disabled={!walletAddress}
             >
-              {t('buy_with_wld', { price: TIME_WARP_PRICE_WLD })}
+              {t('buy_with_wld', { price: timeWarpWldCost.toFixed(2) })}
             </button>
           </div>
         </div>

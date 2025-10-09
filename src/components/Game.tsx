@@ -174,6 +174,12 @@ export default function Game() {
         return baseCost + balanceFactor;
     }, [prestigeBalance]);
 
+    const timeWarpWldCost = useMemo(() => {
+        const baseCost = 0.1;
+        const purchasedCount = gameState.wldTimeWarpsPurchased || 0;
+        return baseCost * Math.pow(1.25, purchasedCount);
+    }, [gameState.wldTimeWarpsPurchased]);
+
     const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
         let clickMultiplier = 1;
@@ -515,7 +521,7 @@ export default function Game() {
                 const payload: PayCommandInput = {
                     reference,
                     to: '0x536bB672A282df8c89DDA57E79423cC505750E52',
-                    tokens: [{ symbol: Tokens.WLD, token_amount: tokenToDecimals(0.1, Tokens.WLD).toString() }],
+                    tokens: [{ symbol: Tokens.WLD, token_amount: tokenToDecimals(timeWarpWldCost, Tokens.WLD).toString() }],
                     description: t('time_warp_purchase_desc'),
                 };
 
@@ -531,7 +537,11 @@ export default function Game() {
 
                     const data = await res.json();
                     if (data.success) {
-                        setGameState(prev => ({ ...prev, tokens: prev.tokens + data.rewardAmount }));
+                        setGameState(prev => ({
+                            ...prev,
+                            tokens: prev.tokens + data.rewardAmount,
+                            wldTimeWarpsPurchased: (prev.wldTimeWarpsPurchased || 0) + 1,
+                        }));
                         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + data.rewardAmount }));
                         setNotification({ message: t("time_warp_success"), type: 'success' });
                     } else {
@@ -544,7 +554,7 @@ export default function Game() {
                 setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
             }
         }
-    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost]);
+    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -779,6 +789,7 @@ export default function Game() {
                         handleTimeWarpPurchase={handleTimeWarpPurchase}
                         formatNumber={formatNumber}
                         timeWarpPrestigeCost={timeWarpPrestigeCost}
+                        timeWarpWldCost={timeWarpWldCost}
                     />
                     <div className="mt-4">
                         <button 

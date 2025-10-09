@@ -102,7 +102,7 @@ export default function Game() {
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
-    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number; type: 'prestige' | 'wld' } | null>(null);
+    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
@@ -170,9 +170,9 @@ export default function Game() {
 
     const timeWarpPrestigeCost = useMemo(() => {
         const baseCost = 25;
-        const purchasedCount = gameState.prestigeTimeWarpsPurchased || 0;
-        return Math.ceil(baseCost * Math.pow(PRICE_INCREASE_RATE, purchasedCount));
-    }, [gameState.prestigeTimeWarpsPurchased]);
+        const balanceFactor = Math.floor(prestigeBalance / 100);
+        return baseCost + balanceFactor;
+    }, [prestigeBalance]);
 
     const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
         const purchasedUpgrades = upgrades.filter(u => u.purchased);
@@ -333,16 +333,7 @@ export default function Game() {
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
             setNotification({ message: t("time_warp_success"), type: 'success' });
-            setGameState(prev => {
-                const newGameState = { 
-                    ...prev, 
-                    tokens: prev.tokens + pendingTimeWarpTx.reward,
-                };
-                if (pendingTimeWarpTx.type === 'prestige') {
-                    newGameState.prestigeTimeWarpsPurchased = (prev.prestigeTimeWarpsPurchased || 0) + 1;
-                }
-                return newGameState;
-            });
+            setGameState(prev => ({ ...prev, tokens: prev.tokens + pendingTimeWarpTx.reward }));
             setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward }));
             refetchPrestigeBalance(); // Refetch balance if prestige tokens were used
             setPendingTimeWarpTx(null);
@@ -502,7 +493,7 @@ export default function Game() {
                 }
 
                 if (finalPayload.transaction_id) {
-                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward, type: 'prestige' });
+                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward });
                     setNotification({ message: t("transaction_sent"), type: 'success' });
                 } else {
                     throw new Error(t('transaction_error'));

@@ -64,7 +64,6 @@ export type GameState = {
   tokensPerClick: number;
   permanentBoostBonus: number;
   lastSaved?: number;
-  prestigeTimeWarpsPurchased?: number;
 };
 
 export type StatsState = {

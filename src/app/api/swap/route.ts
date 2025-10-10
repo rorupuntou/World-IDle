@@ -1,111 +1,83 @@
 import { NextResponse } from 'next/server';
-import { parseUnits, Hex } from "viem";
+import { createPublicClient, http, parseUnits, defineChain, type Hex } from "viem";
 
-// The user-provided Alchemy API Key
-const ALCHEMY_API_KEY = "kodVkLaxHvuF3CErQP3aK";
+// Define World Chain for viem
+const worldChain = defineChain({
+    id: 480, // Using the chain ID from the user's foundry.toml
+    name: 'World Chain',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, // World chain uses ETH for gas
+    rpcUrls: {
+        // Using the user's personal Alchemy RPC URL for reliability
+        default: { http: ['https://worldchain-mainnet.g.alchemy.com/v2/kodVkLaxHvuF3CErQP3aK'] },
+    },
+    blockExplorers: {
+        default: { name: 'Worldscan', url: 'https://worldscan.org' },
+    },
+});
 
+const publicClient = createPublicClient({
+    chain: worldChain,
+    transport: http(),
+});
+
+const QUOTER_CONTRACT_ADDRESS = '0x10158D43e6cc414deE1Bd1eB0EfC6a5cBCfF244c'; // Uniswap V3 QuoterV2 on World Chain
+
+// Minimal ABI for the QuoterV2 contract
+const quoterAbi = [
+    {
+        "name": "quoteExactInputSingle",
+        "type": "function",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            { "name": "tokenIn", "type": "address" },
+            { "name": "tokenOut", "type": "address" },
+            { "name": "fee", "type": "uint24" },
+            { "name": "amountIn", "type": "uint256" },
+            { "name": "sqrtPriceLimitX96", "type": "uint160" }
+        ],
+        "outputs": [
+            { "name": "amountOut", "type": "uint256" }
+        ]
+    }
+] as const;
+
+// Token decimals lookup
 const tokenDecimals: Record<string, number> = {
   '0x6671c7c52b5ee08174d432408086e1357ed07246': 18, // PrestigeToken
   '0x2cfc85d8e48f8eab294be644d9e25c3030863003': 18, // WLD
   '0x79a02482a880bce3f13e09da970dc34db4cd24d1': 6,  // USDC
 };
 
-interface AlchemyRpcResponse<T> {
-    jsonrpc: string;
-    id: number;
-    result?: T;
-    error?: { code: number; message: string; };
-}
-
-interface AccountResponse {
-    accountAddress: Hex;
-    id: string;
-}
-
-interface QuoteCall { to: Hex; data: Hex; value: Hex; }
-
-interface QuoteResponse {
-    calls: QuoteCall[];
-    quote: { minimumToAmount: string; fromAmount: string; };
-}
-
-async function alchemyRpcFetch<T>(apiKey: string, body: Record<string, unknown>): Promise<AlchemyRpcResponse<T>> {
-    const res = await fetch(`https://worldchain-mainnet.g.alchemy.com/v2/${apiKey}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        }
-    );
-    return res.json();
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { walletAddress, fromToken, toToken, amount } = body;
+    const { fromToken, toToken, amount } = body;
 
-    if (!walletAddress || !fromToken || !toToken || !amount) {
+    if (!fromToken || !toToken || !amount) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    // 1. Get the Smart Wallet address associated with the user's EOA
-    const accountResponse = await alchemyRpcFetch<AccountResponse>(ALCHEMY_API_KEY, {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'wallet_requestAccount',
-        params: [{ signerAddress: walletAddress }]
+    const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
+    const amountIn = parseUnits(amount, fromDecimals);
+
+    // Call the Uniswap V3 Quoter contract to get the expected amount out
+    // We default to the 0.3% fee tier, which is the most common.
+    const amountOut = await publicClient.readContract({
+        address: QUOTER_CONTRACT_ADDRESS,
+        abi: quoterAbi,
+        functionName: 'quoteExactInputSingle',
+        args: [
+            fromToken as Hex, // tokenIn
+            toToken as Hex,   // tokenOut
+            3000,             // fee (3000 = 0.3%)
+            amountIn,         // amountIn
+            0,                // sqrtPriceLimitX96 (0 for no limit)
+        ]
     });
 
-    if (accountResponse.error || !accountResponse.result) {
-        throw new Error(accountResponse.error?.message || "Failed to get smart account");
-    }
-    const smartAccountAddress = accountResponse.result.accountAddress;
-
-    // 2. Get token decimals
-    const fromDecimals = tokenDecimals[fromToken.toLowerCase()];
-    if (fromDecimals === undefined) {
-      throw new Error(`Decimals not found for token: ${fromToken}`);
-    }
-
-    // 3. Convert amount to smallest unit
-    const fromAmountInSmallestUnit = parseUnits(amount, fromDecimals);
-    const fromAmountHex = `0x${fromAmountInSmallestUnit.toString(16)}` as Hex;
-
-    // 4. Request the quote
-    const quoteResponse = await alchemyRpcFetch<QuoteResponse>(ALCHEMY_API_KEY, {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'wallet_requestQuote_v0',
-        params: [{
-            from: smartAccountAddress,
-            fromToken: fromToken as Hex,
-            toToken: toToken as Hex,
-            fromAmount: fromAmountHex,
-            returnRawCalls: true,
-        }]
-    });
-
-    if (quoteResponse.error || !quoteResponse.result) {
-        throw new Error(quoteResponse.error?.message || "Failed to get quote");
-    }
-    
-    const quote = quoteResponse.result;
-
-    // 5. Map the calls for MiniKit compatibility
-    if (!quote.calls || !Array.isArray(quote.calls)) {
-        throw new Error("Invalid quote response: 'calls' array not found.");
-    }
-    const mappedCalls = quote.calls.map((call) => ({
-        address: call.to,
-        data: call.data,
-        value: call.value,
-    }));
-
-    // 6. Return the mapped calls to the frontend
+    // Return the quoted amount to the frontend
     return NextResponse.json({ 
-      calls: mappedCalls,
-      toAmount: quote.quote.minimumToAmount,
+      toAmount: amountOut.toString(),
       toTokenDecimals: tokenDecimals[toToken.toLowerCase()] ?? 18
     });
 

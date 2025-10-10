@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,7 +6,7 @@ import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroico
 import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
-import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "viem";
+import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, type Hex } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -31,7 +31,7 @@ const PRICE_INCREASE_RATE = 1.15;
 const worldChain = defineChain({
     id: contractConfig.worldChainId,
     name: 'World Chain',
-    nativeCurrency: { name: 'Worldcoin', symbol: 'WRLD', decimals: 18 },
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
         default: { http: ['https://worldchain-mainnet.g.alchemy.com/public'] },
     },
@@ -91,6 +91,12 @@ const NewsTicker = () => {
             </AnimatePresence>
         </div>
     );
+};
+
+const tokenDecimals: Record<string, number> = {
+  '0x6671c7c52b5ee08174d432408086e1357ed07246': 18, // PrestigeToken
+  '0x2cfc85d8e48f8eab294be644d9e25c3030863003': 18, // WLD
+  '0x79a02482a880bce3f13e09da970dc34db4cd24d1': 6,  // USDC
 };
 
 export default function Game() {
@@ -488,17 +494,46 @@ export default function Game() {
         }
     }, [prestigeReward, t]);
 
-    const handleDoSwap = useCallback(async (rawTxs: { address: `0x${string}`; value?: string; data?: `0x${string}`; }[]) => {
+    const handleDoSwap = useCallback(async (params: { fromToken: `0x${string}`; toToken: `0x${string}`; amountIn: string; amountOutMin: string; }) => {
+        if (!walletAddress) return;
+
         try {
-            const transformedTxs = rawTxs.map(tx => ({
-                address: contractConfig.transactionForwarderAddress,
-                abi: contractConfig.transactionForwarderAbi,
-                functionName: 'execute',
-                args: [tx.address, tx.value ?? '0', tx.data ?? '0x'],
-            }));
+            const { fromToken, toToken, amountIn, amountOutMin } = params;
+            const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
+            const amountInBigInt = parseUnits(amountIn, fromDecimals);
+
+            // 1. Construct the permit2 object for MiniKit
+            const permit = {
+                permitted: {
+                    token: fromToken,
+                    amount: amountInBigInt.toString(),
+                },
+                spender: contractConfig.universalRouterAddress, // The Universal Router will spend the token
+                nonce: Date.now().toString(),
+                deadline: Math.floor((Date.now() + 30 * 60 * 1000) / 1000).toString(), // 30 minutes from now
+            };
+
+            // 2. Construct the transaction for the Universal Router
+            // The router will execute a `V3_SWAP_EXACT_IN` command.
+            // The `payer` is the router itself, which has been approved via Permit2.
+            const commands = '0x00'; // V3_SWAP_EXACT_IN
+            const path = encodePacked(['address', 'uint24', 'address'], [fromToken, 3000, toToken]);
+            
+            const inputs = [encodePacked(
+                ['address', 'uint256', 'uint256', 'bytes', 'bool'],
+                [walletAddress, amountInBigInt, BigInt(amountOutMin), path, false] // recipient, amountIn, amountOutMinimum, path, payerIsUser
+            )];
 
             const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                transaction: transformedTxs,
+                transaction: [
+                    {
+                        address: contractConfig.universalRouterAddress,
+                        abi: contractConfig.universalRouterAbi,
+                        functionName: 'execute',
+                        args: [commands, inputs],
+                    },
+                ],
+                permit2: [permit],
             });
 
             if (finalPayload.status === 'error') {
@@ -516,7 +551,7 @@ export default function Game() {
         } catch (error) {
             setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
         }
-    }, [t]);
+    }, [walletAddress, t]);
 
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;

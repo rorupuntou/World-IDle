@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 cookie_clicker_reference.js
+
+# Foundry
+cache/
+broadcast/
+contracts/lib/
+.env

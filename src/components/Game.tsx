@@ -23,7 +23,7 @@ import ShopSection from "./ShopSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
 import LanguageSelector from "./LanguageSelector";
-import SwapSection from "./SwapSection";
+
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -871,11 +871,11 @@ export default function Game() {
                         timeWarpPrestigeCost={timeWarpPrestigeCost}
                         timeWarpWldCost={timeWarpWldCost}
                     />
-                    <SwapSection
+                    {/* <SwapSection
                         prestigeBalance={prestigeBalance}
                         onSwap={handleDoSwap}
                         isSwapping={isConfirmingSwap}
-                    />
+                    /> */}
                     <div className="mt-4">
                         <button 
                             onClick={() => saveGameToBackend(true)}

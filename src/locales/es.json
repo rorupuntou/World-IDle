@@ -367,5 +367,15 @@
     "boost_modal.prestige_boost_desc": "Tus Tokens de Prestigio (ERC-20) te otorgan un bonus global a toda tu producción. ¡Tiene rendimientos decrecientes, así que los primeros son los más potentes!",
     "boost_modal.permanent_boost_title": "Boost Permanente",
     "boost_modal.permanent_boost_desc": "Bonus comprado en la tienda con Gemas de Humanidad.",
-    "boost_modal.formula_title": "Producción Final"
+    "boost_modal.formula_title": "Producción Final",
+    "token_swap": "Intercambiar Tokens",
+    "balance": "Saldo",
+    "enter_valid_amount": "Por favor, introduce una cantidad válida.",
+    "quote_failed": "Error al obtener cotización.",
+    "getting_quote": "Obteniendo cotización...",
+    "get_quote": "Obtener Cotización",
+    "swapping": "Intercambiando...",
+    "swap": "Intercambiar",
+    "swap_success": "¡Intercambio completado!",
+    "unknown_error": "Ocurrió un error desconocido."
 }

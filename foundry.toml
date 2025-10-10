@@ -10,7 +10,7 @@ remappings = [
 ]
 
 [rpc_endpoints]
-worldchain = "https://worldchain-mainnet.g.alchemy.com/public"
+worldchain = "https://worldchain-mainnet.g.alchemy.com/v2/kodVkLaxHvuF3CErQP3aK"
 
 [etherscan]
 worldchain = { url = "https://worldscan.org", key = "${ETHERSCAN_API_KEY}" }

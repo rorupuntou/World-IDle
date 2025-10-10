@@ -23,6 +23,7 @@ import ShopSection from "./ShopSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
 import LanguageSelector from "./LanguageSelector";
+import SwapSection from "./SwapSection";
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -103,6 +104,7 @@ export default function Game() {
     const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
     const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
+    const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
@@ -163,6 +165,12 @@ export default function Game() {
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingTimeWarpTx?.txId ?? '',
+    });
+
+    const { isLoading: isConfirmingSwap, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
+        client,
+        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+        transactionId: pendingSwapTxId ?? '',
     });
 
     // --- Memoized Calculations ---
@@ -346,6 +354,15 @@ export default function Game() {
         }
     }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t]);
 
+    useEffect(() => {
+        if (isSwapSuccess) {
+            setNotification({ message: t("swap_success"), type: 'success' });
+            // TODO: We may need to refetch other token balances here in the future
+            refetchPrestigeBalance();
+            setPendingSwapTxId(undefined);
+        }
+    }, [isSwapSuccess, refetchPrestigeBalance, t]);
+
     const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
         if (manual) setNotification({ message: t("saving"), type: 'success' });
@@ -470,6 +487,36 @@ export default function Game() {
             setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
         }
     }, [prestigeReward, t]);
+
+    const handleDoSwap = useCallback(async (rawTxs: { address: `0x${string}`; value?: string; data?: `0x${string}`; }[]) => {
+        try {
+            const transformedTxs = rawTxs.map(tx => ({
+                address: contractConfig.transactionForwarderAddress,
+                abi: contractConfig.transactionForwarderAbi,
+                functionName: 'execute',
+                args: [tx.address, tx.value ?? '0', tx.data ?? '0x'],
+            }));
+
+            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                transaction: transformedTxs,
+            });
+
+            if (finalPayload.status === 'error') {
+                const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                console.error('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
+                throw new Error(errorPayload.message || 'Error al enviar la transacción con MiniKit.');
+            }
+
+            if (finalPayload.transaction_id) {
+                setPendingSwapTxId(finalPayload.transaction_id);
+                setNotification({ message: t("transaction_sent"), type: 'success' });
+            } else {
+                throw new Error(t('transaction_error'));
+            }
+        } catch (error) {
+            setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
+        }
+    }, [t]);
 
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;
@@ -765,7 +812,7 @@ export default function Game() {
                         prestigeReward={prestigeReward}
                         handlePrestige={handlePrestige}
                         isPrestigeReady={canPrestige}
-                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp}
+                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp || isConfirmingSwap}
                     />
                     <UpgradesSection
                         upgrades={sortedUpgrades}
@@ -790,6 +837,12 @@ export default function Game() {
                         formatNumber={formatNumber}
                         timeWarpPrestigeCost={timeWarpPrestigeCost}
                         timeWarpWldCost={timeWarpWldCost}
+                    />
+                    <SwapSection
+                        walletAddress={walletAddress}
+                        prestigeBalance={prestigeBalance}
+                        onSwap={handleDoSwap}
+                        isSwapping={isConfirmingSwap}
                     />
                     <div className="mt-4">
                         <button 

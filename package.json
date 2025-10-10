@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@account-kit/infra": "^4.68.0",
+    "@account-kit/react": "^4.68.0",
+    "@account-kit/wallet-client": "^4.68.0",
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.58.0",
     "@tanstack/react-query": "^5.90.2",
@@ -21,7 +24,7 @@
     "next": "15.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "viem": "^2.37.12",
+    "viem": "^2.38.0",
     "wagmi": "^2.17.5"
   },
   "devDependencies": {

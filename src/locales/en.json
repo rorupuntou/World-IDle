@@ -367,5 +367,15 @@
     "boost_modal.prestige_boost_desc": "Your Prestige Tokens (ERC-20) grant you a global bonus to all your production. It has diminishing returns, so the first ones are the most powerful!",
     "boost_modal.permanent_boost_title": "Permanent Boost",
     "boost_modal.permanent_boost_desc": "Bonus purchased from the shop with Humanity Gems.",
-    "boost_modal.formula_title": "Final Production"
+    "boost_modal.formula_title": "Final Production",
+    "token_swap": "Token Swap",
+    "balance": "Balance",
+    "enter_valid_amount": "Please enter a valid amount.",
+    "quote_failed": "Failed to get quote.",
+    "getting_quote": "Getting Quote...",
+    "get_quote": "Get Quote",
+    "swapping": "Swapping...",
+    "swap": "Swap",
+    "swap_success": "Swap successful!",
+    "unknown_error": "An unknown error occurred."
 }

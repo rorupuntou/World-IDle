@@ -50,7 +50,8 @@ const FEE_TIERS = [10000, 3000, 500]; // 1%, 0.3%, 0.05%
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    let { fromToken, toToken, amount } = body;
+    const { amount } = body;
+    let { fromToken, toToken } = body;
 
     // --- DEBUGGING STEP --- 
     // To diagnose the "No liquidity pool" error, we will force the quote to use a known good pair (WLD/USDC).

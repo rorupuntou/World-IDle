@@ -7,7 +7,6 @@ import { ArrowDownIcon } from '@heroicons/react/24/solid';
 
 // Define the props for the component
 interface SwapSectionProps {
-  walletAddress: `0x${string}` | null;
   prestigeBalance: number;
   onSwap: (params: {
     fromToken: `0x${string}`;
@@ -25,7 +24,7 @@ const supportedTokens = [
   { symbol: 'USDC', name: 'USD Coin', address: '0x79A02482A880bCE3F13e09Da970dC34db4CD24d1' as `0x${string}` },
 ];
 
-export default function SwapSection({ walletAddress, prestigeBalance, onSwap, isSwapping }: SwapSectionProps) {
+export default function SwapSection({ prestigeBalance, onSwap, isSwapping }: SwapSectionProps) {
   const { t } = useLanguage();
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState(''); // For display

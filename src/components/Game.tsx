@@ -872,7 +872,6 @@ export default function Game() {
                         timeWarpWldCost={timeWarpWldCost}
                     />
                     <SwapSection
-                        walletAddress={walletAddress}
                         prestigeBalance={prestigeBalance}
                         onSwap={handleDoSwap}
                         isSwapping={isConfirmingSwap}

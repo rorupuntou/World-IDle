@@ -19,11 +19,6 @@ interface AlchemyRpcResponse<T> {
     };
 }
 
-interface AccountResponse {
-    accountAddress: Hex;
-    id: string;
-}
-
 interface QuoteCall {
     to: Hex;
     data: Hex;
@@ -63,34 +58,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    // 1. Get the Smart Wallet address associated with the user's EOA
-    const accountResponse = await alchemyRpcFetch<AccountResponse>(apiKey, {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'wallet_requestAccount',
-        params: [{ signerAddress: walletAddress }]
-    });
-
-    if (accountResponse.error || !accountResponse.result) throw new Error(accountResponse.error?.message || "Failed to get smart account");
-    const smartAccountAddress = accountResponse.result.accountAddress;
-
-    // 2. Get the correct decimals for the input token
+    // Get the correct decimals for the input token
     const fromDecimals = tokenDecimals[fromToken.toLowerCase()];
     if (fromDecimals === undefined) {
       throw new Error(`Decimals not found for token: ${fromToken}`);
     }
 
-    // 3. Convert the human-readable amount to a hex string of the smallest unit
+    // Convert the human-readable amount to a hex string of the smallest unit
     const fromAmountInSmallestUnit = parseUnits(amount, fromDecimals);
     const fromAmountHex = `0x${fromAmountInSmallestUnit.toString(16)}` as Hex;
 
-    // 4. Request the quote, asking for raw transaction calls
+    // Request the quote, asking for raw transaction calls
+    // NOTE: We are using the user's EOA (walletAddress) as the 'from' address
+    // because wallet_requestAccount is not supported on World Chain.
+    // This is a hypothesis that the Alchemy API can resolve the smart wallet from the EOA.
     const quoteResponse = await alchemyRpcFetch<QuoteResponse>(apiKey, {
         jsonrpc: '2.0',
         id: 1,
         method: 'wallet_requestQuote_v0',
         params: [{
-            from: smartAccountAddress,
+            from: walletAddress, // Using user's EOA address directly
             fromToken: fromToken as Hex,
             toToken: toToken as Hex,
             fromAmount: fromAmountHex,
@@ -98,11 +85,13 @@ export async function POST(request: Request) {
         }]
     });
 
-    if (quoteResponse.error || !quoteResponse.result) throw new Error(quoteResponse.error?.message || "Failed to get quote");
+    if (quoteResponse.error || !quoteResponse.result) {
+        throw new Error(quoteResponse.error?.message || "Failed to get quote");
+    }
     
     const quote = quoteResponse.result;
 
-    // 5. Map the calls from {to, data, value} to {address, data, value} for MiniKit compatibility
+    // Map the calls from {to, data, value} to {address, data, value} for MiniKit compatibility
     if (!quote.calls || !Array.isArray(quote.calls)) {
         throw new Error("Invalid quote response: 'calls' array not found.");
     }
@@ -112,7 +101,7 @@ export async function POST(request: Request) {
         value: call.value,
     }));
 
-    // 6. Return the mapped calls and quote details to the frontend
+    // Return the mapped calls and quote details to the frontend
     return NextResponse.json({ 
       calls: mappedCalls,
       toAmount: quote.quote.minimumToAmount,

@@ -14,6 +14,7 @@ interface SwapSectionProps {
     toToken: `0x${string}`;
     amountIn: string;
     amountOutMin: string;
+    fee: number;
   }) => Promise<void>;
   isSwapping: boolean;
 }
@@ -34,12 +35,14 @@ export default function SwapSection({ walletAddress, prestigeBalance, onSwap, is
   const [error, setError] = useState<string | null>(null);
   const [isFetchingQuote, setIsFetchingQuote] = useState(false);
   const [quotedAmountOut, setQuotedAmountOut] = useState<string | null>(null); // The raw amount from the quote
+  const [quoteFee, setQuoteFee] = useState<number | null>(null); // The fee from the best quote
 
   const handleAmountChange = (amount: string) => {
     setFromAmount(amount);
     // Reset quote if amount changes
     setToAmount('');
     setQuotedAmountOut(null);
+    setQuoteFee(null);
   }
 
   const handleGetQuote = async () => {
@@ -50,6 +53,7 @@ export default function SwapSection({ walletAddress, prestigeBalance, onSwap, is
 
     setError(null);
     setQuotedAmountOut(null);
+    setQuoteFee(null);
     setIsFetchingQuote(true);
 
     try {
@@ -75,7 +79,8 @@ export default function SwapSection({ walletAddress, prestigeBalance, onSwap, is
 
       const formattedToAmount = formatUnits(BigInt(data.toAmount), data.toTokenDecimals);
       setToAmount(formattedToAmount);
-      setQuotedAmountOut(data.toAmount); // Store the raw minimum amount out
+      setQuotedAmountOut(data.toAmount);
+      setQuoteFee(data.fee);
 
     } catch (err) {
       const message = err instanceof Error ? err.message : t('unknown_error');
@@ -90,20 +95,22 @@ export default function SwapSection({ walletAddress, prestigeBalance, onSwap, is
     const fromToken = supportedTokens.find(t => t.symbol === fromTokenSymbol);
     const toToken = supportedTokens.find(t => t.symbol === toTokenSymbol);
 
-    if (!quotedAmountOut || !fromToken || !toToken) return;
+    if (!quotedAmountOut || !quoteFee || !fromToken || !toToken) return;
 
     await onSwap({
       fromToken: fromToken.address,
       toToken: toToken.address,
       amountIn: fromAmount,
       amountOutMin: quotedAmountOut,
+      fee: quoteFee,
     });
 
     // Reset state after swap is sent
     setQuotedAmountOut(null);
+    setQuoteFee(null);
     setFromAmount('');
     setToAmount('');
-  }, [fromTokenSymbol, toTokenSymbol, fromAmount, quotedAmountOut, onSwap]);
+  }, [fromTokenSymbol, toTokenSymbol, fromAmount, quotedAmountOut, quoteFee, onSwap]);
 
   const displayBalance = fromTokenSymbol === 'PSTG' ? prestigeBalance : 0; // Placeholder for other token balances
 

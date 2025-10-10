@@ -6,7 +6,7 @@ import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroico
 import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
-import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, type Hex } from "viem";
+import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, encodeAbiParameters, type Hex } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -494,11 +494,11 @@ export default function Game() {
         }
     }, [prestigeReward, t]);
 
-    const handleDoSwap = useCallback(async (params: { fromToken: `0x${string}`; toToken: `0x${string}`; amountIn: string; amountOutMin: string; }) => {
+    const handleDoSwap = useCallback(async (params: { fromToken: Hex; toToken: Hex; amountIn: string; amountOutMin: string; fee: number; }) => {
         if (!walletAddress) return;
 
         try {
-            const { fromToken, toToken, amountIn, amountOutMin } = params;
+            const { fromToken, toToken, amountIn, amountOutMin, fee } = params;
             const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
             const amountInBigInt = parseUnits(amountIn, fromDecimals);
 
@@ -508,16 +508,14 @@ export default function Game() {
                     token: fromToken,
                     amount: amountInBigInt.toString(),
                 },
-                spender: contractConfig.universalRouterAddress, // The Universal Router will spend the token
+                spender: contractConfig.universalRouterAddress,
                 nonce: Date.now().toString(),
                 deadline: Math.floor((Date.now() + 30 * 60 * 1000) / 1000).toString(), // 30 minutes from now
             };
 
             // 2. Construct the transaction for the Universal Router
-            // The router will execute a `V3_SWAP_EXACT_IN` command.
-            // The `payer` is the router itself, which has been approved via Permit2.
             const commands = '0x00'; // V3_SWAP_EXACT_IN
-            const path = encodePacked(['address', 'uint24', 'address'], [fromToken, 3000, toToken]);
+            const path = encodePacked(['address', 'uint24', 'address'], [fromToken, fee, toToken]);
             
             const inputs = [encodePacked(
                 ['address', 'uint256', 'uint256', 'bytes', 'bool'],

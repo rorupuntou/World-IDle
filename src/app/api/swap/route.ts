@@ -3,11 +3,10 @@ import { createPublicClient, http, parseUnits, defineChain, type Hex } from "vie
 
 // Define World Chain for viem
 const worldChain = defineChain({
-    id: 480, // Using the chain ID from the user's foundry.toml
+    id: 480,
     name: 'World Chain',
-    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, // World chain uses ETH for gas
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
-        // Using the user's personal Alchemy RPC URL for reliability
         default: { http: ['https://worldchain-mainnet.g.alchemy.com/v2/kodVkLaxHvuF3CErQP3aK'] },
     },
     blockExplorers: {
@@ -22,12 +21,11 @@ const publicClient = createPublicClient({
 
 const QUOTER_CONTRACT_ADDRESS = '0x10158D43e6cc414deE1Bd1eB0EfC6a5cBCfF244c'; // Uniswap V3 QuoterV2 on World Chain
 
-// Minimal ABI for the QuoterV2 contract
 const quoterAbi = [
     {
         "name": "quoteExactInputSingle",
         "type": "function",
-        "stateMutability": "view", // Corrected from nonpayable to view
+        "stateMutability": "view",
         "inputs": [
             { "name": "tokenIn", "type": "address" },
             { "name": "tokenOut", "type": "address" },
@@ -41,12 +39,13 @@ const quoterAbi = [
     }
 ] as const;
 
-// Token decimals lookup
 const tokenDecimals: Record<string, number> = {
   '0x6671c7c52b5ee08174d432408086e1357ed07246': 18, // PrestigeToken
   '0x2cfc85d8e48f8eab294be644d9e25c3030863003': 18, // WLD
   '0x79a02482a880bce3f13e09da970dc34db4cd24d1': 6,  // USDC
 };
+
+const FEE_TIERS = [10000, 3000, 500]; // 1%, 0.3%, 0.05%
 
 export async function POST(request: Request) {
   try {
@@ -60,24 +59,36 @@ export async function POST(request: Request) {
     const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
     const amountIn = parseUnits(amount, fromDecimals);
 
-    // Call the Uniswap V3 Quoter contract to get the expected amount out
-    // We default to the 0.3% fee tier, which is the most common.
-    const amountOut = await publicClient.readContract({
-        address: QUOTER_CONTRACT_ADDRESS,
-        abi: quoterAbi,
-        functionName: 'quoteExactInputSingle',
-        args: [
-            fromToken as Hex, // tokenIn
-            toToken as Hex,   // tokenOut
-            3000,             // fee (3000 = 0.3%)
-            amountIn,         // amountIn
-            BigInt(0),        // sqrtPriceLimitX96 (0 for no limit)
-        ]
-    });
+    // Try all common fee tiers in parallel
+    const quotePromises = FEE_TIERS.map(fee => 
+        publicClient.readContract({
+            address: QUOTER_CONTRACT_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [ fromToken as Hex, toToken as Hex, fee, amountIn, BigInt(0) ]
+        }).then(amountOut => ({ amountOut, fee, status: 'fulfilled' as const }))
+          .catch(error => ({ error, fee, status: 'rejected' as const }))
+    );
 
-    // Return the quoted amount to the frontend
+    const results = await Promise.all(quotePromises);
+
+    const successfulQuotes = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result as { amountOut: bigint, fee: number });
+
+    if (successfulQuotes.length === 0) {
+        throw new Error("No liquidity pool found for this token pair.");
+    }
+
+    // Find the quote with the highest output amount
+    const bestQuote = successfulQuotes.reduce((best, current) => 
+        current.amountOut > best.amountOut ? current : best
+    );
+
+    // Return the best quote details to the frontend
     return NextResponse.json({ 
-      toAmount: amountOut.toString(),
+      toAmount: bestQuote.amountOut.toString(),
+      fee: bestQuote.fee,
       toTokenDecimals: tokenDecimals[toToken.toLowerCase()] ?? 18
     });
 

@@ -50,7 +50,14 @@ const FEE_TIERS = [10000, 3000, 500]; // 1%, 0.3%, 0.05%
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { fromToken, toToken, amount } = body;
+    let { fromToken, toToken, amount } = body;
+
+    // --- DEBUGGING STEP --- 
+    // To diagnose the "No liquidity pool" error, we will force the quote to use a known good pair (WLD/USDC).
+    // If this succeeds, it means the quoting logic is correct and the original token pair lacks a direct pool.
+    fromToken = '0x2cfc85d8e48f8eab294be644d9e25c3030863003'; // WLD
+    toToken = '0x79a02482a880bce3f13e09da970dc34db4cd24d1';   // USDC
+    // --- END DEBUGGING STEP ---
 
     if (!fromToken || !toToken || !amount) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -59,7 +66,6 @@ export async function POST(request: Request) {
     const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
     const amountIn = parseUnits(amount, fromDecimals);
 
-    // Try all common fee tiers in parallel
     const quotePromises = FEE_TIERS.map(fee => 
         publicClient.readContract({
             address: QUOTER_CONTRACT_ADDRESS,
@@ -80,12 +86,10 @@ export async function POST(request: Request) {
         throw new Error("No liquidity pool found for this token pair.");
     }
 
-    // Find the quote with the highest output amount
     const bestQuote = successfulQuotes.reduce((best, current) => 
         current.amountOut > best.amountOut ? current : best
     );
 
-    // Return the best quote details to the frontend
     return NextResponse.json({ 
       toAmount: bestQuote.amountOut.toString(),
       fee: bestQuote.fee,

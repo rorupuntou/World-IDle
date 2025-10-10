@@ -27,7 +27,7 @@ const quoterAbi = [
     {
         "name": "quoteExactInputSingle",
         "type": "function",
-        "stateMutability": "nonpayable",
+        "stateMutability": "view", // Corrected from nonpayable to view
         "inputs": [
             { "name": "tokenIn", "type": "address" },
             { "name": "tokenOut", "type": "address" },
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
             toToken as Hex,   // tokenOut
             3000,             // fee (3000 = 0.3%)
             amountIn,         // amountIn
-            0,                // sqrtPriceLimitX96 (0 for no limit)
+            BigInt(0),        // sqrtPriceLimitX96 (0 for no limit)
         ]
     });
 

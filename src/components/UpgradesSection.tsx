@@ -1,63 +1,3 @@
-"use client";
-
-import { useLanguage } from "@/contexts/LanguageContext";
-import { motion } from "framer-motion";
-import * as HIcons from '@heroicons/react/24/outline';
-import { Upgrade, GameState, Requirement, Autoclicker } from "@/components/types";
-
-const { 
-    BeakerIcon, BoltIcon, QuestionMarkCircleIcon, CursorArrowRaysIcon, GlobeAltIcon, 
-    CpuChipIcon, CircleStackIcon, PaperAirplaneIcon, ServerStackIcon, CloudIcon, 
-    ArrowsRightLeftIcon, ClockIcon, UserGroupIcon, SparklesIcon, StopCircleIcon, 
-    CubeTransparentIcon 
-} = HIcons;
-
-const iconMap: { [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>> } = {
-    CursorArrowRaysIcon, CpuChipIcon, CircleStackIcon, PaperAirplaneIcon, ServerStackIcon, 
-    GlobeAltIcon, CloudIcon, ArrowsRightLeftIcon, ClockIcon, UserGroupIcon, SparklesIcon, 
-    StopCircleIcon, CubeTransparentIcon
-};
-
-const tierColorMap: { [key: string]: string } = {
-    common: 'border-slate-600',
-    rare: 'border-blue-500',
-    epic: 'border-purple-500',
-    legendary: 'border-yellow-400',
-};
-
-interface UpgradesSectionProps {
-  upgrades: Upgrade[];
-  autoclickers: Autoclicker[];
-  gameState: GameState;
-  checkRequirements: (req: Requirement | undefined) => boolean;
-  purchaseUpgrade: (id: number) => void;
-  showRequirements: (item: Upgrade, itemType: 'upgrade') => void;
-  formatNumber: (num: number) => string;
-}
-
-const getUpgradeIcon = (upgrade: Upgrade, autoclickers: Autoclicker[]) => {
-    if (!upgrade.effect || upgrade.effect.length === 0) return QuestionMarkCircleIcon;
-
-    const effect = upgrade.effect[0];
-
-    if (effect.type === 'multiplyClick' || effect.type === 'addClick' || effect.type === 'addCpSToClick') {
-        return CursorArrowRaysIcon;
-    }
-
-    if (effect.type === 'multiplyGlobal') {
-        return GlobeAltIcon;
-    }
-
-    if (effect.type === 'multiplyAutoclicker' || effect.type === 'addCpSToAutoclickerFromOthers' || effect.type === 'multiplyAutoclickerByOtherCount') {
-        const autoclicker = autoclickers.find(a => a.id === effect.targetId);
-        if (autoclicker && autoclicker.icon) {
-            return iconMap[autoclicker.icon] || QuestionMarkCircleIcon;
-        }
-    }
-
-    return QuestionMarkCircleIcon;
-};
-
 'use client';
 
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -119,7 +59,7 @@ const getUpgradeIcon = (upgrade: Upgrade, autoclickers: Autoclicker[]) => {
     return QuestionMarkCircleIcon;
 };
 
-const getEffectDescription = (effect: Effect, t: (key: string, replacements?: any) => string): string => {
+const getEffectDescription = (effect: Effect, t: (key: string, replacements?: { [key: string]: string | number }) => string): string => {
     switch (effect.type) {
         case 'multiplyClick':
             return t('effect_desc.multiplyClick', { value: effect.value });

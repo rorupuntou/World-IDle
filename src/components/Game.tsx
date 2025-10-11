@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon, HomeIcon, BoltIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, type Hex } from "viem";
+
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -101,6 +102,7 @@ const tokenDecimals: Record<string, number> = {
 
 export default function Game() {
     const { t } = useLanguage();
+    const [activeTab, setActiveTab] = useState('main');
     // --- Base States ---
     const [isClient, setIsClient] = useState(false);
     const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
@@ -793,6 +795,33 @@ export default function Game() {
         }
     }, [upgrades, gameState.tokens, checkRequirements, saveGameToBackend]);
 
+    const purchaseAllAffordableUpgrades = useCallback(() => {
+        const affordableUpgrades = upgrades
+            .filter(upg => !upg.purchased && checkRequirements(upg.req))
+            .sort((a, b) => a.cost - b.cost);
+
+        let currentTokens = gameState.tokens;
+        let totalCost = 0;
+        const upgradesToPurchase = new Set<number>();
+
+        for (const upg of affordableUpgrades) {
+            if (currentTokens >= upg.cost) {
+                currentTokens -= upg.cost;
+                totalCost += upg.cost;
+                upgradesToPurchase.add(upg.id);
+            } else {
+                break; // Stop if we can't afford the next cheapest one
+            }
+        }
+
+        if (upgradesToPurchase.size > 0) {
+            setGameState(prev => ({ ...prev, tokens: prev.tokens - totalCost }));
+            setUpgrades(prev => prev.map(upg => upgradesToPurchase.has(upg.id) ? { ...upg, purchased: true } : upg));
+            setNotification({ message: t('bulk_purchase_success', { count: upgradesToPurchase.size }), type: 'success' });
+            saveGameToBackend(false);
+        }
+    }, [upgrades, gameState.tokens, checkRequirements, t, saveGameToBackend]);
+
     const handleDevMode = () => {
         const code = prompt(t("dev_mode_prompt"));
         if (code === "1312") {
@@ -848,88 +877,108 @@ export default function Game() {
                     />
                 )}
             </AnimatePresence>
-            <div className="w-full max-w-6xl mx-auto p-4 pt-12 flex flex-col lg:flex-row gap-6">
-                <div className="w-full lg:w-2/3 flex flex-col gap-6">
-                    <div className="text-center">
-                        <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">{t('app_title')}</h1>
-                    </div>
-                    <HeaderStats
-                        tokens={gameState.tokens}
-                        tokensPerSecond={totalCPS}
-                        humanityGems={gameState.humanityGems}
-                        totalClicks={stats.totalClicks}
-                        permanentBoostBonus={gameState.permanentBoostBonus || 0}
-                        formatNumber={formatNumber}
-                    />
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
-                        {t('click')} (+{formatNumber(clickValue)})
-                    </motion.button>
-                    <AutoclickersSection
-                        autoclickers={autoclickers}
-                        buyAmount={buyAmount}
-                        setBuyAmount={setBuyAmount}
-                        gameState={gameState}
-                        checkRequirements={checkRequirements}
-                        showRequirements={showItemDetails}
-                        calculateBulkCost={calculateBulkCost}
-                        calculatePrestigeBulkCost={calculatePrestigeBulkCost}
-                        purchaseAutoclicker={purchaseAutoclicker}
-                        formatNumber={formatNumber}
-                        autoclickerCPSValues={autoclickerCPSValues}
-                        devModeActive={devModeActive}
-                        isConfirmingPurchase={isConfirmingPurchase}
-                        pendingPurchaseTx={pendingPurchaseTx}
-                        prestigeBalance={prestigeBalance}
-                    />
+            <div className="w-full max-w-md mx-auto p-4 pt-12 flex flex-col gap-6 pb-24"> 
+                <div className="text-center">
+                    <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">{t('app_title')}</h1>
                 </div>
-                <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                    <PrestigeSection
-                        prestigeBoost={prestigeBoost}
-                        prestigeBalance={prestigeBalance}
-                        prestigeReward={prestigeReward}
-                        handlePrestige={handlePrestige}
-                        isPrestigeReady={canPrestige}
-                        isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp || isConfirmingSwap}
-                    />
-                    <UpgradesSection
-                        upgrades={sortedUpgrades}
-                        autoclickers={autoclickers}
-                        gameState={gameState}
-                        checkRequirements={checkRequirements}
-                        purchaseUpgrade={purchaseUpgrade}
-                        showRequirements={showItemDetails}
-                        formatNumber={formatNumber}
-                    />
-                    <AchievementsSection
-                        achievements={achievements}
-                        showRequirements={showItemDetails}
-                    />
-                    <ShopSection 
-                        walletAddress={walletAddress} 
-                        setGameState={setGameState} 
-                        setNotification={setNotification} 
-                        totalCPS={totalCPS}
-                        prestigeBalance={prestigeBalance}
-                        handleTimeWarpPurchase={handleTimeWarpPurchase}
-                        formatNumber={formatNumber}
-                        timeWarpPrestigeCost={timeWarpPrestigeCost}
-                        timeWarpWldCost={timeWarpWldCost}
-                        timeWarpCooldown={timeWarpCooldown}
-                    />
-                    {/* <SwapSection
-                        prestigeBalance={prestigeBalance}
-                        onSwap={handleDoSwap}
-                        isSwapping={isConfirmingSwap}
-                    /> */}
-                    <div className="mt-4">
-                        <button 
-                            onClick={() => saveGameToBackend(true)}
-                            className="w-full flex items-center justify-center gap-2 bg-slate-500/20 hover:bg-slate-500/40 text-slate-300 font-bold py-2 px-4 rounded-lg"
-                        >
-                            <BookmarkIcon className="w-5 h-5" />
-                            {t('save_game')}
-                        </button>
-                    </div>
+                <HeaderStats
+                    tokens={gameState.tokens}
+                    tokensPerSecond={totalCPS}
+                    humanityGems={gameState.humanityGems}
+                    totalClicks={stats.totalClicks}
+                    permanentBoostBonus={gameState.permanentBoostBonus || 0}
+                    formatNumber={formatNumber}
+                />
+
+                <div className="flex flex-col gap-6">
+                    {activeTab === 'main' && (
+                        <div className="flex flex-col gap-6">
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
+                                {t('click')} (+{formatNumber(clickValue)})
+                            </motion.button>
+                            <AutoclickersSection
+                                autoclickers={autoclickers}
+                                buyAmount={buyAmount}
+                                setBuyAmount={setBuyAmount}
+                                gameState={gameState}
+                                checkRequirements={checkRequirements}
+                                showRequirements={showItemDetails}
+                                calculateBulkCost={calculateBulkCost}
+                                calculatePrestigeBulkCost={calculatePrestigeBulkCost}
+                                purchaseAutoclicker={purchaseAutoclicker}
+                                formatNumber={formatNumber}
+                                autoclickerCPSValues={autoclickerCPSValues}
+                                devModeActive={devModeActive}
+                                isConfirmingPurchase={isConfirmingPurchase}
+                                pendingPurchaseTx={pendingPurchaseTx}
+                                prestigeBalance={prestigeBalance}
+                            />
+                            <PrestigeSection
+                                prestigeBoost={prestigeBoost}
+                                prestigeBalance={prestigeBalance}
+                                prestigeReward={prestigeReward}
+                                handlePrestige={handlePrestige}
+                                isPrestigeReady={canPrestige}
+                                isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp || isConfirmingSwap}
+                            />
+                        </div>
+                    )}
+                    {activeTab === 'upgrades' && (
+                        <UpgradesSection
+                            upgrades={sortedUpgrades}
+                            autoclickers={autoclickers}
+                            gameState={gameState}
+                            checkRequirements={checkRequirements}
+                            purchaseUpgrade={purchaseUpgrade}
+                            purchaseAllAffordableUpgrades={purchaseAllAffordableUpgrades}
+                            showRequirements={showItemDetails}
+                            formatNumber={formatNumber}
+                        />
+                    )}
+                    {activeTab === 'shop' && (
+                        <div className="flex flex-col gap-6">
+                            <ShopSection 
+                                walletAddress={walletAddress} 
+                                setGameState={setGameState} 
+                                setNotification={setNotification} 
+                                totalCPS={totalCPS}
+                                prestigeBalance={prestigeBalance}
+                                handleTimeWarpPurchase={handleTimeWarpPurchase}
+                                formatNumber={formatNumber}
+                                timeWarpPrestigeCost={timeWarpPrestigeCost}
+                                timeWarpWldCost={timeWarpWldCost}
+                                timeWarpCooldown={timeWarpCooldown}
+                            />
+                            <AchievementsSection
+                                achievements={achievements}
+                                showRequirements={showItemDetails}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/80 backdrop-blur-lg border-t border-slate-700 flex justify-around items-center">
+                    <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'}`}>
+                        <HomeIcon className="w-6 h-6" />
+                        <span className="text-xs">{t('main_tab')}</span>
+                    </button>
+                    <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'}`}>
+                        <BoltIcon className="w-6 h-6" />
+                        <span className="text-xs">{t('upgrades_tab')}</span>
+                    </button>
+                    <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 ${activeTab === 'shop' ? 'text-cyan-400' : 'text-slate-400'}`}>
+                        <ShoppingCartIcon className="w-6 h-6" />
+                        <span className="text-xs">{t('shop_tab')}</span>
+                    </button>
+                </div>
+                 <div className="mt-4">
+                    <button 
+                        onClick={() => saveGameToBackend(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-slate-500/20 hover:bg-slate-500/40 text-slate-300 font-bold py-2 px-4 rounded-lg"
+                    >
+                        <BookmarkIcon className="w-5 h-5" />
+                        {t('save_game')}
+                    </button>
                 </div>
             </div>
             <button onClick={handleDevMode} className="fixed bottom-2 right-2 p-2 text-transparent hover:text-yellow-400">

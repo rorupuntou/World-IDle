@@ -65,6 +65,7 @@ export type GameState = {
   permanentBoostBonus: number;
   lastSaved?: number;
   wldTimeWarpsPurchased?: number;
+  lastPrestigeTimeWarp?: number;
 };
 
 export type StatsState = {

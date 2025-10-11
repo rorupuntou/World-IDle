@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,6 +15,7 @@ interface ShopSectionProps {
   formatNumber: (num: number) => string;
   timeWarpPrestigeCost: number;
   timeWarpWldCost: number;
+  timeWarpCooldown: string;
 }
 
 const boosts = [
@@ -26,7 +26,7 @@ const boosts = [
 
 const PAYMENT_RECIPIENT_ADDRESS = '0x536bB672A282df8c89DDA57E79423cC505750E52';
 
-const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost, timeWarpWldCost }) => {
+const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost, timeWarpWldCost, timeWarpCooldown }) => {
   const { t } = useLanguage();
 
   const timeWarpReward = totalCPS * 86400; // 24 hours of production
@@ -133,13 +133,19 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
             {t('reward')}: +{formatNumber(timeWarpReward)} $WCLICK
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => handleTimeWarpPurchase('prestige')}
-              className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
-              disabled={!walletAddress || prestigeBalance < timeWarpPrestigeCost}
-            >
-              {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
-            </button>
+            {timeWarpCooldown ? (
+              <div className="flex-1 bg-pink-900/50 text-white font-bold py-2 px-4 rounded text-center">
+                {t('available_in')} {timeWarpCooldown}
+              </div>
+            ) : (
+              <button
+                onClick={() => handleTimeWarpPurchase('prestige')}
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+                disabled={!walletAddress || prestigeBalance < timeWarpPrestigeCost}
+              >
+                {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
+              </button>
+            )}
             <button
               onClick={() => handleTimeWarpPurchase('wld')}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"

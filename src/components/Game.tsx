@@ -6,7 +6,7 @@ import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon } from '@heroico
 import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
-import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, encodeAbiParameters, type Hex } from "viem";
+import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, type Hex } from "viem";
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -109,11 +109,12 @@ export default function Game() {
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
     const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
-    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number } | null>(null);
+    const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number; type: 'prestige' | 'wld' } | null>(null);
     const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
+    const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
 
     const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
         setSelectedItem({ ...item, itemType });
@@ -353,12 +354,20 @@ export default function Game() {
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
             setNotification({ message: t("time_warp_success"), type: 'success' });
-            setGameState(prev => ({ ...prev, tokens: prev.tokens + pendingTimeWarpTx.reward }));
+            if (pendingTimeWarpTx.type === 'prestige') {
+                setGameState(prev => ({ 
+                    ...prev, 
+                    tokens: prev.tokens + pendingTimeWarpTx.reward,
+                    lastPrestigeTimeWarp: Date.now(),
+                }));
+            } else {
+                setGameState(prev => ({ ...prev, tokens: prev.tokens + pendingTimeWarpTx.reward }));
+            }
             setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward }));
             refetchPrestigeBalance(); // Refetch balance if prestige tokens were used
             setPendingTimeWarpTx(null);
         }
-    }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t]);
+    }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t, setGameState]);
 
     useEffect(() => {
         if (isSwapSuccess) {
@@ -368,6 +377,31 @@ export default function Game() {
             setPendingSwapTxId(undefined);
         }
     }, [isSwapSuccess, refetchPrestigeBalance, t]);
+
+    // Cooldown timer effect
+    useEffect(() => {
+        const updateCooldown = () => {
+            if (gameState.lastPrestigeTimeWarp) {
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+                const timePassed = Date.now() - gameState.lastPrestigeTimeWarp;
+                const timeLeft = twentyFourHours - timePassed;
+
+                if (timeLeft > 0) {
+                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+                    const seconds = Math.floor((timeLeft / 1000) % 60);
+                    setTimeWarpCooldown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                } else {
+                    setTimeWarpCooldown("");
+                    setGameState(prev => ({ ...prev, lastPrestigeTimeWarp: undefined }));
+                }
+            }
+        };
+
+        updateCooldown(); // Initial check
+        const interval = setInterval(updateCooldown, 1000); // Update every second
+        return () => clearInterval(interval);
+    }, [gameState.lastPrestigeTimeWarp, setGameState]);
 
     const saveGameToBackend = useCallback(async (manual = false) => {
         if (!walletAddress) return;
@@ -554,6 +588,16 @@ export default function Game() {
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;
         if (type === 'prestige') {
+            // Check for cooldown
+            if (gameState.lastPrestigeTimeWarp) {
+                const twentyFourHours = 24 * 60 * 60 * 1000;
+                const timePassed = Date.now() - gameState.lastPrestigeTimeWarp;
+                if (timePassed < twentyFourHours) {
+                    setNotification({ message: t("time_warp_cooldown"), type: 'error' });
+                    return;
+                }
+            }
+
             const cost = timeWarpPrestigeCost;
             if (prestigeBalance < cost) {
                 setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' });
@@ -579,7 +623,7 @@ export default function Game() {
                 }
 
                 if (finalPayload.transaction_id) {
-                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward });
+                    setPendingTimeWarpTx({ txId: finalPayload.transaction_id, reward, type: 'prestige' });
                     setNotification({ message: t("transaction_sent"), type: 'success' });
                 } else {
                     throw new Error(t('transaction_error'));
@@ -634,7 +678,7 @@ export default function Game() {
                 setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
             }
         }
-    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost]);
+    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost, gameState.lastPrestigeTimeWarp]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         const value = clickValue;
@@ -870,6 +914,7 @@ export default function Game() {
                         formatNumber={formatNumber}
                         timeWarpPrestigeCost={timeWarpPrestigeCost}
                         timeWarpWldCost={timeWarpWldCost}
+                        timeWarpCooldown={timeWarpCooldown}
                     />
                     {/* <SwapSection
                         prestigeBalance={prestigeBalance}

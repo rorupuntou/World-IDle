@@ -390,5 +390,8 @@
     "req.totalClicks": "Click a total of {amount} times.",
     "req.autoclicker": "Own {amount} {name}.",
     "req.eachAutoclickerAmount": "Own at least {amount} of each autoclicker.",
-    "unknown_autoclicker": "Unknown Autoclicker"
+    "unknown_autoclicker": "Unknown Autoclicker",
+    "req.tps": "Reach {amount} $WCLICK/s.",
+    "req.verified": "Be verified with World ID.",
+    "effect_desc.addTps": "Adds {value} to base production per second."
 }

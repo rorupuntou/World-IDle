@@ -54,33 +54,7 @@ const getUpgradeIcon = (upgrade: Upgrade, autoclickers: Autoclicker[]) => {
     return QuestionMarkCircleIcon;
 };
 
-const getEffectDescription = (effect: Effect, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[]): string => {
-    const findAutoclickerName = (id: number) => {
-        const auto = autoclickers.find(a => a.id === id);
-        return auto ? t(auto.name) : t('unknown_autoclicker');
-    };
-
-    switch (effect.type) {
-        case 'multiplyClick':
-            return t('effect_desc.multiplyClick', { value: effect.value });
-        case 'addClick':
-            return t('effect_desc.addClick', { value: effect.value });
-        case 'multiplyGlobal':
-            return t('effect_desc.multiplyGlobal', { value: ((effect.value - 1) * 100).toFixed(0) });
-        case 'addCpSToClick':
-            return t('effect_desc.addCpSToClick', { percent: (effect.percent * 100).toFixed(0) });
-        case 'multiplyAutoclicker':
-            return t('effect_desc.multiplyAutoclicker', { name: findAutoclickerName(effect.targetId), value: effect.value });
-        case 'multiplyAutoclickerByOtherCount':
-            return t('effect_desc.multiplyAutoclickerByOtherCount', { targetName: findAutoclickerName(effect.targetId), sourceName: findAutoclickerName(effect.sourceId), value: (effect.value * 100).toFixed(0) });
-        case 'addCpSToAutoclickerFromOthers':
-             return t('effect_desc.addCpSToAutoclickerFromOthers', { name: findAutoclickerName(effect.targetId), value: effect.value });
-        default:
-            return t('effect_desc.unknown');
-    }
-}
-
-const getRequirementText = (req: Requirement | undefined, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[], formatNumber: (num: number) => string, stats: StatsState): {text: string, met: boolean}[] => {
+function getRequirementText(req: Requirement | undefined, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[], formatNumber: (num: number) => string, stats: StatsState): {text: string, met: boolean}[] {
     const texts: {text: string, met: boolean}[] = [];
     if (!req) return texts;
 
@@ -98,7 +72,7 @@ const getRequirementText = (req: Requirement | undefined, t: (key: string, repla
             const auto = autoclickers.find(a => a.id === autoReq.id);
             if (auto) {
                 const met = auto.purchased >= autoReq.amount;
-                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(auto.name) }), met });
+                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(`autoclicker.${auto.name.toLowerCase()}.name`) }), met });
             }
         });
     }
@@ -108,6 +82,34 @@ const getRequirementText = (req: Requirement | undefined, t: (key: string, repla
     }
     return texts;
 };
+
+function getEffectDescription(effects: Effect[], t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[]): string[] {
+    return effects.map(e => {
+        const findAutoclickerName = (id: number) => {
+            const auto = autoclickers.find(a => a.id === id);
+            return auto ? t(`autoclicker.${auto.name.toLowerCase()}.name`) : t('unknown_autoclicker');
+        };
+
+        switch (e.type) {
+            case 'multiplyClick':
+                return t('effect_desc.multiplyClick', { value: e.value });
+            case 'addClick':
+                return t('effect_desc.addClick', { value: e.value });
+            case 'multiplyGlobal':
+                return t('effect_desc.multiplyGlobal', { value: ((e.value - 1) * 100).toFixed(0) });
+            case 'addCpSToClick':
+                return t('effect_desc.addCpSToClick', { percent: (e.percent * 100).toFixed(0) });
+            case 'multiplyAutoclicker':
+                return t('effect_desc.multiplyAutoclicker', { name: findAutoclickerName(e.targetId), value: e.value });
+            case 'multiplyAutoclickerByOtherCount':
+                return t('effect_desc.multiplyAutoclickerByOtherCount', { targetName: findAutoclickerName(e.targetId), sourceName: findAutoclickerName(e.sourceId), value: (e.value * 100).toFixed(0) });
+            case 'addCpSToAutoclickerFromOthers':
+                 return t('effect_desc.addCpSToAutoclickerFromOthers', { name: findAutoclickerName(e.targetId), value: e.value });
+            default:
+                return t('effect_desc.unknown');
+        }
+    });
+}
 
 export default function UpgradesSection({ upgrades, autoclickers, gameState, stats, checkRequirements, purchaseUpgrade, purchaseAllAffordableUpgrades, formatNumber }: UpgradesSectionProps) {
   const { t } = useLanguage();
@@ -137,6 +139,7 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
           const translatedName = upg.dynamicName ? t(upg.dynamicName.key, upg.dynamicName.replacements) : t(upg.name);
           const translatedDesc = t(upg.desc);
           const requirementTexts = getRequirementText(upg.req, t, autoclickers, formatNumber, stats);
+          const effectTexts = getEffectDescription(upg.effect, t, autoclickers);
 
           return (
             <motion.div 
@@ -145,15 +148,15 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
               animate={{ opacity: 1, y: 0 }} 
               className={`w-full flex flex-col gap-3 p-4 rounded-lg border ${tierClasses.border} ${tierClasses.bg} ${!requirementsMet ? 'opacity-60' : ''} transition-all`}
             >
-                <div className="flex items-start gap-4">
-                    <div className={`flex-shrink-0 p-2 rounded-full bg-black/20 ${isPurchasable ? tierClasses.text : 'text-slate-500'}`}>
+                <div className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 p-2 mt-1 rounded-full bg-black/20 ${isPurchasable ? tierClasses.text : 'text-slate-500'}`}>
                         <IconComponent className="w-8 h-8"/>
                     </div>
                     <div className="flex-grow min-w-0">
                         <p className={`font-bold ${tierClasses.text}`}>{translatedName}</p>
                         <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
-                        {upg.effect.map((eff, index) => (
-                            <p key={index} className="text-sm text-lime-400/90">+ {getEffectDescription(eff, t, autoclickers)}</p>
+                        {effectTexts.map((eff, index) => (
+                            <p key={index} className="text-sm text-lime-400/90">+ {eff}</p>
                         ))}
                     </div>
                     <div className="flex-shrink-0 flex flex-col items-end gap-1">

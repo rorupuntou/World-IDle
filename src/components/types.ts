@@ -72,6 +72,7 @@ export type StatsState = {
   totalTokensEarned: number;
   totalClicks: number;
   tokensPerSecond: number;
+  isVerified: boolean;
 };
 
 // Define the structure of the full game data saved and loaded from the backend

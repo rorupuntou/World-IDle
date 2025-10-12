@@ -54,17 +54,22 @@ const getUpgradeIcon = (upgrade: Upgrade, autoclickers: Autoclicker[]) => {
     return QuestionMarkCircleIcon;
 };
 
+// --- Logic from ItemDetailsModal --- 
 function getRequirementText(req: Requirement | undefined, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[], formatNumber: (num: number) => string, stats: StatsState): {text: string, met: boolean}[] {
     const texts: {text: string, met: boolean}[] = [];
     if (!req) return texts;
 
     if (req.totalTokensEarned) {
         const met = stats.totalTokensEarned >= req.totalTokensEarned;
-        texts.push({ text: t('req.totalTokensEarned', { amount: formatNumber(req.totalTokensEarned) }), met });
+        texts.push({ text: t('item_details.req_total_tokens', { amount: formatNumber(req.totalTokensEarned) }), met });
     }
     if (req.totalClicks) {
         const met = stats.totalClicks >= req.totalClicks;
-        texts.push({ text: t('req.totalClicks', { amount: formatNumber(req.totalClicks) }), met });
+        texts.push({ text: t('item_details.req_total_clicks', { amount: formatNumber(req.totalClicks) }), met });
+    }
+    if (req.tps) {
+        const met = stats.tokensPerSecond >= req.tps;
+        texts.push({ text: t('item_details.req_tps', { amount: formatNumber(req.tps) }), met });
     }
     if (req.autoclickers) {
         const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
@@ -72,41 +77,44 @@ function getRequirementText(req: Requirement | undefined, t: (key: string, repla
             const auto = autoclickers.find(a => a.id === autoReq.id);
             if (auto) {
                 const met = auto.purchased >= autoReq.amount;
-                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(auto.name) }), met });
+                texts.push({ text: t('item_details.req_autoclicker_amount', { amount: autoReq.amount, name: t(auto.name) }), met });
             }
         });
     }
     if (req.eachAutoclickerAmount) {
         const met = autoclickers.every(a => a.purchased >= req.eachAutoclickerAmount!);
-        texts.push({ text: t('req.eachAutoclickerAmount', { amount: req.eachAutoclickerAmount }), met });
+        texts.push({ text: t('item_details.req_each_autoclicker', { amount: req.eachAutoclickerAmount }), met });
+    }
+    if (req.verified) {
+        // Assuming you have a way to check this in your gameState or stats
+        const met = stats.isVerified || false; 
+        texts.push({ text: t('item_details.req_verified'), met });
     }
     return texts;
 };
 
 function getEffectDescription(effects: Effect[], t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[]): string[] {
     return effects.map(e => {
-        const findAutoclickerName = (id: number) => {
-            const auto = autoclickers.find(a => a.id === id);
-            return auto ? t(auto.name) : t('unknown_autoclicker');
-        };
-
         switch (e.type) {
-            case 'multiplyClick':
-                return t('effect_desc.multiplyClick', { value: e.value });
-            case 'addClick':
-                return t('effect_desc.addClick', { value: e.value });
-            case 'multiplyGlobal':
-                return t('effect_desc.multiplyGlobal', { value: ((e.value - 1) * 100).toFixed(0) });
-            case 'addCpSToClick':
-                return t('effect_desc.addCpSToClick', { percent: (e.percent * 100).toFixed(0) });
-            case 'multiplyAutoclicker':
-                return t('effect_desc.multiplyAutoclicker', { name: findAutoclickerName(e.targetId), value: e.value });
-            case 'multiplyAutoclickerByOtherCount':
-                return t('effect_desc.multiplyAutoclickerByOtherCount', { targetName: findAutoclickerName(e.targetId), sourceName: findAutoclickerName(e.sourceId), value: (e.value * 100).toFixed(0) });
-            case 'addCpSToAutoclickerFromOthers':
-                 return t('effect_desc.addCpSToAutoclickerFromOthers', { name: findAutoclickerName(e.targetId), value: e.value });
-            default:
-                return t('effect_desc.unknown');
+            case 'multiplyClick': return t('item_details.eff_multiply_click', { value: e.value });
+            case 'addClick': return t('item_details.eff_add_click', { value: e.value });
+            case 'multiplyGlobal': return t('item_details.eff_multiply_global', { value: e.value });
+            case 'multiplyAutoclicker': {
+                const auto = autoclickers.find(a => a.id === e.targetId);
+                return t('item_details.eff_multiply_autoclicker', { name: auto ? t(auto.name) : `ID ${e.targetId}`, value: e.value });
+            }
+            case 'addCpSToClick': return t('item_details.eff_add_cps_to_click', { percent: e.percent * 100 });
+            case 'addCpSToAutoclickerFromOthers': {
+                const auto = autoclickers.find(a => a.id === e.targetId);
+                return t('item_details.eff_add_cps_from_others', { name: auto ? t(auto.name) : `ID ${e.targetId}` });
+            }
+            case 'multiplyAutoclickerByOtherCount': {
+                const target = autoclickers.find(a => a.id === e.targetId);
+                const source = autoclickers.find(a => a.id === e.sourceId);
+                return t('item_details.eff_multiply_by_other', { target: target ? t(target.name) : `ID ${e.targetId}`, source: source ? t(source.name) : `ID ${e.sourceId}` });
+            }
+            case 'addTps': return t('item_details.eff_add_tps', { value: e.value });
+            default: return t('item_details.eff_unknown');
         }
     });
 }

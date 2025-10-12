@@ -26,6 +26,7 @@ import ItemDetailsModal from "./ItemDetailsModal";
 import LanguageSelector from "./LanguageSelector";
 
 
+
 const PRICE_INCREASE_RATE = 1.15;
 
 // Define World Chain for viem
@@ -136,7 +137,7 @@ export default function Game() {
 
     // --- Game State ---
     const [gameState, setGameState] = useState<GameState>(initialState);
-    const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+    const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: false });
     const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
     const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
@@ -264,11 +265,64 @@ export default function Game() {
         return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
     }, [upgrades, autoclickers, prestigeBoost, gameState.permanentBoostBonus]);
 
+    const handleVerifyWithMiniKit = async () => {
+        if (!walletAddress) return;
+        if (!MiniKit.isInstalled()) {
+            return setNotification({ message: t("wallet_prompt"), type: 'error' });
+        }
+        try {
+            const { finalPayload } = await MiniKit.commandsAsync.verify({
+                action: 'world-idle-login', // Action ID from Developer Portal
+                signal: walletAddress,
+            });
+
+            if (finalPayload.status === 'error') {
+                const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                console.error('DEBUG (MiniKit Error): ' + JSON.stringify(errorPayload, null, 2));
+                return setNotification({ message: errorPayload.message || "Verification failed in World App.", type: 'error' });
+            }
+
+            // The payload from MiniKit.verify is already what we need for the backend
+            const res = await fetch("/api/verify-worldid", { 
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ proof: finalPayload, signal: walletAddress }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error("Backend verification failed:", data);
+                return setNotification({ message: data.detail || "Verification proof could not be validated.", type: 'error' });
+            }
+            
+            if (data.success) {
+                setStats(prev => ({ ...prev, isVerified: true }));
+                setNotification({ message: "World ID Verified!", type: 'success' });
+                if (data.gameData) {
+                    const { gameState, stats, autoclickers, upgrades, achievements } = data.gameData;
+                    if (gameState) setGameState(gameState);
+                    if (stats) setStats(stats);
+                    if (autoclickers) setAutoclickers(autoclickers);
+                    if (upgrades) setUpgrades(upgrades);
+                    if (achievements) setAchievements(achievements);
+                }
+            } else {
+                setNotification({ message: data.detail || "Verification failed.", type: 'error' });
+            }
+
+        } catch (error) {
+            console.error(error);
+            setNotification({ message: "An unknown error occurred during verification.", type: 'error' });
+        }
+    };
+
     const checkRequirements = useCallback((req: Requirement | undefined): boolean => {
         if (!req) return true;
         if (req.totalTokensEarned !== undefined && stats.totalTokensEarned < req.totalTokensEarned) return false;
         if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks) return false;
         if (req.tps !== undefined && totalCPS < req.tps) return false;
+        if (req.verified !== undefined && req.verified && !stats.isVerified) return false;
         if (req.autoclickers !== undefined) {
             const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
             for (const autoReq of autoclickerReqs) {
@@ -345,13 +399,13 @@ export default function Game() {
         if (isPrestigeSuccess) {
             setNotification({ message: t("prestige_success"), type: 'success' });
             setGameState(prev => ({ ...initialState, permanentBoostBonus: prev.permanentBoostBonus }));
-            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0 });
+            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: stats.isVerified });
             setAutoclickers(initialAutoclickers);
             setUpgrades(initialUpgrades);
             refetchPrestigeBalance();
             setPendingPrestigeTxId(undefined); // Reset ID after success
         }
-    }, [isPrestigeSuccess, refetchPrestigeBalance, t]);
+    }, [isPrestigeSuccess, refetchPrestigeBalance, t, stats.isVerified]);
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
@@ -530,62 +584,7 @@ export default function Game() {
         }
     }, [prestigeReward, t]);
 
-    const handleDoSwap = useCallback(async (params: { fromToken: Hex; toToken: Hex; amountIn: string; amountOutMin: string; fee: number; }) => {
-        if (!walletAddress) return;
 
-        try {
-            const { fromToken, toToken, amountIn, amountOutMin, fee } = params;
-            const fromDecimals = tokenDecimals[fromToken.toLowerCase()] ?? 18;
-            const amountInBigInt = parseUnits(amountIn, fromDecimals);
-
-            // 1. Construct the permit2 object for MiniKit
-            const permit = {
-                permitted: {
-                    token: fromToken,
-                    amount: amountInBigInt.toString(),
-                },
-                spender: contractConfig.universalRouterAddress,
-                nonce: Date.now().toString(),
-                deadline: Math.floor((Date.now() + 30 * 60 * 1000) / 1000).toString(), // 30 minutes from now
-            };
-
-            // 2. Construct the transaction for the Universal Router
-            const commands = '0x00'; // V3_SWAP_EXACT_IN
-            const path = encodePacked(['address', 'uint24', 'address'], [fromToken, fee, toToken]);
-            
-            const inputs = [encodePacked(
-                ['address', 'uint256', 'uint256', 'bytes', 'bool'],
-                [walletAddress, amountInBigInt, BigInt(amountOutMin), path, false] // recipient, amountIn, amountOutMinimum, path, payerIsUser
-            )];
-
-            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                transaction: [
-                    {
-                        address: contractConfig.universalRouterAddress,
-                        abi: contractConfig.universalRouterAbi,
-                        functionName: 'execute',
-                        args: [commands, inputs],
-                    },
-                ],
-                permit2: [permit],
-            });
-
-            if (finalPayload.status === 'error') {
-                const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                console.error('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
-                throw new Error(errorPayload.message || 'Error al enviar la transacción con MiniKit.');
-            }
-
-            if (finalPayload.transaction_id) {
-                setPendingSwapTxId(finalPayload.transaction_id);
-                setNotification({ message: t("transaction_sent"), type: 'success' });
-            } else {
-                throw new Error(t('transaction_error'));
-            }
-        } catch (error) {
-            setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
-        }
-    }, [walletAddress, t]);
 
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;
@@ -921,6 +920,16 @@ export default function Game() {
                                 isPrestigeReady={canPrestige}
                                 isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp || isConfirmingSwap}
                             />
+                            {!stats.isVerified && (
+                                <div className="mt-4">
+                                    <button 
+                                        onClick={handleVerifyWithMiniKit}
+                                        className="w-full bg-blue-500/80 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
+                                    >
+                                        Verify with World ID
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                     {activeTab === 'upgrades' && (

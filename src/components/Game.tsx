@@ -6,7 +6,7 @@ import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon, HomeIcon, BoltI
 import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
-import { formatUnits, createPublicClient, http, defineChain, parseUnits, encodePacked, type Hex } from "viem";
+import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "viem";
 
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
@@ -96,11 +96,7 @@ const NewsTicker = () => {
     );
 };
 
-const tokenDecimals: Record<string, number> = {
-  '0x6671c7c52b5ee08174d432408086e1357ed07246': 18, // PrestigeToken
-  '0x2cfc85d8e48f8eab294be644d9e25c3030863003': 18, // WLD
-  '0x79a02482a880bce3f13e09da970dc34db4cd24d1': 6,  // USDC
-};
+
 
 export default function Game() {
     const { t } = useLanguage();
@@ -290,12 +286,22 @@ export default function Game() {
                 body: JSON.stringify({ proof: finalPayload, signal: walletAddress }),
             });
 
-            const data = await res.json();
-
             if (!res.ok) {
-                console.error("Backend verification failed:", data);
-                return setNotification({ message: data.detail || "Verification proof could not be validated.", type: 'error' });
+                const errorText = await res.text();
+                let errorMessage = "An unexpected error occurred on the server.";
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson && typeof errorJson.detail === 'string') {
+                        errorMessage = errorJson.detail;
+                    }
+                    console.error("Backend verification failed:", errorJson);
+                } catch {
+                    console.error("Backend verification failed with non-JSON response:", errorText);
+                }
+                return setNotification({ message: errorMessage, type: 'error' });
             }
+
+            const data: { success: boolean; gameData: FullGameState | null; detail?: unknown } = await res.json();
             
             if (data.success) {
                 setStats(prev => ({ ...prev, isVerified: true }));
@@ -309,7 +315,8 @@ export default function Game() {
                     if (achievements) setAchievements(achievements);
                 }
             } else {
-                setNotification({ message: data.detail || "Verification failed.", type: 'error' });
+                const message = typeof data.detail === 'string' ? data.detail : "Verification failed.";
+                setNotification({ message, type: 'error' });
             }
 
         } catch (error) {

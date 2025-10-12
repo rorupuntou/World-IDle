@@ -283,7 +283,11 @@ export default function Game() {
             const res = await fetch("/api/verify-worldid", { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ proof: finalPayload, signal: walletAddress }),
+                body: JSON.stringify({ 
+                    proof: finalPayload, 
+                    signal: walletAddress, 
+                    action: 'world-idle-login' 
+                }),
             });
 
             if (!res.ok) {

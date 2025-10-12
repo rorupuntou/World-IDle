@@ -149,23 +149,24 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
                     <div className={`flex-shrink-0 p-2 rounded-full bg-black/20 ${isPurchasable ? tierClasses.text : 'text-slate-500'}`}>
                         <IconComponent className="w-8 h-8"/>
                     </div>
-                    <div className="flex-grow">
+                    <div className="flex-grow min-w-0">
                         <p className={`font-bold ${tierClasses.text}`}>{translatedName}</p>
                         <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
                         {upg.effect.map((eff, index) => (
                             <p key={index} className="text-sm text-lime-400/90">+ {getEffectDescription(eff, t, autoclickers)}</p>
                         ))}
                     </div>
-                    <div className="flex-shrink-0 text-right">
+                    <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                        <div className="font-mono text-right">
+                            {upg.cost > 0 && <p className="text-lg font-bold text-yellow-300">{formatNumber(upg.cost)}</p>}
+                            {upg.humanityGemsCost && <p className="text-sm flex items-center justify-end gap-1 text-cyan-300"><BeakerIcon className="w-4 h-4"/>{upg.humanityGemsCost}</p>}
+                        </div>
                         <button 
                             onClick={() => purchaseUpgrade(upg.id)}
                             disabled={!isPurchasable}
-                            className="bg-yellow-500/80 hover:bg-yellow-500 text-stone-900 font-bold py-2 px-4 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                            className="bg-yellow-500/80 hover:bg-yellow-500 text-stone-900 font-bold py-1 px-3 rounded-md text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                         >
-                            <div className="font-mono text-center">
-                                {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
-                                {upg.humanityGemsCost && <p className="text-sm flex items-center justify-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}
-                            </div>
+                            {t('buy')}
                         </button>
                     </div>
                 </div>

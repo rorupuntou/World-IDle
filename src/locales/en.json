@@ -22,7 +22,7 @@
     "wclick": "$WCLICK",
     "per_second": "/s",
     "buy": "Buy",
-    "requirements": "Requirements:",
+    "requirements": "Requirements",
     "effect": "Effect:",
     "game_loaded": "Game loaded successfully!",
     "welcome_back": "Welcome! Your adventure starts now.",
@@ -377,5 +377,18 @@
     "swapping": "Swapping...",
     "swap": "Swap",
     "swap_success": "Swap successful!",
-    "unknown_error": "An unknown error occurred."
+    "unknown_error": "An unknown error occurred.",
+    "effect_desc.multiplyClick": "Multiplies click value by {value}.",
+    "effect_desc.addClick": "Adds {value} to click value.",
+    "effect_desc.multiplyGlobal": "Increases all token gains by {value}%.",
+    "effect_desc.addCpSToClick": "Adds {percent}% of your CpS to your click value.",
+    "effect_desc.multiplyAutoclicker": "{name}s are {value}x more effective.",
+    "effect_desc.multiplyAutoclickerByOtherCount": "{targetName} effectiveness increased by {value}% for each {sourceName} you own.",
+    "effect_desc.addCpSToAutoclickerFromOthers": "{name}s gain +{value} CpS for each other autoclicker you own.",
+    "effect_desc.unknown": "Special effect.",
+    "req.totalTokensEarned": "Earn a total of {amount} tokens.",
+    "req.totalClicks": "Click a total of {amount} times.",
+    "req.autoclicker": "Own {amount} {name}.",
+    "req.eachAutoclickerAmount": "Own at least {amount} of each autoclicker.",
+    "unknown_autoclicker": "Unknown Autoclicker"
 }

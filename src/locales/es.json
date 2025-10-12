@@ -22,7 +22,7 @@
     "wclick": "$WCLICK",
     "per_second": "/s",
     "buy": "Comprar",
-    "requirements": "Requisitos:",
+    "requirements": "Requisitos",
     "effect": "Efecto:",
     "game_loaded": "Partida cargada exitosamente!",
     "welcome_back": "¡Bienvenido! Tu aventura comienza ahora.",
@@ -377,5 +377,18 @@
     "swapping": "Intercambiando...",
     "swap": "Intercambiar",
     "swap_success": "¡Intercambio completado!",
-    "unknown_error": "Ocurrió un error desconocido."
+    "unknown_error": "Ocurrió un error desconocido.",
+    "effect_desc.multiplyClick": "Multiplica el valor del clic por {value}.",
+    "effect_desc.addClick": "Añade {value} al valor del clic.",
+    "effect_desc.multiplyGlobal": "Incrementa todas las ganancias de tokens en un {value}%.",
+    "effect_desc.addCpSToClick": "Añade un {percent}% de tu CpS a tu valor de clic.",
+    "effect_desc.multiplyAutoclicker": "Los {name} son {value}x más efectivos.",
+    "effect_desc.multiplyAutoclickerByOtherCount": "La efectividad de {targetName} aumenta un {value}% por cada {sourceName} que poseas.",
+    "effect_desc.addCpSToAutoclickerFromOthers": "Los {name} ganan +{value} CpS por cada otro autoclicker que poseas.",
+    "effect_desc.unknown": "Efecto especial.",
+    "req.totalTokensEarned": "Gana un total de {amount} tokens.",
+    "req.totalClicks": "Haz un total de {amount} clics.",
+    "req.autoclicker": "Posee {amount} {name}.",
+    "req.eachAutoclickerAmount": "Posee al menos {amount} de cada autoclicker.",
+    "unknown_autoclicker": "Autoclicker Desconocido"
 }

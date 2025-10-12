@@ -3,13 +3,13 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import * as HIcons from '@heroicons/react/24/outline';
-import { Upgrade, GameState, Requirement, Autoclicker, Effect } from "@/components/types";
+import { Upgrade, GameState, Requirement, Autoclicker, Effect, StatsState } from "@/components/types";
 
 const { 
     BeakerIcon, BoltIcon, QuestionMarkCircleIcon, CursorArrowRaysIcon, GlobeAltIcon, 
     CpuChipIcon, CircleStackIcon, PaperAirplaneIcon, ServerStackIcon, CloudIcon, 
     ArrowsRightLeftIcon, ClockIcon, UserGroupIcon, SparklesIcon, StopCircleIcon, 
-    CubeTransparentIcon 
+    CubeTransparentIcon, CheckCircleIcon, XCircleIcon
 } = HIcons;
 
 const iconMap: { [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>> } = {
@@ -18,82 +18,114 @@ const iconMap: { [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement
     StopCircleIcon, CubeTransparentIcon
 };
 
-const tierColorMap: { [key: string]: string } = {
-    common: 'border-slate-600 text-slate-400',
-    rare: 'border-blue-500 text-blue-400',
-    epic: 'border-purple-500 text-purple-400',
-    legendary: 'border-yellow-400 text-yellow-300',
+const tierColorMap: { [key: string]: { border: string, text: string, bg: string } } = {
+    common: { border: 'border-slate-600', text: 'text-slate-300', bg: 'bg-slate-800/30' },
+    rare: { border: 'border-blue-500', text: 'text-blue-300', bg: 'bg-blue-900/30' },
+    epic: { border: 'border-purple-500', text: 'text-purple-300', bg: 'bg-purple-900/30' },
+    legendary: { border: 'border-yellow-400', text: 'text-yellow-300', bg: 'bg-yellow-900/30' },
 };
 
 interface UpgradesSectionProps {
   upgrades: Upgrade[];
   autoclickers: Autoclicker[];
   gameState: GameState;
+  stats: StatsState;
   checkRequirements: (req: Requirement | undefined) => boolean;
   purchaseUpgrade: (id: number) => void;
-  purchaseAllAffordableUpgrades: () => void; // New prop
-  showRequirements: (item: Upgrade, itemType: 'upgrade') => void;
+  purchaseAllAffordableUpgrades: () => void;
   formatNumber: (num: number) => string;
 }
 
 const getUpgradeIcon = (upgrade: Upgrade, autoclickers: Autoclicker[]) => {
     if (!upgrade.effect || upgrade.effect.length === 0) return QuestionMarkCircleIcon;
-
     const effect = upgrade.effect[0];
-
     if (effect.type === 'multiplyClick' || effect.type === 'addClick' || effect.type === 'addCpSToClick') {
         return CursorArrowRaysIcon;
     }
-
     if (effect.type === 'multiplyGlobal') {
         return GlobeAltIcon;
     }
-
     if (effect.type === 'multiplyAutoclicker' || effect.type === 'addCpSToAutoclickerFromOthers' || effect.type === 'multiplyAutoclickerByOtherCount') {
         const autoclicker = autoclickers.find(a => a.id === effect.targetId);
-        if (autoclicker && autoclicker.icon) {
-            return iconMap[autoclicker.icon] || QuestionMarkCircleIcon;
+        if (autoclicker && autoclicker.icon && iconMap[autoclicker.icon]) {
+            return iconMap[autoclicker.icon];
         }
     }
-
     return QuestionMarkCircleIcon;
 };
 
-const getEffectDescription = (effect: Effect, t: (key: string, replacements?: { [key: string]: string | number }) => string): string => {
+const getEffectDescription = (effect: Effect, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[]): string => {
+    const findAutoclickerName = (id: number) => {
+        const auto = autoclickers.find(a => a.id === id);
+        return auto ? t(auto.name) : t('unknown_autoclicker');
+    };
+
     switch (effect.type) {
         case 'multiplyClick':
             return t('effect_desc.multiplyClick', { value: effect.value });
         case 'addClick':
             return t('effect_desc.addClick', { value: effect.value });
         case 'multiplyGlobal':
-            return t('effect_desc.multiplyGlobal', { value: (effect.value - 1) * 100 });
+            return t('effect_desc.multiplyGlobal', { value: ((effect.value - 1) * 100).toFixed(0) });
         case 'addCpSToClick':
-            return t('effect_desc.addCpSToClick', { percent: effect.percent * 100 });
+            return t('effect_desc.addCpSToClick', { percent: (effect.percent * 100).toFixed(0) });
         case 'multiplyAutoclicker':
-            return t('effect_desc.multiplyAutoclicker', { value: effect.value });
-        // Add other effect descriptions here
+            return t('effect_desc.multiplyAutoclicker', { name: findAutoclickerName(effect.targetId), value: effect.value });
+        case 'multiplyAutoclickerByOtherCount':
+            return t('effect_desc.multiplyAutoclickerByOtherCount', { targetName: findAutoclickerName(effect.targetId), sourceName: findAutoclickerName(effect.sourceId), value: (effect.value * 100).toFixed(0) });
+        case 'addCpSToAutoclickerFromOthers':
+             return t('effect_desc.addCpSToAutoclickerFromOthers', { name: findAutoclickerName(effect.targetId), value: effect.value });
         default:
             return t('effect_desc.unknown');
     }
 }
 
-export default function UpgradesSection({ upgrades, autoclickers, gameState, checkRequirements, purchaseUpgrade, purchaseAllAffordableUpgrades, showRequirements, formatNumber }: UpgradesSectionProps) {
+const getRequirementText = (req: Requirement | undefined, t: (key: string, replacements?: { [key: string]: string | number }) => string, autoclickers: Autoclicker[], formatNumber: (num: number) => string, stats: StatsState): {text: string, met: boolean}[] => {
+    const texts: {text: string, met: boolean}[] = [];
+    if (!req) return texts;
+
+    if (req.totalTokensEarned) {
+        const met = stats.totalTokensEarned >= req.totalTokensEarned;
+        texts.push({ text: t('req.totalTokensEarned', { amount: formatNumber(req.totalTokensEarned) }), met });
+    }
+    if (req.totalClicks) {
+        const met = stats.totalClicks >= req.totalClicks;
+        texts.push({ text: t('req.totalClicks', { amount: formatNumber(req.totalClicks) }), met });
+    }
+    if (req.autoclickers) {
+        const autoclickerReqs = Array.isArray(req.autoclickers) ? req.autoclickers : [req.autoclickers];
+        autoclickerReqs.forEach(autoReq => {
+            const auto = autoclickers.find(a => a.id === autoReq.id);
+            if (auto) {
+                const met = auto.purchased >= autoReq.amount;
+                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(auto.name) }), met });
+            }
+        });
+    }
+    if (req.eachAutoclickerAmount) {
+        const met = autoclickers.every(a => a.purchased >= req.eachAutoclickerAmount!);
+        texts.push({ text: t('req.eachAutoclickerAmount', { amount: req.eachAutoclickerAmount }), met });
+    }
+    return texts;
+};
+
+export default function UpgradesSection({ upgrades, autoclickers, gameState, stats, checkRequirements, purchaseUpgrade, purchaseAllAffordableUpgrades, formatNumber }: UpgradesSectionProps) {
   const { t } = useLanguage();
   const availableUpgrades = upgrades.filter(upg => !upg.purchased && checkRequirements(upg.req) && gameState.tokens >= upg.cost);
 
   return (
-    <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700 flex flex-col gap-3">
+    <div className="bg-slate-900/50 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-slate-700 flex flex-col gap-4">
         <div className="flex justify-between items-center">
-            <h3 className="text-xl font-semibold flex items-center gap-2"><BoltIcon className="w-6 h-6"/>{t('upgrades')}</h3>
+            <h3 className="text-xl font-semibold flex items-center gap-2"><BoltIcon className="w-6 h-6 text-cyan-400"/>{t('upgrades')}</h3>
             <button 
                 onClick={purchaseAllAffordableUpgrades}
                 disabled={availableUpgrades.length === 0}
-                className="bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             >
-                {t('buy_all_affordable')}
+                {t('buy_all_affordable')} ({availableUpgrades.length})
             </button>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
         {upgrades.map((upg) => {
           if (upg.purchased) return null;
 
@@ -101,39 +133,55 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, che
           const isAffordable = gameState.tokens >= upg.cost && gameState.humanityGems >= (upg.humanityGemsCost || 0);
           const isPurchasable = requirementsMet && isAffordable;
           const IconComponent = getUpgradeIcon(upg, autoclickers);
-          const tierClasses = upg.tier ? tierColorMap[upg.tier] || 'border-slate-700 text-slate-400' : 'border-slate-700 text-slate-400';
+          const tierClasses = upg.tier ? tierColorMap[upg.tier] : tierColorMap.common;
           const translatedName = upg.dynamicName ? t(upg.dynamicName.key, upg.dynamicName.replacements) : t(upg.name);
           const translatedDesc = t(upg.desc);
+          const requirementTexts = getRequirementText(upg.req, t, autoclickers, formatNumber, stats);
 
           return (
             <motion.div 
               key={upg.id} 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              className={`w-full flex items-center gap-4 p-3 bg-slate-500/10 rounded-lg border ${!requirementsMet ? 'grayscale opacity-50' : tierClasses} transition-all`}
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className={`w-full flex flex-col gap-3 p-4 rounded-lg border ${tierClasses.border} ${tierClasses.bg} ${!requirementsMet ? 'opacity-60' : ''} transition-all`}
             >
-                <div className={`flex-shrink-0 text-3xl ${isPurchasable ? 'text-cyan-400' : 'text-slate-500'}`}>
-                    {requirementsMet ? <IconComponent className="w-8 h-8" /> : <QuestionMarkCircleIcon className="w-8 h-8"/>}
+                <div className="flex items-start gap-4">
+                    <div className={`flex-shrink-0 p-2 rounded-full bg-black/20 ${isPurchasable ? tierClasses.text : 'text-slate-500'}`}>
+                        <IconComponent className="w-8 h-8"/>
+                    </div>
+                    <div className="flex-grow">
+                        <p className={`font-bold ${tierClasses.text}`}>{translatedName}</p>
+                        <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
+                        {upg.effect.map((eff, index) => (
+                            <p key={index} className="text-sm text-lime-400/90">+ {getEffectDescription(eff, t, autoclickers)}</p>
+                        ))}
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                        <button 
+                            onClick={() => purchaseUpgrade(upg.id)}
+                            disabled={!isPurchasable}
+                            className="bg-yellow-500/80 hover:bg-yellow-500 text-stone-900 font-bold py-2 px-4 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                        >
+                            <div className="font-mono text-center">
+                                {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
+                                {upg.humanityGemsCost && <p className="text-sm flex items-center justify-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}
+                            </div>
+                        </button>
+                    </div>
                 </div>
-                <div className="flex-grow">
-                    <p className="font-bold">{translatedName}</p>
-                    <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
-                    {upg.effect.map((eff, index) => (
-                        <p key={index} className="text-xs text-lime-400">{getEffectDescription(eff, t)}</p>
-                    ))}
-                </div>
-                <div className="flex-shrink-0 text-right">
-                    <button 
-                        onClick={() => purchaseUpgrade(upg.id)}
-                        disabled={!isPurchasable}
-                        className="bg-yellow-500/80 hover:bg-yellow-500 text-stone-900 font-bold py-2 px-4 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        <div className="font-mono">
-                            {upg.cost > 0 && <p>{formatNumber(upg.cost)}</p>}
-                            {upg.humanityGemsCost && <p className="text-sm flex items-center gap-1"><BeakerIcon className="w-3 h-3"/>{upg.humanityGemsCost}</p>}
-                        </div>
-                    </button>
-                </div>
+                {!requirementsMet && requirementTexts.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-slate-700/50 text-xs">
+                        <p className="font-bold text-red-400/80 mb-1">{t('requirements')}:</p>
+                        <ul className="list-none pl-2 space-y-1">
+                            {requirementTexts.map((req, i) => (
+                                <li key={i} className={`flex items-center gap-2 ${req.met ? 'text-green-400/70' : 'text-red-400/70'}`}>
+                                    {req.met ? <CheckCircleIcon className="w-4 h-4" /> : <XCircleIcon className="w-4 h-4" />}
+                                    <span>{req.text}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </motion.div>
           )
         })}

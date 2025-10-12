@@ -928,10 +928,10 @@ export default function Game() {
                             upgrades={sortedUpgrades}
                             autoclickers={autoclickers}
                             gameState={gameState}
+                            stats={stats}
                             checkRequirements={checkRequirements}
                             purchaseUpgrade={purchaseUpgrade}
                             purchaseAllAffordableUpgrades={purchaseAllAffordableUpgrades}
-                            showRequirements={showItemDetails}
                             formatNumber={formatNumber}
                         />
                     )}

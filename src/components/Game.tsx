@@ -27,6 +27,7 @@ import LanguageSelector from "./LanguageSelector";
 
 
 
+
 const PRICE_INCREASE_RATE = 1.15;
 
 // Define World Chain for viem

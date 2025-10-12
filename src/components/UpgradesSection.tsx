@@ -72,7 +72,7 @@ function getRequirementText(req: Requirement | undefined, t: (key: string, repla
             const auto = autoclickers.find(a => a.id === autoReq.id);
             if (auto) {
                 const met = auto.purchased >= autoReq.amount;
-                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(`autoclicker.${auto.name.toLowerCase()}.name`) }), met });
+                texts.push({ text: t('req.autoclicker', { amount: autoReq.amount, name: t(auto.name) }), met });
             }
         });
     }
@@ -87,7 +87,7 @@ function getEffectDescription(effects: Effect[], t: (key: string, replacements?:
     return effects.map(e => {
         const findAutoclickerName = (id: number) => {
             const auto = autoclickers.find(a => a.id === id);
-            return auto ? t(`autoclicker.${auto.name.toLowerCase()}.name`) : t('unknown_autoclicker');
+            return auto ? t(auto.name) : t('unknown_autoclicker');
         };
 
         switch (e.type) {

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "node scripts/patch-worldcoin-kit.js"
   },
   "dependencies": {
     "@account-kit/infra": "^4.68.0",

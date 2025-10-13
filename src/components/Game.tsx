@@ -868,7 +868,7 @@ export default function Game() {
                     />
                 )}
             </AnimatePresence>
-            <div className="w-full max-w-md mx-auto p-4 pt-12 flex flex-col gap-6 pb-24"> 
+            <div className="w-full max-w-md mx-auto p-4 pt-12 flex flex-col gap-6 pb-24" style={{ backgroundColor: 'red' }}> 
                 <div className="text-center">
                     <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">{t('app_title')}</h1>
                 </div>

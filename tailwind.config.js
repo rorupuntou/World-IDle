@@ -6,6 +6,7 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./node_modules/@worldcoin/mini-apps-ui-kit-react/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -26,6 +27,7 @@ module.exports = {
       },
     },
   },
-  // 3. Eliminamos la sección de plugins que hacía referencia al paquete incompatible
-  plugins: [],
+  plugins: [
+    require("@worldcoin/mini-apps-ui-kit-react/tailwind"),
+  ],
 };

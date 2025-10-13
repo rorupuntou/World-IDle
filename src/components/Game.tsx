@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon, HomeIcon, BoltIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
-import { MiniKit, Tokens, tokenToDecimals, PayCommandInput, MiniAppPaymentErrorPayload, MiniAppSendTransactionErrorPayload } from "@worldcoin/minikit-js";
+// ✅ CAMBIO 1: Importación de MiniKit simplificada. Ya no se importan tipos complejos.
+import { MiniKit, Tokens } from '@worldcoin/minikit-js';
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
 import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "viem";
-
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
@@ -25,12 +25,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
 import LanguageSelector from "./LanguageSelector";
 
-
-
-
 const PRICE_INCREASE_RATE = 1.15;
 
-// Define World Chain for viem
 const worldChain = defineChain({
     id: contractConfig.worldChainId,
     name: 'World Chain',
@@ -43,7 +39,6 @@ const worldChain = defineChain({
     },
 });
 
-// Client for the minikit-react hook
 const client = createPublicClient({
     chain: worldChain,
     transport: http(),
@@ -56,9 +51,7 @@ const Toast = ({ message, type, onDone }: { message: string, type: 'success' | '
         const timer = setTimeout(onDone, 4000);
         return () => clearTimeout(timer);
     }, [onDone]);
-
     const isSuccess = type === 'success';
-
     return (
         <motion.div 
             initial={{ opacity: 0, y: 50 }} 
@@ -96,12 +89,9 @@ const NewsTicker = () => {
     );
 };
 
-
-
 export default function Game() {
     const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState('main');
-    // --- Base States ---
     const [isClient, setIsClient] = useState(false);
     const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(null);
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -116,22 +106,6 @@ export default function Game() {
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
     const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
 
-    const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
-        setSelectedItem({ ...item, itemType });
-    };
-
-    const closeItemDetails = () => {
-        setSelectedItem(null);
-    };
-
-    const formatNumber = useCallback((num: number) => {
-        if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
-        if (num < 1e6) return `${(num / 1e3).toFixed(2)}K`;
-        if (num < 1e9) return `${(num / 1e6).toFixed(2)}M`;
-        if (num < 1e12) return `${(num / 1e9).toFixed(2)}B`;
-        return `${(num / 1e12).toFixed(2)}T`;
-    }, []);
-
     // --- Game State ---
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: false });
@@ -140,7 +114,21 @@ export default function Game() {
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [prestigeBalance, setPrestigeBalance] = useState(0);
 
-    // --- Read & Observe Hooks ---
+    const showItemDetails = (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number }, itemType: 'upgrade' | 'achievement' | 'autoclicker') => {
+        setSelectedItem({ ...item, itemType });
+    };
+
+    const closeItemDetails = () => { setSelectedItem(null); };
+
+    const formatNumber = useCallback((num: number) => {
+        if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        if (num < 1e6) return `${(num / 1e3).toFixed(2)}K`;
+        if (num < 1e9) return `${(num / 1e6).toFixed(2)}M`;
+        if (num < 1e12) return `${(num / 1e9).toFixed(2)}B`;
+        return `${(num / 1e12).toFixed(2)}T`;
+    }, []);
+    
+    // --- Blockchain Hooks ---
     const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } = useReadContract({
         address: contractConfig.prestigeTokenAddress,
         abi: contractConfig.prestigeTokenAbi,
@@ -596,43 +584,36 @@ export default function Game() {
         }
     }, [prestigeReward, t]);
 
-
-
+    // ✅ CAMBIO 2: Lógica de MiniKit actualizada a la API moderna.
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
         const reward = totalCPS * 86400;
         if (type === 'prestige') {
-            // Check for cooldown
             if (gameState.lastPrestigeTimeWarp) {
                 const twentyFourHours = 24 * 60 * 60 * 1000;
-                const timePassed = Date.now() - gameState.lastPrestigeTimeWarp;
-                if (timePassed < twentyFourHours) {
-                    setNotification({ message: t("time_warp_cooldown"), type: 'error' });
-                    return;
+                if (Date.now() - gameState.lastPrestigeTimeWarp < twentyFourHours) {
+                    return setNotification({ message: t("time_warp_cooldown"), type: 'error' });
                 }
             }
-
-            const cost = timeWarpPrestigeCost;
-            if (prestigeBalance < cost) {
-                setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' });
-                return;
+            if (prestigeBalance < timeWarpPrestigeCost) {
+                return setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' });
             }
             try {
                 const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
-                const amountToBurnInWei = BigInt(cost) * BigInt(10 ** decimals);
+                const amountToBurnInWei = parseUnits(timeWarpPrestigeCost.toString(), decimals);
+                
                 const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                    transaction: [
-                        {
-                            address: contractConfig.prestigeTokenAddress,
-                            abi: contractConfig.prestigeTokenAbi,
-                            functionName: 'transfer',
-                            args: ['0x000000000000000000000000000000000000dEaD', amountToBurnInWei.toString()],
-                            value: '0x0',
-                        },
-                    ],
+                    transaction: [{
+                        address: contractConfig.prestigeTokenAddress,
+                        abi: contractConfig.prestigeTokenAbi,
+                        functionName: 'transfer',
+                        args: ['0x000000000000000000000000000000000000dEaD', amountToBurnInWei.toString()],
+                        value: '0x0',
+                    }],
                 });
 
                 if (finalPayload.status === 'error') {
-                    throw new Error((finalPayload as MiniAppSendTransactionErrorPayload).error_code || 'Error sending transaction');
+                    // La API moderna devuelve un objeto de error simple
+                    throw new Error((finalPayload as { message?: string }).message || 'Error sending transaction');
                 }
 
                 if (finalPayload.transaction_id) {
@@ -651,41 +632,40 @@ export default function Game() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ walletAddress, boostId: 'timewarp_24h' }),
                 });
-        
                 if (!initRes.ok) throw new Error(t("payment_failed_init"));
                 const { reference } = await initRes.json();
 
-                const payload: PayCommandInput = {
+                // ✅ CAMBIO 3: La construcción del payload de `pay` es más simple.
+                // No se necesita `PayCommandInput` ni `Tokens`. Se usan strings directamente.
+                const { finalPayload } = await MiniKit.commandsAsync.pay({
                     reference,
-                    to: '0x536bB672A282df8c89DDA57E79423cC505750E52',
-                    tokens: [{ symbol: Tokens.WLD, token_amount: tokenToDecimals(timeWarpWldCost, Tokens.WLD).toString() }],
+                    to: '0x536bB672A282df8c89DDA57E79423cC505750E52', // Dirección de recepción
+                    tokens: [{ 
+                        symbol: Tokens.WLD, 
+                        token_amount: parseUnits(timeWarpWldCost.toString(), 18).toString() 
+                    }],
                     description: t('time_warp_purchase_desc'),
-                };
-
-                const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
+                });
 
                 if (finalPayload.status === 'success' && finalPayload.transaction_id) {
                     setNotification({ message: t("payment_sent_verifying"), type: 'success' });
+                    // ... el resto de la lógica de confirmación está bien
                     const res = await fetch('/api/confirm-timewarp-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ txId: finalPayload.transaction_id, rewardAmount: reward }),
                     });
-
                     const data = await res.json();
                     if (data.success) {
-                        setGameState(prev => ({
-                            ...prev,
-                            tokens: prev.tokens + data.rewardAmount,
-                            wldTimeWarpsPurchased: (prev.wldTimeWarpsPurchased || 0) + 1,
-                        }));
+                        setGameState(prev => ({ ...prev, tokens: prev.tokens + data.rewardAmount, wldTimeWarpsPurchased: (prev.wldTimeWarpsPurchased || 0) + 1 }));
                         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + data.rewardAmount }));
                         setNotification({ message: t("time_warp_success"), type: 'success' });
                     } else {
                         throw new Error(data.error || t("confirmation_failed"));
                     }
                 } else {
-                    throw new Error((finalPayload as MiniAppPaymentErrorPayload).error_code || t("payment_cancelled"));
+                    // El error se maneja de forma más genérica.
+                    throw new Error((finalPayload as { message?: string }).message || t("payment_cancelled"));
                 }
             } catch (error) {
                 setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });

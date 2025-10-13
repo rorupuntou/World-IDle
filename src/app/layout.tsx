@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.className} bg-red-500 text-slate-50 pt-safe-top pb-safe-bottom`}
+        className={`${inter.className} bg-stone-950 text-slate-50 pt-safe-top pb-safe-bottom`}
         style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, #3f3f46 1px, transparent 0)',
           backgroundSize: '2rem 2rem'

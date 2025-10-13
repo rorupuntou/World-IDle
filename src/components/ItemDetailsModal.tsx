@@ -78,7 +78,7 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-bold mb-2 text-cyan-400">{item.name}</h2>
+                    <h2 className="text-2xl font-bold mb-4 text-cyan-400">{item.name}</h2>
                     <button onClick={onClose} className="p-1 -m-1 text-slate-400 hover:text-white rounded-full">
                         <XMarkIcon className="w-6 h-6" />
                     </button>
@@ -88,7 +88,7 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                 {item.req && (
                     <div className="mb-4">
                         <h3 className="font-bold mb-1 text-slate-200">{t('requirements')}</h3>
-                        <ul className="list-disc list-inside text-slate-300 space-y-1">
+                        <ul className="list-disc list-inside text-slate-300 space-y-2">
                             {formatRequirement(item.req, autoclickers, t).map((r, i) => <li key={i}>{r}</li>)}
                         </ul>
                     </div>
@@ -97,7 +97,7 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                 {item.effect && item.effect.length > 0 && (
                     <div className="mb-4">
                         <h3 className="font-bold mb-1 text-lime-300">{t('effect')}</h3>
-                        <ul className="list-disc list-inside text-lime-400 space-y-1">
+                        <ul className="list-disc list-inside text-lime-400 space-y-2">
                             {formatEffect(item.effect, autoclickers, t).map((e, i) => <li key={i}>{e}</li>)}
                         </ul>
                     </div>

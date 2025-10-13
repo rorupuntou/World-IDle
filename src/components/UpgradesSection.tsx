@@ -135,7 +135,7 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
                 {t('buy_all_affordable')} ({availableUpgrades.length})
             </button>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
         {upgrades.map((upg) => {
           if (upg.purchased) return null;
 
@@ -154,9 +154,9 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
               key={upg.id} 
               initial={{ opacity: 0, y: 20 }} 
               animate={{ opacity: 1, y: 0 }} 
-              className={`w-full flex flex-col gap-3 p-4 rounded-lg border ${tierClasses.border} ${tierClasses.bg} ${!requirementsMet ? 'opacity-60' : ''} transition-all`}
+              className={`w-full flex flex-col gap-4 p-4 rounded-lg border ${tierClasses.border} ${tierClasses.bg} ${!requirementsMet ? 'opacity-60' : ''} transition-all`}
             >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                     <div className={`flex-shrink-0 p-2 mt-1 rounded-full bg-black/20 ${isPurchasable ? tierClasses.text : 'text-slate-500'}`}>
                         <IconComponent className="w-8 h-8"/>
                     </div>
@@ -182,7 +182,7 @@ export default function UpgradesSection({ upgrades, autoclickers, gameState, sta
                     </div>
                 </div>
                 {!requirementsMet && requirementTexts.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-slate-700/50 text-xs">
+                    <div className="mt-4 pt-4 border-t border-slate-700/50 text-xs">
                         <p className="font-bold text-red-400/80 mb-1">{t('requirements')}:</p>
                         <ul className="list-none pl-2 space-y-1">
                             {requirementTexts.map((req, i) => (

@@ -103,19 +103,19 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
   };
 
   return (
-    <div className="bg-gray-800 p-4 rounded-lg flex flex-col gap-6">
+    <div className="bg-slate-900/50 backdrop-blur-sm p-4 rounded-xl border border-slate-700 flex flex-col gap-8">
       <div>
         <h2 className="text-xl font-bold mb-4">{t('permanent_boosts_shop')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {boosts.map((boost) => (
-            <div key={boost.id} className="bg-gray-700 p-4 rounded-lg flex flex-col justify-between">
+            <div key={boost.id} className="bg-slate-800/50 p-4 rounded-lg flex flex-col justify-between">
               <div>
                 <h3 className="text-lg font-semibold">{t(boost.name)}</h3>
-                <p className="text-gray-400">{t('price')}: {boost.price} WLD</p>
+                <p className="text-slate-400">{t('price')}: {boost.price} WLD</p>
               </div>
               <button
                 onClick={() => handleBoostPurchase(boost.id)}
-                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
                 disabled={!walletAddress}
               >
                 {t('buy_now')}
@@ -126,9 +126,9 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
       </div>
       <div>
         <h2 className="text-xl font-bold mb-4">{t('time_warps')}</h2>
-        <div className="bg-gray-700 p-4 rounded-lg">
+        <div className="bg-slate-800/50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold">{t('time_warp_24h')}</h3>
-          <p className="text-gray-400 mb-2">{t('time_warp_desc')}</p>
+          <p className="text-slate-400 mb-2">{t('time_warp_desc')}</p>
           <p className="text-lime-400 font-bold text-lg mb-4">
             {t('reward')}: +{formatNumber(timeWarpReward)} $WCLICK
           </p>
@@ -140,7 +140,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
             ) : (
               <button
                 onClick={() => handleTimeWarpPurchase('prestige')}
-                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
                 disabled={!walletAddress || prestigeBalance < timeWarpPrestigeCost}
               >
                 {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
@@ -148,7 +148,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
             )}
             <button
               onClick={() => handleTimeWarpPurchase('wld')}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
               disabled={!walletAddress}
             >
               {t('buy_with_wld', { price: timeWarpWldCost.toFixed(2) })}

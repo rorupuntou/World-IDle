@@ -26,11 +26,11 @@ export default function PrestigeSection({
 
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-            <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
             <p className="text-sm text-slate-300">
                 {t('prestige_bonus_part1')}<b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b>{t('prestige_bonus_part2')}
             </p>
-            <p className="text-xs text-slate-400 mt-1">{t('prestige_balance_message', { prestigeBalance: prestigeBalance.toLocaleString() })}</p>
+            <p className="text-xs text-slate-400 mt-2">{t('prestige_balance_message', { prestigeBalance: prestigeBalance.toLocaleString() })}</p>
             
             {isPrestigeReady && (
                 <p className="text-center text-sm mt-3 text-yellow-200">

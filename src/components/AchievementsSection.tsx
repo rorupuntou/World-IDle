@@ -14,8 +14,8 @@ export default function AchievementsSection({ achievements, showRequirements }: 
   const { t } = useLanguage();
   return (
     <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-        <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrophyIcon className="w-6 h-6"/>{t('achievements')}</h3>
-        <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-3">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrophyIcon className="w-6 h-6"/>{t('achievements')}</h3>
+        <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-4">
         {achievements.map((ach) => {
           if (ach.type === 'shadow' && !ach.unlocked) {
             return (

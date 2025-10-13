@@ -868,7 +868,7 @@ export default function Game() {
                     />
                 )}
             </AnimatePresence>
-            <div className="w-full max-w-md mx-auto p-4 pt-12 flex flex-col gap-6 pb-24"> 
+            <div className="w-full max-w-md mx-auto p-6 pt-12 flex flex-col gap-8 pb-28"> 
                 <div className="text-center">
                     <h1 className="text-5xl font-bold tracking-tighter bg-gradient-to-r from-slate-200 to-slate-400 text-transparent bg-clip-text">{t('app_title')}</h1>
                 </div>
@@ -884,7 +884,7 @@ export default function Game() {
                 <div className="flex flex-col gap-6">
                     {activeTab === 'main' && (
                         <div className="flex flex-col gap-6">
-                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500/80 hover:bg-cyan-500/100 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/20 border border-cyan-400">
+                            <motion.button whileTap={{ scale: 0.95 }} onClick={handleManualClick} className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-6 rounded-xl text-2xl shadow-lg shadow-cyan-500/30 border border-cyan-400 transition-colors">
                                 {t('click')} (+{formatNumber(clickValue)})
                             </motion.button>
                             <AutoclickersSection
@@ -916,7 +916,7 @@ export default function Game() {
                                 <div className="mt-4">
                                     <button 
                                         onClick={handleVerifyWithMiniKit}
-                                        className="w-full bg-blue-500/80 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
+                                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors"
                                     >
                                         Verify with World ID
                                     </button>
@@ -958,24 +958,24 @@ export default function Game() {
                     )}
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/80 backdrop-blur-lg border-t border-slate-700 flex justify-around items-center">
-                    <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'}`}>
-                        <HomeIcon className="w-6 h-6" />
-                        <span className="text-xs">{t('main_tab')}</span>
+                <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-around items-center pb-safe-bottom">
+                    <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                        <HomeIcon className="w-7 h-7" />
+                        <span className="text-xs font-medium">{t('main_tab')}</span>
                     </button>
-                    <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'}`}>
-                        <BoltIcon className="w-6 h-6" />
-                        <span className="text-xs">{t('upgrades_tab')}</span>
+                    <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                        <BoltIcon className="w-7 h-7" />
+                        <span className="text-xs font-medium">{t('upgrades_tab')}</span>
                     </button>
-                    <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 ${activeTab === 'shop' ? 'text-cyan-400' : 'text-slate-400'}`}>
-                        <ShoppingCartIcon className="w-6 h-6" />
-                        <span className="text-xs">{t('shop_tab')}</span>
+                    <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 ${activeTab === 'shop' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                        <ShoppingCartIcon className="w-7 h-7" />
+                        <span className="text-xs font-medium">{t('shop_tab')}</span>
                     </button>
                 </div>
                  <div className="mt-4">
                     <button 
                         onClick={() => saveGameToBackend(true)}
-                        className="w-full flex items-center justify-center gap-2 bg-slate-500/20 hover:bg-slate-500/40 text-slate-300 font-bold py-2 px-4 rounded-lg"
+                        className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 font-bold py-2 px-4 rounded-lg transition-colors"
                     >
                         <BookmarkIcon className="w-5 h-5" />
                         {t('save_game')}

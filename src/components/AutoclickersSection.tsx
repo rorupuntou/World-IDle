@@ -54,7 +54,7 @@ export default function AutoclickersSection({
     }, [autoclickers, devModeActive]);
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6" />{t('autoclickers_section.title')}</h3>
                 <div className="flex items-center bg-slate-500/10 border border-slate-700 rounded-lg">
@@ -84,7 +84,7 @@ export default function AutoclickersSection({
                         <motion.button 
                             onClick={() => purchaseAutoclicker(auto.id)} 
                             disabled={!canAfford || isConfirmingPurchase || isThisItemPending}
-                            className="flex-grow flex justify-between items-center p-3 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex-grow flex justify-between items-center p-4 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <div className="text-left">
                                 <p className={`font-bold ${auto.devOnly ? 'text-yellow-400' : ''}`}>{translatedName} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
@@ -103,7 +103,7 @@ export default function AutoclickersSection({
                         </motion.button>
                         <button 
                             onClick={() => showRequirements({ name: translatedName, desc: translatedDesc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] }, 'autoclicker')}
-                            className="p-3 text-slate-400 hover:text-white border-l border-slate-700"
+                            className="p-4 text-slate-400 hover:text-white border-l border-slate-700"
                         >
                             <InformationCircleIcon className="w-5 h-5" />
                         </button>

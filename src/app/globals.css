@@ -1,12 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html, body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   overflow-y: auto;
 }
-
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
 
 :root {
   --background: #0a0a0a;

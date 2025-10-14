@@ -2,7 +2,7 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { BeakerIcon, CursorArrowRaysIcon, ArrowTrendingUpIcon } from "@heroicons/react/24/outline";
+import { TestTube, MagicWand, ArrowUp } from "iconoir-react";
 
 interface HeaderStatsProps {
     tokens: number;
@@ -29,16 +29,16 @@ export default function HeaderStats({
             <div className="flex justify-center items-center gap-4 mt-4">
                 <p className="text-md text-lime-400">+{formatNumber(tokensPerSecond)}{t('per_second')}</p>
                 <div className="flex items-center gap-2 text-cyan-400">
-                    <CursorArrowRaysIcon className="w-5 h-5" />
+                    <MagicWand className="w-5 h-5" />
                     <p className="font-mono text-lg">{formatNumber(totalClicks)}</p>
                 </div>
                 <div className="flex items-center gap-2 text-yellow-400">
-                    <BeakerIcon className="w-5 h-5" />
+                    <TestTube className="w-5 h-5" />
                     <p className="font-mono text-lg">{humanityGems}</p>
                 </div>
                 {permanentBoostBonus > 0 && (
                     <div className="flex items-center gap-2 text-purple-400">
-                        <ArrowTrendingUpIcon className="w-5 h-5" />
+                        <ArrowUp className="w-5 h-5" />
                         <p className="font-mono text-lg">+{permanentBoostBonus * 100}%</p>
                     </div>
                 )}

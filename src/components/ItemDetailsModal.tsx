@@ -1,6 +1,6 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Xmark } from 'iconoir-react';
 import { Requirement, Effect, Autoclicker } from './types';
 
 interface ItemDetailsModalProps {
@@ -80,7 +80,7 @@ export default function ItemDetailsModal({ item, autoclickers, onClose, onPurcha
                 <div className="flex justify-between items-start">
                     <h2 className="text-2xl font-bold mb-4 text-cyan-400">{item.name}</h2>
                     <button onClick={onClose} className="p-1 -m-1 text-slate-400 hover:text-white rounded-full">
-                        <XMarkIcon className="w-6 h-6" />
+                        <Xmark className="w-6 h-6" />
                     </button>
                 </div>
                 {item.desc && <p className="text-slate-400 italic mb-4">{item.desc}</p>}

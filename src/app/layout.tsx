@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./globals.css";
+import "@worldcoin/mini-apps-ui-kit-react/styles.css";
 
 const inter = Inter({ subsets: ["latin"] });
 

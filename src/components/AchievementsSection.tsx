@@ -2,8 +2,9 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { TrophyIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { Trophy, QuestionMark } from 'iconoir-react';
 import { Achievement, Requirement } from "@/components/types";
+import clsx from "clsx";
 
 interface AchievementsSectionProps {
   achievements: Achievement[];
@@ -13,21 +14,24 @@ interface AchievementsSectionProps {
 export default function AchievementsSection({ achievements, showRequirements }: AchievementsSectionProps) {
   const { t } = useLanguage();
   return (
-    <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrophyIcon className="w-6 h-6"/>{t('achievements')}</h3>
-        <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-4">
+    <div className="flex flex-col gap-4">
+        <h3 className="text-xl font-semibold flex items-center gap-2 px-1"><Trophy className="w-6 h-6"/>{t('achievements')}</h3>
+        <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
         {achievements.map((ach) => {
+          const translatedName = t(ach.name);
+          const translatedDesc = t(ach.desc);
+
           if (ach.type === 'shadow' && !ach.unlocked) {
             return (
               <motion.div 
                 key={ach.id} 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                className="aspect-square flex justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-opacity cursor-pointer opacity-50" 
+                initial={{ opacity: 0, scale: 0.8 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="aspect-square flex justify-center items-center bg-slate-900/80 rounded-lg border border-slate-700 transition-all cursor-pointer hover:bg-slate-800"
                 title={t('secret_trophy')}
                 onClick={() => showRequirements({ name: t('secret_trophy'), desc: t('secret_trophy_desc') }, 'achievement')}
               >
-                <div className="text-3xl text-slate-500"><QuestionMarkCircleIcon className="w-8 h-8" /></div>
+                <QuestionMark className="w-8 h-8 text-slate-600" />
               </motion.div>
             );
           }
@@ -35,13 +39,22 @@ export default function AchievementsSection({ achievements, showRequirements }: 
           return (
             <motion.div 
               key={ach.id} 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              className={`aspect-square flex justify-center items-center bg-slate-500/10 rounded-lg border border-slate-700 transition-opacity cursor-pointer ${ach.unlocked ? 'opacity-100' : 'opacity-20'}`} 
-              title={ach.unlocked ? `${t(ach.name)} - ${t(ach.desc)}`: t(ach.name)}
-              onClick={() => showRequirements({ ...ach, name: t(ach.name), desc: t(ach.desc) }, 'achievement')}
+              initial={{ opacity: 0, scale: 0.8 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              className={clsx(
+                "aspect-square flex justify-center items-center rounded-lg border transition-all cursor-pointer hover:bg-slate-800",
+                {
+                  "bg-yellow-950/50 border-yellow-500 shadow-lg shadow-yellow-500/20": ach.unlocked,
+                  "bg-slate-900/80 border-slate-800 opacity-50 grayscale": !ach.unlocked
+                }
+              )}
+              title={ach.unlocked ? `${translatedName} - ${translatedDesc}`: translatedName}
+              onClick={() => showRequirements({ ...ach, name: translatedName, desc: translatedDesc }, 'achievement')}
             >
-              <div className="text-3xl">{ach.unlocked ? '🏆' : '🔒'}</div>
+              <Trophy className={clsx("w-8 h-8", {
+                "text-yellow-400": ach.unlocked,
+                "text-slate-600": !ach.unlocked
+              })} />
             </motion.div>
           );
         })}

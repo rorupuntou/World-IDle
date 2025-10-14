@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckBadgeIcon, XMarkIcon, BookmarkIcon, Cog6ToothIcon, HomeIcon, BoltIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
-// ✅ CAMBIO 1: Importación de MiniKit simplificada. Ya no se importan tipos complejos.
+import { Rocket, Home, Shop as ShopIcon, Bookmark, Settings, Check, Xmark } from 'iconoir-react';
 import { MiniKit, Tokens } from '@worldcoin/minikit-js';
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
@@ -57,10 +56,10 @@ const Toast = ({ message, type, onDone }: { message: string, type: 'success' | '
             initial={{ opacity: 0, y: 50 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0, y: 20 }} 
-            className={`fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? 'bg-lime-400/90' : 'bg-red-500/90'}`}>
-            {isSuccess ? <CheckBadgeIcon className="w-6 h-6" /> : <XMarkIcon className="w-6 h-6" />}
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? 'bg-lime-400/90' : 'bg-red-500/90'}`}>
+            {isSuccess ? <Check className="w-6 h-6" /> : <Xmark className="w-6 h-6" />}
             <span>{message}</span>
-            <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><XMarkIcon className="w-4 h-4" /></button>
+            <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><Xmark className="w-4 h-4" /></button>
         </motion.div>
     );
 };
@@ -958,17 +957,17 @@ export default function Game() {
                     )}
                 </div>
 
-                <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-around items-center pb-safe-bottom">
-                    <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
-                        <HomeIcon className="w-7 h-7" />
-                        <span className="text-xs font-medium">{t('main_tab')}</span>
-                    </button>
+                <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-between items-center px-8 pb-safe-bottom">
                     <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
-                        <BoltIcon className="w-7 h-7" />
+                        <Rocket className="w-7 h-7" />
                         <span className="text-xs font-medium">{t('upgrades_tab')}</span>
                     </button>
+                    <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                        <Home className="w-7 h-7" />
+                        <span className="text-xs font-medium">{t('main_tab')}</span>
+                    </button>
                     <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 ${activeTab === 'shop' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
-                        <ShoppingCartIcon className="w-7 h-7" />
+                        <ShopIcon className="w-7 h-7" />
                         <span className="text-xs font-medium">{t('shop_tab')}</span>
                     </button>
                 </div>
@@ -977,13 +976,13 @@ export default function Game() {
                         onClick={() => saveGameToBackend(true)}
                         className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 font-bold py-2 px-4 rounded-lg transition-colors"
                     >
-                        <BookmarkIcon className="w-5 h-5" />
+                        <Bookmark className="w-5 h-5" />
                         {t('save_game')}
                     </button>
                 </div>
             </div>
             <button onClick={handleDevMode} className="fixed bottom-2 right-2 p-2 text-transparent hover:text-yellow-400">
-                <Cog6ToothIcon className="w-5 h-5" />
+                <Settings className="w-5 h-5" />
             </button>
         </>
     );

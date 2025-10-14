@@ -2,8 +2,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import Image from 'next/image';
-import { CpuChipIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { Cpu, InfoCircle } from 'iconoir-react';
 import { Autoclicker, BuyAmount, GameState, Requirement, Effect } from "@/components/types";
+import clsx from "clsx";
 
 interface AutoclickersSectionProps {
     autoclickers: Autoclicker[];
@@ -54,15 +55,21 @@ export default function AutoclickersSection({
     }, [autoclickers, devModeActive]);
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold flex items-center gap-2"><CpuChipIcon className="w-6 h-6" />{t('autoclickers_section.title')}</h3>
-                <div className="flex items-center bg-slate-500/10 border border-slate-700 rounded-lg">
+        <div className="space-y-3">
+            <div className="flex justify-between items-center px-1">
+                <h3 className="text-xl font-semibold flex items-center gap-2"><Cpu className="w-6 h-6" />{t('autoclickers_section.title')}</h3>
+                <div className="flex items-center bg-slate-900/80 border border-slate-700 rounded-lg">
                     {([1, 10, 100] as BuyAmount[]).map(amount => (
                         <button
                             key={amount}
                             onClick={() => setBuyAmount(amount)}
-                            className={`px-4 py-1 text-sm font-bold rounded-md transition-colors ${buyAmount === amount ? 'bg-cyan-500/80 text-white' : 'text-slate-400 hover:bg-slate-500/20'}`}
+                            className={clsx(
+                                "px-3 py-1 text-sm font-bold rounded-md transition-colors",
+                                {
+                                    'bg-cyan-500 text-white': buyAmount === amount,
+                                    'text-slate-400 hover:bg-slate-700/50': buyAmount !== amount
+                                }
+                            )}
                         >
                             x{amount}
                         </button>
@@ -78,21 +85,32 @@ export default function AutoclickersSection({
                 const translatedDesc = t(auto.desc);
 
                 const canAfford = gameState.tokens >= totalTokenCost && prestigeBalance >= totalPrestigeCost;
+                const isDisabled = !canAfford || isConfirmingPurchase || isThisItemPending;
 
                 return (
-                    <div key={auto.id} className="w-full flex items-center bg-slate-500/10 backdrop-blur-sm rounded-lg border border-slate-700 hover:bg-slate-500/20 transition-colors">
+                    <div 
+                        key={auto.id} 
+                        className={clsx(
+                            "w-full flex items-center bg-slate-900/70 rounded-xl border transition-all duration-200",
+                            {
+                                "border-slate-700 hover:bg-slate-800/60": !isDisabled,
+                                "border-slate-800 opacity-60": isDisabled
+                            }
+                        )}
+                    >
                         <motion.button 
                             onClick={() => purchaseAutoclicker(auto.id)} 
-                            disabled={!canAfford || isConfirmingPurchase || isThisItemPending}
-                            className="flex-grow flex justify-between items-center p-4 disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={isDisabled}
+                            className="flex-grow flex justify-between items-center p-3 disabled:cursor-not-allowed"
+                            whileTap={{ scale: isDisabled ? 1 : 0.98 }}
                         >
                             <div className="text-left">
-                                <p className={`font-bold ${auto.devOnly ? 'text-yellow-400' : ''}`}>{translatedName} <span className="text-slate-400 text-sm">({auto.purchased})</span></p>
+                                <p className={clsx("font-bold", auto.devOnly ? 'text-yellow-400' : 'text-slate-100')}>{translatedName} <span className="text-slate-400 text-sm font-normal">({auto.purchased})</span></p>
                                 <p className="text-xs text-slate-400 italic">{translatedDesc}</p>
                                 <p className="text-xs text-lime-400">+{formatNumber(autoclickerCPSValues.get(auto.id) || 0)}{t('per_second')} {t('each')}</p>
                             </div>
-                            <div className="text-right font-mono text-yellow-400">
-                                <p>{formatNumber(totalTokenCost)}</p>
+                            <div className="text-right font-mono">
+                                <p className={clsx("text-lg", canAfford ? "text-yellow-400" : "text-red-500/70")}>{formatNumber(totalTokenCost)}</p>
                                 {totalPrestigeCost > 0 && (
                                     <p className="text-sm flex items-center justify-end gap-1">
                                         <Image src="/prestige-token-icon.svg" alt="Prestige Token" width={16} height={16} />
@@ -103,9 +121,9 @@ export default function AutoclickersSection({
                         </motion.button>
                         <button 
                             onClick={() => showRequirements({ name: translatedName, desc: translatedDesc, req: auto.req, effect: [{type: 'addTps', value: auto.tps}] }, 'autoclicker')}
-                            className="p-4 text-slate-400 hover:text-white border-l border-slate-700"
+                            className="p-4 text-slate-500 hover:text-cyan-400 border-l border-slate-700/80 transition-colors"
                         >
-                            <InformationCircleIcon className="w-5 h-5" />
+                            <InfoCircle className="w-5 h-5" />
                         </button>
                     </div>
                 )

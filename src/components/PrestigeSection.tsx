@@ -2,7 +2,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { StarIcon } from '@heroicons/react/24/outline';
+import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PrestigeSectionProps {
@@ -26,7 +26,7 @@ export default function PrestigeSection({
 
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><StarIcon className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
             <p className="text-sm text-slate-300">
                 {t('prestige_bonus_part1')}<b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b>{t('prestige_bonus_part2')}
             </p>

@@ -4,6 +4,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import React from 'react';
 import { MiniKit, PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
 import { GameState } from './types';
+import clsx from "clsx";
+import { Clock } from "iconoir-react";
 
 interface ShopSectionProps {
   walletAddress: string | null;
@@ -102,53 +104,88 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
     }
   };
 
+  const canAffordPrestigeWarp = prestigeBalance >= timeWarpPrestigeCost;
+
   return (
-    <div className="bg-slate-900/50 backdrop-blur-sm p-4 rounded-xl border border-slate-700 flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-bold mb-4">{t('permanent_boosts_shop')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {boosts.map((boost) => (
-            <div key={boost.id} className="bg-slate-800/50 p-4 rounded-lg flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{t(boost.name)}</h3>
-                <p className="text-slate-400">{t('price')}: {boost.price} WLD</p>
-              </div>
-              <button
-                onClick={() => handleBoostPurchase(boost.id)}
-                className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
-                disabled={!walletAddress}
+        <h2 className="text-xl font-bold mb-4 px-1">{t('permanent_boosts_shop')}</h2>
+        <div className="grid grid-cols-1 gap-4">
+          {boosts.map((boost) => {
+            const isAvailable = !!walletAddress;
+            return (
+              <div 
+                key={boost.id} 
+                className={clsx(
+                  "bg-slate-900/70 p-4 rounded-xl border flex flex-col justify-between transition-all",
+                  {
+                    "border-slate-700": isAvailable,
+                    "border-slate-800 opacity-60": !isAvailable,
+                  }
+                )}
               >
-                {t('buy_now')}
-              </button>
-            </div>
-          ))}
+                <div>
+                  <h3 className="text-lg font-semibold">{t(boost.name)}</h3>
+                  <p className="text-slate-400">{t('price')}: {boost.price} WLD</p>
+                </div>
+                <button
+                  onClick={() => handleBoostPurchase(boost.id)}
+                  className={clsx(
+                    "mt-4 w-full text-white font-bold py-2 px-4 rounded-lg transition-colors",
+                    {
+                      "bg-purple-600 hover:bg-purple-700": isAvailable,
+                      "bg-slate-600 cursor-not-allowed": !isAvailable,
+                    }
+                  )}
+                  disabled={!isAvailable}
+                >
+                  {t('buy_now')}
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
       <div>
-        <h2 className="text-xl font-bold mb-4">{t('time_warps')}</h2>
-        <div className="bg-slate-800/50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold">{t('time_warp_24h')}</h3>
-          <p className="text-slate-400 mb-2">{t('time_warp_desc')}</p>
-          <p className="text-lime-400 font-bold text-lg mb-4">
-            {t('reward')}: +{formatNumber(timeWarpReward)} $WCLICK
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
+        <h2 className="text-xl font-bold mb-4 px-1">{t('time_warps')}</h2>
+        <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-700 flex flex-col gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">{t('time_warp_24h')}</h3>
+            <p className="text-slate-400 mb-2 text-sm">{t('time_warp_desc')}</p>
+            <p className="text-lime-400 font-bold text-base mb-3">
+              {t('reward')}: +{formatNumber(timeWarpReward)} $WCLICK
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
             {timeWarpCooldown ? (
-              <div className="flex-1 bg-pink-900/50 text-white font-bold py-2 px-4 rounded text-center">
-                {t('available_in')} {timeWarpCooldown}
+              <div className="flex-1 bg-slate-800 text-slate-300 font-bold py-2 px-4 rounded-lg text-center flex items-center justify-center gap-2">
+                <Clock />
+                <span>{t('available_in')} {timeWarpCooldown}</span>
               </div>
             ) : (
               <button
                 onClick={() => handleTimeWarpPurchase('prestige')}
-                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
-                disabled={!walletAddress || prestigeBalance < timeWarpPrestigeCost}
+                className={clsx(
+                  "w-full text-white font-bold py-2 px-4 rounded-lg transition-colors",
+                  {
+                    "bg-pink-600 hover:bg-pink-700": canAffordPrestigeWarp,
+                    "bg-slate-600 opacity-70 cursor-not-allowed": !canAffordPrestigeWarp,
+                  }
+                )}
+                disabled={!canAffordPrestigeWarp}
               >
                 {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
               </button>
             )}
             <button
               onClick={() => handleTimeWarpPurchase('wld')}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-slate-500"
+              className={clsx(
+                "w-full text-white font-bold py-2 px-4 rounded-lg transition-colors",
+                {
+                  "bg-blue-600 hover:bg-blue-700": !!walletAddress,
+                  "bg-slate-600 opacity-70 cursor-not-allowed": !walletAddress,
+                }
+              )}
               disabled={!walletAddress}
             >
               {t('buy_with_wld', { price: timeWarpWldCost.toFixed(2) })}

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatUnits } from 'viem';
-import { ArrowDownIcon } from '@heroicons/react/24/solid';
+import { ArrowDown } from 'iconoir-react';
 
 // Define the props for the component
 interface SwapSectionProps {
@@ -139,7 +139,7 @@ export default function SwapSection({ prestigeBalance, onSwap, isSwapping }: Swa
 
       <div className="flex justify-center -my-2 z-10">
         <button className="p-1 bg-slate-700 border-2 border-slate-800 rounded-full">
-            <ArrowDownIcon className="w-4 h-4 text-slate-400" />
+            <ArrowDown className="w-4 h-4 text-slate-400" />
         </button>
       </div>
 

@@ -6,5 +6,6 @@
     "geminicodeassist.verboseLogging": true,
     "geminicodeassist.inlineSuggestions.nextEditPredictions": true,
     "search.useGlobalIgnoreFiles": true,
-    "search.useParentIgnoreFiles": true
+    "search.useParentIgnoreFiles": true,
+    "geminicodeassist.inlineSuggestions.suggestionSpeed": "Fast"
 }

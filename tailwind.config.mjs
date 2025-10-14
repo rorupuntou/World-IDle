@@ -1,7 +1,8 @@
-// tailwind.config.js
+// tailwind.config.mjs
+import worldcoinPlugin from "@worldcoin/mini-apps-ui-kit-react/tailwind";
 
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+const config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -10,15 +11,12 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // 1. Sobrescribimos la altura para usar 'dvh' (esto ya estaba bien)
       minHeight: {
         screen: "100dvh",
       },
       height: {
         screen: "100dvh",
       },
-      // 2. NUEVO: Añadimos espaciado para las áreas seguras de iOS
-      // Esto nos permitirá usar clases como 'pt-safe', 'pb-safe', etc.
       spacing: {
         "safe-top": "env(safe-area-inset-top)",
         "safe-bottom": "env(safe-area-inset-bottom)",
@@ -28,6 +26,8 @@ module.exports = {
     },
   },
   plugins: [
-    require("@worldcoin/mini-apps-ui-kit-react/tailwind"),
+    worldcoinPlugin,
   ],
 };
+
+export default config;

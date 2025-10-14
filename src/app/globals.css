@@ -1,9 +1,7 @@
-html,
-body {
-  width: 100vw;
-  height: 100vh;
-  overscroll-behavior: none;
-  overflow: hidden;
+html, body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  overflow-y: auto;
 }
 
 @import "tailwindcss/preflight";

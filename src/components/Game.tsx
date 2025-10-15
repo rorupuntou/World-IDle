@@ -405,11 +405,27 @@ export default function Game() {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    const reloadGameData = useCallback(() => {
-        if (walletAddress) {
-            loadGameFromBackend(walletAddress);
+    const saveResetState = useCallback(async () => {
+        if (!walletAddress) return;
+        const resetData: FullGameState = {
+            gameState: { ...initialState, lastSaved: Date.now() },
+            stats: initialStats,
+            autoclickers: initialAutoclickers,
+            upgrades: initialUpgrades,
+            achievements: initialAchievements,
+        };
+        try {
+            await fetch("/api/save-game", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ walletAddress, gameData: resetData }),
+            });
+            setNotification({ message: t("game_saved"), type: 'success' });
+        } catch (error) {
+            console.error("Failed to save reset game state:", error);
+            setNotification({ message: t("save_error"), type: 'error' });
         }
-    }, [walletAddress, loadGameFromBackend]);
+    }, [walletAddress, t]);
 
     // Effect for successful prestige
     useEffect(() => {
@@ -418,18 +434,18 @@ export default function Game() {
             
             // Reset game state
             setGameState(initialState);
-            setStats(initialStats); // Correctly reset stats
+            setStats(initialStats);
             setAutoclickers(initialAutoclickers);
             setUpgrades(initialUpgrades);
             setAchievements(initialAchievements);
 
-            // Refetch balances and new state from backend
+            // Refetch balances and save the new state
             refetchPrestigeBalance();
-            reloadGameData();
+            saveResetState();
 
             setPendingPrestigeTxId(undefined); // Clear the pending transaction ID
         }
-    }, [isPrestigeSuccess, refetchPrestigeBalance, reloadGameData, t]);
+    }, [isPrestigeSuccess, refetchPrestigeBalance, saveResetState, t]);
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {

@@ -1,10 +1,10 @@
 
-"use client";
-
 import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
+import { parseEther } from 'viem';
+import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
     prestigeBoost: number;
@@ -14,7 +14,7 @@ interface PrestigeSectionProps {
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
-    reloadGameData: () => void;
+    setPendingPrestigeTxId: (txId: string) => void; // New prop
 }
 
 export default function PrestigeSection({
@@ -25,14 +25,19 @@ export default function PrestigeSection({
     isLoading,
     setIsLoading,
     walletAddress,
-    reloadGameData,
+    setPendingPrestigeTxId, // New prop
 }: PrestigeSectionProps) {
     const { t } = useLanguage();
 
     const handlePrestige = async () => {
         if (!MiniKit.isInstalled()) {
-            // Handle case where World App is not installed
             console.error("World App not installed");
+            alert(t('error.wallet_not_installed'));
+            return;
+        }
+
+        if (prestigeReward <= 0) {
+            alert(t('error.no_prestige_reward'));
             return;
         }
 
@@ -45,39 +50,60 @@ export default function PrestigeSection({
         };
 
         try {
-            const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
+            // 1. Verify with World ID
+            const { finalPayload: verifyFinalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
 
-            if (finalPayload.status === 'error') {
-                console.error('Error payload', finalPayload);
-                // You might want to show a user-friendly error message here
-                throw new Error(t('error.prestige_failed'));
+            if (verifyFinalPayload.status === 'error') {
+                throw new Error((verifyFinalPayload as { message?: string }).message || t('error.verification_failed'));
             }
 
+            // 2. Send proof to our backend for verification
             const response = await fetch('/api/prestige-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    payload: finalPayload as ISuccessResult,
+                    payload: verifyFinalPayload as ISuccessResult,
                     action: 'prestige-game',
                     signal: walletAddress,
-                    walletAddress: walletAddress
                 }),
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                if (errorData.code === 'already_verified') {
+                if (result.code === 'already_verified') {
                     throw new Error(t('error.already_verified_prestige'));
                 }
-                throw new Error(errorData.detail || t('error.prestige_failed'));
+                throw new Error(result.detail || t('error.prestige_failed'));
             }
 
-            console.log("Prestige successful, reloading game data...");
-            reloadGameData();
+            // 3. If backend verification is successful, send the mint transaction
+            if (result.success) {
+                const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                    transaction: [
+                        {
+                            address: contractConfig.prestigeTokenAddress,
+                            abi: contractConfig.prestigeTokenAbi,
+                            functionName: 'mint',
+                            args: [walletAddress, parseEther(prestigeReward.toString()).toString()],
+                            value: '0x0',
+                        },
+                    ],
+                });
+
+                if (txFinalPayload.status === 'error') {
+                    throw new Error((txFinalPayload as { message?: string }).message || t('error.transaction_failed'));
+                }
+
+                if (txFinalPayload.transaction_id) {
+                    setPendingPrestigeTxId(txFinalPayload.transaction_id);
+                } else {
+                    throw new Error(t('error.transaction_id_missing'));
+                }
+            }
 
         } catch (error) {
             console.error(error);
-            // Show a user-friendly error message
             alert(error instanceof Error ? error.message : String(error));
         } finally {
             setIsLoading(false);

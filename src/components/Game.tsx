@@ -10,7 +10,7 @@ import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
-    initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed 
+    initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed, initialStats
 } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
@@ -99,6 +99,7 @@ export default function Game() {
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
     const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number; type: 'prestige' | 'wld' } | null>(null);
     const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
+    const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>(); // New state
     const [selectedItem, setSelectedItem] = useState<({ name: string, desc?: string, req?: Requirement, effect?: Effect[], id?: number, cost?: number } & { itemType?: 'upgrade' | 'achievement' | 'autoclicker' }) | null>(null);
     const [devModeActive, setDevModeActive] = useState(false);
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
@@ -146,6 +147,13 @@ export default function Game() {
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingPurchaseTx?.txId ?? '',
+    });
+
+    // New hook for prestige transaction
+    const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
+        client,
+        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+        transactionId: pendingPrestigeTxId ?? '',
     });
 
     const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
@@ -402,6 +410,26 @@ export default function Game() {
             loadGameFromBackend(walletAddress);
         }
     }, [walletAddress, loadGameFromBackend]);
+
+    // Effect for successful prestige
+    useEffect(() => {
+        if (isPrestigeSuccess) {
+            setNotification({ message: t("prestige_success"), type: 'success' });
+            
+            // Reset game state
+            setGameState(initialState);
+            setStats(initialStats); // Correctly reset stats
+            setAutoclickers(initialAutoclickers);
+            setUpgrades(initialUpgrades);
+            setAchievements(initialAchievements);
+
+            // Refetch balances and new state from backend
+            refetchPrestigeBalance();
+            reloadGameData();
+
+            setPendingPrestigeTxId(undefined); // Clear the pending transaction ID
+        }
+    }, [isPrestigeSuccess, refetchPrestigeBalance, reloadGameData, t]);
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
@@ -871,10 +899,10 @@ export default function Game() {
                                 prestigeBalance={prestigeBalance}
                                 prestigeReward={prestigeReward}
                                 isPrestigeReady={canPrestige}
-                                isLoading={isLoading}
+                                isLoading={isLoading || isConfirmingPrestige} // Show loading while confirming
                                 setIsLoading={setIsLoading}
                                 walletAddress={walletAddress}
-                                reloadGameData={reloadGameData}
+                                setPendingPrestigeTxId={setPendingPrestigeTxId} // Pass setter
                             />
                             {!stats.isVerified && (
                                 <div className="mt-4">

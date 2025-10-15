@@ -11,5 +11,7 @@
     "geminicodeassist.chat.enableStreaming": false,
     "gemini-cli.debug.logging.enabled": true,
     "geminicodeassist.contextExclusionGitignore": false,
-    "geminicodeassist.project": "gen-lang-client-0427096448"
+    "geminicodeassist.project": "gen-lang-client-0427096448",
+    "npm.packageManager": "pnpm",
+    "npm.scriptRunner": "pnpm"
 }

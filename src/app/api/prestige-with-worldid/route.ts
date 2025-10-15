@@ -1,41 +1,28 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import type { ISuccessResult } from '@worldcoin/idkit';
+import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/minikit-js';
 import { supabase } from '@/lib/supabaseClient';
 import { initialState, initialAutoclickers, initialUpgrades, initialAchievements, initialStats } from '@/app/data';
 
-const APP_ID = process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_3b83f308b9f7ef9a01e4042f1f48721d';
-const ACTION_NAME = 'prestige-game';
+const APP_ID = (process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_3b83f308b9f7ef9a01e4042f1f48721d') as `app_${string}`;
 
-interface VerifyResponse {
-  success: boolean;
-  code?: string;
-  detail?: string;
-  attribute?: string | null;
+interface IRequestPayload {
+	payload: ISuccessResult
+	action: string
+	signal: string | undefined
+    walletAddress: string;
 }
 
 export async function POST(req: NextRequest) {
-  const { proof, walletAddress } = (await req.json()) as { proof: ISuccessResult; walletAddress: string };
+  const { payload, action, signal, walletAddress } = (await req.json()) as IRequestPayload;
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'walletAddress is required' }, { status: 400 });
   }
 
-  const verifyRes = await fetch(`https://developer.worldcoin.org/api/v2/verify/${APP_ID}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': `world-idle-app/1.0`,
-    },
-    body: JSON.stringify({
-      ...proof,
-      action: ACTION_NAME,
-    }),
-  });
+  const verifyRes = (await verifyCloudProof(payload, APP_ID, action, signal)) as IVerifyResponse;
 
-  const verifyResult: VerifyResponse = await verifyRes.json();
-
-  if (verifyRes.ok && verifyResult.success) {
+  if (verifyRes.success) {
     // Proof is valid, reset the game state
     try {
       // Construct the full initial game state object
@@ -64,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
   } else {
     // Proof is invalid or already used
-    console.warn('World ID verification failed:', verifyResult);
-    return NextResponse.json(verifyResult, { status: 400 });
+    console.warn('World ID verification failed:', verifyRes);
+    return NextResponse.json(verifyRes, { status: 400 });
   }
 }

@@ -3,13 +3,13 @@ import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
-import { parseEther } from 'viem';
 import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
     prestigeBoost: number;
     prestigeBalance: number;
     prestigeReward: number;
+    totalTokensEarned: number;
     isPrestigeReady: boolean;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
@@ -21,6 +21,7 @@ export default function PrestigeSection({
     prestigeBoost,
     prestigeBalance,
     prestigeReward,
+    totalTokensEarned,
     isPrestigeReady,
     isLoading,
     setIsLoading,
@@ -77,15 +78,15 @@ export default function PrestigeSection({
                 throw new Error(result.detail || t('error.prestige_failed'));
             }
 
-            // 3. If backend verification is successful, send the mint transaction
+            // 3. If backend verification is successful, send the prestige transaction through GameManager
             if (result.success) {
                 const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
                     transaction: [
                         {
-                            address: contractConfig.prestigeTokenAddress,
-                            abi: contractConfig.prestigeTokenAbi,
-                            functionName: 'mint',
-                            args: [walletAddress, parseEther(prestigeReward.toString()).toString()],
+                            address: contractConfig.gameManagerAddress,
+                            abi: contractConfig.gameManagerAbi,
+                            functionName: 'prestige',
+                            args: [Math.floor(totalTokensEarned).toString()],
                             value: '0x0',
                         },
                     ],

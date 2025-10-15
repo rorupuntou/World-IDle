@@ -898,6 +898,7 @@ export default function Game() {
                                 prestigeBoost={prestigeBoost}
                                 prestigeBalance={prestigeBalance}
                                 prestigeReward={prestigeReward}
+                                totalTokensEarned={stats.totalTokensEarned}
                                 isPrestigeReady={canPrestige}
                                 isLoading={isLoading || isConfirmingPrestige} // Show loading while confirming
                                 setIsLoading={setIsLoading}

@@ -7,5 +7,9 @@
     "geminicodeassist.inlineSuggestions.nextEditPredictions": true,
     "search.useGlobalIgnoreFiles": true,
     "search.useParentIgnoreFiles": true,
-    "geminicodeassist.inlineSuggestions.suggestionSpeed": "Fast"
+    "geminicodeassist.inlineSuggestions.suggestionSpeed": "Fast",
+    "geminicodeassist.chat.enableStreaming": false,
+    "gemini-cli.debug.logging.enabled": true,
+    "geminicodeassist.contextExclusionGitignore": false,
+    "geminicodeassist.project": "gen-lang-client-0427096448"
 }

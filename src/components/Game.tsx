@@ -96,7 +96,6 @@ export default function Game() {
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
     const [floatingNumbers, setFloatingNumbers] = useState<{ id: number; value: string; x: number; y: number }[]>([]);
-    const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<string | undefined>();
     const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{ txId: string; itemId: number } | null>(null);
     const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{ txId: string; reward: number; type: 'prestige' | 'wld' } | null>(null);
     const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
@@ -143,25 +142,19 @@ export default function Game() {
         query: { enabled: !!walletAddress },
     });
 
-    const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } = useWaitForTransactionReceipt({
-        client,
-        appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-        transactionId: pendingPrestigeTxId ?? '',
-    });
-
     const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } = useWaitForTransactionReceipt({
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingPurchaseTx?.txId ?? '',
     });
 
-    const { isLoading: isConfirmingTimeWarp, isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
+    const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingTimeWarpTx?.txId ?? '',
     });
 
-    const { isLoading: isConfirmingSwap, isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
+    const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
         client,
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingSwapTxId ?? '',
@@ -402,17 +395,13 @@ export default function Game() {
         }
     }, [t]);
 
-    useEffect(() => {
-        if (isPrestigeSuccess) {
-            setNotification({ message: t("prestige_success"), type: 'success' });
-            setGameState(prev => ({ ...initialState, permanentBoostBonus: prev.permanentBoostBonus }));
-            setStats({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: stats.isVerified });
-            setAutoclickers(initialAutoclickers);
-            setUpgrades(initialUpgrades);
-            refetchPrestigeBalance();
-            setPendingPrestigeTxId(undefined); // Reset ID after success
+    const [isLoading, setIsLoading] = useState(false);
+
+    const reloadGameData = useCallback(() => {
+        if (walletAddress) {
+            loadGameFromBackend(walletAddress);
         }
-    }, [isPrestigeSuccess, refetchPrestigeBalance, t, stats.isVerified]);
+    }, [walletAddress, loadGameFromBackend]);
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {
@@ -556,40 +545,6 @@ export default function Game() {
             setNotification({ message: t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
         }
     }, [loadGameFromBackend, t]);
-
-    const handlePrestige = useCallback(async () => {
-        if (prestigeReward <= 0) return;
-        try {
-            // The amount to mint is the number of prestige tokens, converted to WEI (18 decimals)
-            const amountToMintInWei = parseUnits(prestigeReward.toString(), 18);
-            const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                transaction: [
-                    {
-                        address: contractConfig.gameManagerAddress,
-                        abi: contractConfig.gameManagerAbi,
-                        functionName: 'prestige',
-                        args: [amountToMintInWei.toString()],
-                        value: '0x0',
-                    },
-                ],
-            });
-
-            if (finalPayload.status === 'error') {
-                const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                console.error('DEBUG: ' + JSON.stringify(errorPayload, null, 2));
-                throw new Error(errorPayload.message || 'Error al enviar la transacción con MiniKit.');
-            }
-
-            if (finalPayload.transaction_id) {
-                setPendingPrestigeTxId(finalPayload.transaction_id);
-                setNotification({ message: t("transaction_sent"), type: 'success' });
-            } else {
-                throw new Error(t('transaction_error'));
-            }
-        } catch (error) {
-            setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
-        }
-    }, [prestigeReward, t]);
 
     // ✅ CAMBIO 2: Lógica de MiniKit actualizada a la API moderna.
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
@@ -915,9 +870,11 @@ export default function Game() {
                                 prestigeBoost={prestigeBoost}
                                 prestigeBalance={prestigeBalance}
                                 prestigeReward={prestigeReward}
-                                handlePrestige={handlePrestige}
                                 isPrestigeReady={canPrestige}
-                                isLoading={isConfirmingPrestige || isConfirmingPurchase || isConfirmingTimeWarp || isConfirmingSwap}
+                                isLoading={isLoading}
+                                setIsLoading={setIsLoading}
+                                walletAddress={walletAddress}
+                                reloadGameData={reloadGameData}
                             />
                             {!stats.isVerified && (
                                 <div className="mt-4">

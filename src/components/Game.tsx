@@ -339,6 +339,10 @@ export default function Game() {
         return true;
     }, [stats, totalCPS, autoclickers]);
 
+    const availableUpgradesCount = useMemo(() => {
+        return upgrades.filter(u => !u.purchased && checkRequirements(u.req) && gameState.tokens >= u.cost).length;
+    }, [upgrades, gameState.tokens, checkRequirements]);
+
     const sortedUpgrades = useMemo(() => {
         return [...upgrades].sort((a, b) => {
             const aAvailable = checkRequirements(a.req) && gameState.tokens >= a.cost;
@@ -362,6 +366,10 @@ export default function Game() {
     useEffect(() => {
         setIsClient(true);
     }, []);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [activeTab]);
 
     useEffect(() => {
         const decimals = typeof tokenDecimalsData === 'number' ? tokenDecimalsData : 18;
@@ -958,9 +966,14 @@ export default function Game() {
                 </div>
 
                 <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-between items-center px-8 pb-safe-bottom">
-                    <button onClick={() => setActiveTab('upgrades')} className={`flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                    <button onClick={() => setActiveTab('upgrades')} className={`relative flex flex-col items-center gap-1 ${activeTab === 'upgrades' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
                         <Rocket className="w-7 h-7" />
                         <span className="text-xs font-medium">{t('upgrades_tab')}</span>
+                        {availableUpgradesCount > 0 && (
+                            <span className="absolute top-0 right-0 -mt-1 -mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                                {availableUpgradesCount}
+                            </span>
+                        )}
                     </button>
                     <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
                         <Home className="w-7 h-7" />

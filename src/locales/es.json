@@ -393,5 +393,9 @@
     "unknown_autoclicker": "Autoclicker Desconocido",
     "req.tps": "Alcanza {amount} $WCLICK/s.",
     "req.verified": "Verifícate con World ID.",
-    "effect_desc.addTps": "Añade {value} a la producción base por segundo."
+    "effect_desc.addTps": "Añade {value} a la producción base por segundo.",
+    "upgrades_tab": "Mejoras",
+    "main_tab": "Principal",
+    "shop_tab": "Tienda",
+    "buy_all_affordable": "Comprar Mejoras Disponibles"
 }

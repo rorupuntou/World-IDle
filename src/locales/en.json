@@ -393,5 +393,9 @@
     "unknown_autoclicker": "Unknown Autoclicker",
     "req.tps": "Reach {amount} $WCLICK/s.",
     "req.verified": "Be verified with World ID.",
-    "effect_desc.addTps": "Adds {value} to base production per second."
+    "effect_desc.addTps": "Adds {value} to base production per second.",
+    "upgrades_tab": "Upgrades",
+    "main_tab": "Main",
+    "shop_tab": "Shop",
+    "buy_all_affordable": "Buy all Affordable"
 }

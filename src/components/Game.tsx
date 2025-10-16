@@ -23,6 +23,7 @@ import ShopSection from "./ShopSection";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
 import LanguageSelector from "./LanguageSelector";
+import TelegramButton from './TelegramButton';
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -47,7 +48,7 @@ function choose<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.leng
 
 const Toast = ({ message, type, onDone }: { message: string, type: 'success' | 'error', onDone: () => void }) => {
     useEffect(() => {
-        const timer = setTimeout(onDone, 4000);
+        const timer = setTimeout(onDone, 5000);
         return () => clearTimeout(timer);
     }, [onDone]);
     const isSuccess = type === 'success';
@@ -56,7 +57,7 @@ const Toast = ({ message, type, onDone }: { message: string, type: 'success' | '
             initial={{ opacity: 0, y: 50 }} 
             animate={{ opacity: 1, y: 0 }} 
             exit={{ opacity: 0, y: 20 }} 
-            className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? 'bg-lime-400/90' : 'bg-red-500/90'}`}>
+            className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? 'bg-lime-400/70' : 'bg-red-500/70'}`}>
             {isSuccess ? <Check className="w-6 h-6" /> : <Xmark className="w-6 h-6" />}
             <span>{message}</span>
             <button onClick={onDone} className="p-1 -m-1 hover:bg-black/10 rounded-full"><Xmark className="w-4 h-4" /></button>
@@ -851,6 +852,7 @@ export default function Game() {
     return (
         <>
             <LanguageSelector />
+            <TelegramButton />
             <NewsTicker />
             <AnimatePresence>
                 {floatingNumbers.map(num => (

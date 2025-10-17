@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('game_state')
-    .select('game_data')
+    .select('game_data, permanent_boost_bonus')
     .eq('wallet_address', walletAddress)
     .single();
 
@@ -22,8 +22,14 @@ export async function GET(req: NextRequest) {
   }
 
   if (data) {
-    // User found, return their game data
-    return NextResponse.json({ success: true, gameData: data.game_data }, { status: 200 });
+    // User found, return their game data and permanent boost
+    const gameData = data.game_data || {};
+    if (!gameData.gameState) {
+      gameData.gameState = {};
+    }
+    gameData.gameState.permanentBoostBonus = data.permanent_boost_bonus || 0;
+
+    return NextResponse.json({ success: true, gameData: gameData }, { status: 200 });
   } else {
     // No user found, this is a new player
     return NextResponse.json({ success: true, gameData: null }, { status: 200 });

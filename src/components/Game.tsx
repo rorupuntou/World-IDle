@@ -10,7 +10,7 @@ import { formatUnits, createPublicClient, http, defineChain, parseUnits } from "
 
 import { Autoclicker, Upgrade, Achievement, BuyAmount, GameState, StatsState, Requirement, FullGameState, Effect } from "./types";
 import { 
-    initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed, initialStats
+    initialState, initialAutoclickers, initialUpgrades, initialAchievements, newsFeed
 } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
@@ -406,47 +406,49 @@ export default function Game() {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    const saveResetState = useCallback(async () => {
-        if (!walletAddress) return;
-        const resetData: FullGameState = {
-            gameState: { ...initialState, lastSaved: Date.now() },
-            stats: initialStats,
-            autoclickers: initialAutoclickers,
-            upgrades: initialUpgrades,
-            achievements: initialAchievements,
-        };
-        try {
-            await fetch("/api/save-game", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ walletAddress, gameData: resetData }),
-            });
-            setNotification({ message: t("game_saved"), type: 'success' });
-        } catch (error) {
-            console.error("Failed to save reset game state:", error);
-            setNotification({ message: t("save_error"), type: 'error' });
-        }
-    }, [walletAddress, t]);
-
     // Effect for successful prestige
     useEffect(() => {
+        const handlePrestige = async () => {
+            if (!walletAddress) return;
+
+            try {
+                const res = await fetch('/api/prestige', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ walletAddress }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to prestige from server.');
+                }
+
+                setNotification({ message: t("prestige_success"), type: 'success' });
+
+                // Set the new state from the server's response
+                const { gameState, stats, autoclickers, upgrades, achievements } = data.gameData;
+                if (gameState) setGameState(gameState);
+                if (stats) setStats(stats);
+                if (autoclickers) setAutoclickers(autoclickers);
+                if (upgrades) setUpgrades(upgrades);
+                if (achievements) setAchievements(achievements);
+
+                // Refetch on-chain balance
+                refetchPrestigeBalance();
+
+            } catch (error) {
+                console.error("Prestige failed:", error);
+                setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' });
+            } finally {
+                setPendingPrestigeTxId(undefined); // Clear the pending transaction ID
+            }
+        };
+
         if (isPrestigeSuccess) {
-            setNotification({ message: t("prestige_success"), type: 'success' });
-            
-            // Reset game state
-            setGameState(initialState);
-            setStats(initialStats);
-            setAutoclickers(initialAutoclickers);
-            setUpgrades(initialUpgrades);
-            setAchievements(initialAchievements);
-
-            // Refetch balances and save the new state
-            refetchPrestigeBalance();
-            saveResetState();
-
-            setPendingPrestigeTxId(undefined); // Clear the pending transaction ID
+            handlePrestige();
         }
-    }, [isPrestigeSuccess, refetchPrestigeBalance, saveResetState, t]);
+    }, [isPrestigeSuccess, walletAddress, refetchPrestigeBalance, t]);
 
     useEffect(() => {
         if (isTimeWarpSuccess && pendingTimeWarpTx) {

@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // 3. Save the reset game state back to the database
     const { data: updateData, error: updateError } = await supabase
       .from('game_state')
-      .update({ game_data: resetData, last_prestaged: new Date().toISOString() })
+      .update({ game_data: resetData })
       .eq('wallet_address', walletAddress)
       .select('game_data') 
       .single();

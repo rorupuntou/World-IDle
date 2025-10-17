@@ -1,6 +1,8 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { supabase } from '@/lib/supabaseClient';
+import { FullGameState } from "@/components/types";
+import { initialAchievements, initialAutoclickers, initialState, initialStats, initialUpgrades } from "@/app/data";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -22,14 +24,28 @@ export async function GET(req: NextRequest) {
   }
 
   if (data) {
-    // User found, return their game data and permanent boost
-    const gameData = data.game_data || {};
-    if (!gameData.gameState) {
-      gameData.gameState = {};
-    }
-    gameData.gameState.permanentBoostBonus = data.permanent_boost_bonus || 0;
+    // User found
+    const permanentBoostBonus = data.permanent_boost_bonus || 0;
+    let gameData = data.game_data as FullGameState | null;
 
+    if (gameData) {
+        // User has existing game data, inject the boost
+        if (!gameData.gameState) {
+            gameData.gameState = { ...initialState };
+        }
+        gameData.gameState.permanentBoostBonus = permanentBoostBonus;
+    } else {
+        // User exists but has no game data (e.g., post-prestige, or error), create a fresh state
+        gameData = {
+            gameState: { ...initialState, permanentBoostBonus },
+            stats: initialStats,
+            autoclickers: initialAutoclickers,
+            upgrades: initialUpgrades,
+            achievements: initialAchievements,
+        };
+    }
     return NextResponse.json({ success: true, gameData: gameData }, { status: 200 });
+
   } else {
     // No user found, this is a new player
     return NextResponse.json({ success: true, gameData: null }, { status: 200 });

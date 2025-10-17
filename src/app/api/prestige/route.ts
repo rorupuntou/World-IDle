@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 1. Fetch the current permanent boost from the database
+    // 1. Fetch the current game_data to find the permanent boost
     const { data: user_data, error: fetchError } = await supabase
       .from('game_state')
-      .select('permanent_boost_bonus')
+      .select('game_data') // CORRECT: select the whole game_data object
       .eq('wallet_address', walletAddress)
       .single();
 
@@ -24,14 +24,16 @@ export async function POST(req: NextRequest) {
       throw new Error("Could not fetch user data for prestige.");
     }
 
-    const permanentBoostBonus = user_data?.permanent_boost_bonus || 0;
+    // CORRECT: Extract the bonus from inside the game_data object
+    const existingGameData = user_data?.game_data as FullGameState | null;
+    const permanentBoostBonus = existingGameData?.gameState?.permanentBoostBonus || 0;
 
     // 2. Create a fresh game state, preserving the permanent boost
     const resetData: FullGameState = {
         gameState: {
             ...initialState,
             lastSaved: Date.now(),
-            permanentBoostBonus: permanentBoostBonus,
+            permanentBoostBonus: permanentBoostBonus, // Use the extracted value
         },
         stats: initialStats,
         autoclickers: initialAutoclickers,
@@ -53,7 +55,8 @@ export async function POST(req: NextRequest) {
         if (updateError.code === 'PGRST116') {
             const { data: createData, error: createError } = await supabase
                 .from('game_state')
-                .insert({ wallet_address: walletAddress, game_data: resetData, permanent_boost_bonus: permanentBoostBonus })
+                // CORRECT: Do not try to insert into a non-existent column
+                .insert({ wallet_address: walletAddress, game_data: resetData })
                 .select('game_data')
                 .single();
             

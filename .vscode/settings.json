@@ -13,5 +13,7 @@
     "geminicodeassist.contextExclusionGitignore": false,
     "geminicodeassist.project": "gen-lang-client-0427096448",
     "npm.packageManager": "pnpm",
-    "npm.scriptRunner": "pnpm"
+    "npm.scriptRunner": "pnpm",
+    "githubPullRequests.experimental.chat": false,
+    "githubPullRequests.codingAgent.enabled": false
 }

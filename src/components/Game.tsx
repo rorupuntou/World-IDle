@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, Home, Shop as ShopIcon, Bookmark, Settings, Check, Xmark } from 'iconoir-react';
+import { Rocket, Home, Shop as ShopIcon, Bookmark, Settings, Check, Xmark, SoundHigh, SoundOff } from 'iconoir-react';
 import { MiniKit, Tokens } from '@worldcoin/minikit-js';
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
@@ -106,6 +106,11 @@ export default function Game() {
     const [gameJustLoaded, setGameJustLoaded] = useState(false);
     const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
 
+    // --- Audio State ---
+    const [isMuted, setIsMuted] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
     // --- Game State ---
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>({ totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: false });
@@ -168,6 +173,37 @@ export default function Game() {
         appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
         transactionId: pendingSwapTxId ?? '',
     });
+
+    // --- Audio Effects ---
+    useEffect(() => {
+        const audio = new Audio('/music/background-music.mp3');
+        audio.loop = true;
+        audio.volume = 0.25;
+        audioRef.current = audio;
+
+        return () => {
+            audio.pause();
+            audio.src = '';
+        };
+    }, []);
+
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.muted = isMuted;
+            if (hasInteracted && !isMuted) {
+                audioRef.current.play().catch(error => console.error("Audio play failed:", error));
+            } else if (isMuted) {
+                audioRef.current.pause();
+            }
+        }
+    }, [isMuted, hasInteracted]);
+
+    const toggleMute = () => {
+        setIsMuted(!isMuted);
+        if (!hasInteracted) {
+            setHasInteracted(true);
+        }
+    };
 
     // --- Memoized Calculations ---
     const prestigeBoost = useMemo(() => 15 * Math.log10(prestigeBalance + 1), [prestigeBalance]);
@@ -572,6 +608,7 @@ export default function Game() {
 
     // --- User Action Handlers ---
     const handleConnect = useCallback(async () => {
+        if (!hasInteracted) setHasInteracted(true);
         if (!MiniKit.isInstalled()) {
             return setNotification({ message: t("wallet_prompt"), type: 'error' });
         }
@@ -591,7 +628,7 @@ export default function Game() {
             console.error("Error al conectar la billetera:", error);
             setNotification({ message: t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
         }
-    }, [loadGameFromBackend, t]);
+    }, [loadGameFromBackend, t, hasInteracted]);
 
     // ✅ CAMBIO 2: Lógica de MiniKit actualizada a la API moderna.
     const handleTimeWarpPurchase = useCallback(async (type: 'prestige' | 'wld') => {
@@ -683,12 +720,13 @@ export default function Game() {
     }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost, gameState.lastPrestigeTimeWarp]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!hasInteracted) setHasInteracted(true);
         const value = clickValue;
         setFloatingNumbers(current => [...current, { id: Date.now(), value: `+${formatNumber(value)}`, x: e.clientX, y: e.clientY }]);
         setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== e.timeStamp)); }, 2000);
         setGameState(prev => ({ ...prev, tokens: prev.tokens + value }));
         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
-    }, [clickValue, formatNumber]);
+    }, [clickValue, formatNumber, hasInteracted]);
 
     const calculateBulkCost = useCallback((item: Autoclicker, amount: BuyAmount) => {
         let totalCost = 0;
@@ -853,7 +891,12 @@ export default function Game() {
 
     return (
         <>
-            <LanguageSelector />
+            <div className="absolute top-2 left-2 z-50 flex items-center gap-2">
+                <LanguageSelector />
+                <button onClick={toggleMute} className="p-2 bg-slate-800/50 rounded-full text-white hover:bg-slate-700/70 transition-colors">
+                    {isMuted ? <SoundOff /> : <SoundHigh />}
+                </button>
+            </div>
             <TelegramButton />
             <NewsTicker />
             <AnimatePresence>
@@ -866,7 +909,7 @@ export default function Game() {
                 {selectedItem && (
                     <ItemDetailsModal 
                         item={selectedItem} 
-                        autoclickers={autoclickers} 
+                        autoclickers={autoclickers}
                         onClose={closeItemDetails} 
                         isPurchasable={selectedItem.itemType === 'upgrade' && checkRequirements(selectedItem.req) && selectedItem.cost !== undefined && gameState.tokens >= selectedItem.cost}
                         onPurchase={(id) => {

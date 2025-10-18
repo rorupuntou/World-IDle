@@ -192,11 +192,31 @@ export default function Game() {
             audioRef.current.muted = isMuted;
             if (hasInteracted && !isMuted) {
                 audioRef.current.play().catch(error => console.error("Audio play failed:", error));
-            } else if (isMuted) {
+            } else {
                 audioRef.current.pause();
             }
         }
     }, [isMuted, hasInteracted]);
+
+    // --- Page Visibility Effect ---
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!audioRef.current) return;
+            if (document.hidden) {
+                audioRef.current.pause();
+            } else {
+                if (hasInteracted && !isMuted) {
+                    audioRef.current.play().catch(error => console.error("Audio play failed on visibility change:", error));
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [hasInteracted, isMuted]); // Dependencies ensure the handler has the latest state
 
     const toggleMute = () => {
         setIsMuted(!isMuted);

@@ -47,25 +47,14 @@ export function useGameSave(serverState: FullGameState | null) {
     }, []);
 
     useEffect(() => {
-        if (isLoaded) return;
-
-        let finalState: FullGameState = {
-            gameState: initialState,
-            stats: initialStats,
-            autoclickers: initialAutoclickers,
-            upgrades: initialUpgrades,
-            achievements: initialAchievements,
-        };
-
         const localSaveRaw = localStorage.getItem(SAVE_KEY);
         const localSave = localSaveRaw ? JSON.parse(localSaveRaw) as FullGameState : null;
 
+        // Server state takes precedence
         if (serverState) {
-            console.log("Server state is present. Using it as base.");
-            finalState = serverState;
-            
+            let finalState = serverState;
+            // But if local is newer, merge it, preserving server boost
             if (localSave && localSave.gameState.lastSaved && serverState.gameState.lastSaved && localSave.gameState.lastSaved > serverState.gameState.lastSaved) {
-                console.log("Local save is newer, merging.");
                 finalState = {
                     ...localSave,
                     gameState: {
@@ -75,14 +64,18 @@ export function useGameSave(serverState: FullGameState | null) {
                     }
                 };
             }
-        } else if (localSave) {
-            console.log("No server state, using local save.");
-            finalState = localSave;
+            setFullState(finalState);
+            setIsLoaded(true);
+        } 
+        // If no server state, fall back to local storage for the initial load
+        else if (!isLoaded && localSave) {
+            setFullState(localSave);
+            setIsLoaded(true);
         }
-
-        setFullState(finalState);
-        setIsLoaded(true);
-        console.log("Game state loaded and initialized.");
+        // If no server state and no local state, mark as loaded so the game can start
+        else if (!isLoaded) {
+            setIsLoaded(true);
+        }
 
     }, [serverState, setFullState, isLoaded]);
 

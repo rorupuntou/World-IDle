@@ -38,12 +38,21 @@ export function useGameSave(serverState: FullGameState | null) {
         }
     }, [gameState, stats, autoclickers, upgrades, achievements]);
     
-    const setFullState = useCallback((fullState: FullGameState) => {
-        setGameState(prev => ({ ...prev, ...fullState.gameState }));
-        setStats(prev => ({ ...prev, ...fullState.stats }));
-        setAutoclickers(initialAutoclickers.map(a => fullState.autoclickers.find(la => la.id === a.id) || a));
-        setUpgrades(initialUpgrades.map(u => fullState.upgrades.find(lu => lu.id === u.id) || u));
-        setAchievements(initialAchievements.map(ac => fullState.achievements.find(la => la.id === ac.id) || ac));
+    const setFullState = useCallback((fullState: Partial<FullGameState>) => {
+        // For gameState and stats, merge with initial state to ensure all keys are present
+        setGameState(prev => ({ ...initialState, ...prev, ...fullState.gameState }));
+        setStats(prev => ({ ...initialStats, ...prev, ...fullState.stats }));
+
+        // For arrays, the saved data is the source of truth for purchased items.
+        // The merge logic with `initial...` is to add NEW items from the template that the user hasn't seen yet.
+        const savedAutoclickers = fullState.autoclickers || [];
+        setAutoclickers(initialAutoclickers.map(template => savedAutoclickers.find(saved => saved.id === template.id) || template));
+
+        const savedUpgrades = fullState.upgrades || [];
+        setUpgrades(initialUpgrades.map(template => savedUpgrades.find(saved => saved.id === template.id) || template));
+
+        const savedAchievements = fullState.achievements || [];
+        setAchievements(initialAchievements.map(template => savedAchievements.find(saved => saved.id === template.id) || template));
     }, []);
 
     // Load from local storage only once on initial mount

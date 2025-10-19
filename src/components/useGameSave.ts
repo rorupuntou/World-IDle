@@ -15,36 +15,10 @@ export function useGameSave(serverState: FullGameState | null) {
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [isLoaded, setIsLoaded] = useState(false);
 
-    const saveGame = useCallback((walletAddress?: string) => {
-        const saveState: FullGameState = { gameState, stats, autoclickers, upgrades, achievements };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(saveState));
-        console.log("Game saved locally.");
-
-        if (walletAddress) {
-            fetch('/api/save-game', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ walletAddress, gameData: saveState }),
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    console.log("Game saved to server.");
-                } else {
-                    console.error("Failed to save game to server:", data.error);
-                }
-            })
-            .catch(error => console.error("Error saving game to server:", error));
-        }
-    }, [gameState, stats, autoclickers, upgrades, achievements]);
-    
     const setFullState = useCallback((fullState: Partial<FullGameState>) => {
-        // For gameState and stats, merge with initial state to ensure all keys are present
         setGameState(prev => ({ ...initialState, ...prev, ...fullState.gameState }));
         setStats(prev => ({ ...initialStats, ...prev, ...fullState.stats }));
 
-        // For arrays, the saved data is the source of truth for purchased items.
-        // The merge logic with `initial...` is to add NEW items from the template that the user hasn't seen yet.
         const savedAutoclickers = fullState.autoclickers || [];
         setAutoclickers(initialAutoclickers.map(template => savedAutoclickers.find(saved => saved.id === template.id) || template));
 
@@ -55,45 +29,62 @@ export function useGameSave(serverState: FullGameState | null) {
         setAchievements(initialAchievements.map(template => savedAchievements.find(saved => saved.id === template.id) || template));
     }, []);
 
-    // Load from local storage only once on initial mount
     useEffect(() => {
+        let localSave: FullGameState | null = null;
         const localSaveRaw = localStorage.getItem(SAVE_KEY);
         if (localSaveRaw) {
             try {
-                const localSave = JSON.parse(localSaveRaw) as FullGameState;
-                if (localSave) {
-                    setFullState(localSave);
-                }
+                localSave = JSON.parse(localSaveRaw) as FullGameState;
             } catch (e) {
                 console.error("Error parsing local save:", e);
-                localStorage.removeItem(SAVE_KEY); // Clear corrupted save
+                localStorage.removeItem(SAVE_KEY);
             }
         }
+
+        if (serverState && localSave) {
+            const serverTime = serverState.gameState?.lastSaved || 0;
+            const localTime = localSave.gameState?.lastSaved || 0;
+            if (serverTime >= localTime) {
+                setFullState(serverState);
+            } else {
+                setFullState(localSave);
+            }
+        } else if (serverState) {
+            setFullState(serverState);
+        } else if (localSave) {
+            setFullState(localSave);
+        }
+
         setIsLoaded(true);
-    }, [setFullState]);
-
-    // React to server state changes
-    useEffect(() => {
-        if (serverState) {
-            const localSaveRaw = localStorage.getItem(SAVE_KEY);
-            const localSave = localSaveRaw ? JSON.parse(localSaveRaw) as FullGameState : null;
-
-            let finalState = serverState;
-
-            // If local save is newer, merge, but always keep server's boost
-            if (localSave && localSave.gameState?.lastSaved && serverState.gameState?.lastSaved && localSave.gameState.lastSaved > serverState.gameState.lastSaved) {
-                finalState = {
-                    ...localSave,
-                    gameState: {
-                        ...localSave.gameState,
-                        permanentBoostBonus: serverState.gameState.permanentBoostBonus || localSave.gameState.permanentBoostBonus || 0,
-                    },
-                };
-            }
-            
-            setFullState(finalState);
-        }
     }, [serverState, setFullState]);
+
+    const saveGame = useCallback((walletAddress: string, manual = false) => {
+        const currentState: FullGameState = { 
+            gameState: { ...gameState, lastSaved: Date.now() },
+            stats, 
+            autoclickers, 
+            upgrades, 
+            achievements 
+        };
+        
+        localStorage.setItem(SAVE_KEY, JSON.stringify(currentState));
+        if (manual) console.log("Game saved locally.");
+
+        fetch('/api/save-game', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress, gameData: currentState }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (manual) console.log("Game saved to server.");
+            } else {
+                console.error("Failed to save game to server:", data.error);
+            }
+        })
+        .catch(error => console.error("Error saving game to server:", error));
+    }, [gameState, stats, autoclickers, upgrades, achievements]);
 
     return { 
         gameState, setGameState, 

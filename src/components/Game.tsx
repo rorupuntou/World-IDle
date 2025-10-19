@@ -451,7 +451,7 @@ export default function Game() {
             refetchPrestigeBalance();
             setPendingTimeWarpTx(null);
         }
-    }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t, setGameState]);
+    }, [isTimeWarpSuccess, pendingTimeWarpTx, refetchPrestigeBalance, t, setGameState, setStats]);
 
     useEffect(() => {
         if (isSwapSuccess) {
@@ -527,7 +527,7 @@ export default function Game() {
             });
             setAchievements(prev => prev.map(ach => unlockedAchievements.has(ach.id) ? { ...ach, unlocked: true } : ach));
         }
-    }, [stats, achievements, checkRequirements, t, isLoaded, setAchievements]);
+    }, [stats, achievements, checkRequirements, t, isLoaded, setAchievements, setNotification]);
 
     const handleConnect = useCallback(async () => {
         if (!hasInteracted) setHasInteracted(true);
@@ -548,15 +548,15 @@ export default function Game() {
             console.error("Error al conectar la billetera:", error);
             setNotification({ message: t("connect_error", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' });
         }
-    }, [loadGameFromBackend, t, hasInteracted]);
+    }, [loadGameFromBackend, t, hasInteracted, setHasInteracted, setNotification, setWalletAddress]);
 
-    const onBoostPurchased = useCallback((newBonus: number) => {
+    const onBoostPurchased = useCallback((boostToAdd: number) => {
         setGameState(prev => ({
             ...prev,
-            permanentBoostBonus: newBonus,
+            permanentBoostBonus: (prev.permanentBoostBonus || 0) + boostToAdd,
         }));
         if (walletAddress) {
-            saveGame(walletAddress);
+            saveGame(walletAddress, true);
         }
     }, [walletAddress, setGameState, saveGame]);
 
@@ -611,7 +611,7 @@ export default function Game() {
                 } else { throw new Error((finalPayload as { message?: string }).message || t("payment_cancelled")); }
             } catch (error) { setNotification({ message: t("purchase_failed", { error: error instanceof Error ? error.message : 'Unknown error' }), type: 'error' }); }
         }
-    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost, gameState.lastPrestigeTimeWarp, saveGame]);
+    }, [totalCPS, prestigeBalance, tokenDecimalsData, t, walletAddress, timeWarpPrestigeCost, timeWarpWldCost, gameState.lastPrestigeTimeWarp, saveGame, setGameState, setStats, setNotification, setPendingTimeWarpTx]);
 
     const handleManualClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         if (!hasInteracted) setHasInteracted(true);
@@ -620,7 +620,7 @@ export default function Game() {
         setTimeout(() => { setFloatingNumbers(current => current.filter(n => n.id !== e.timeStamp)); }, 2000);
         setGameState(prev => ({ ...prev, tokens: prev.tokens + value }));
         setStats(prev => ({ ...prev, totalTokensEarned: prev.totalTokensEarned + value, totalClicks: prev.totalClicks + 1 }));
-    }, [clickValue, formatNumber, hasInteracted, setGameState, setStats]);
+    }, [clickValue, formatNumber, hasInteracted, setGameState, setStats, setHasInteracted, setFloatingNumbers]);
 
     const calculateBulkCost = useCallback((item: Autoclicker, amount: BuyAmount) => {
         let totalCost = 0;
@@ -659,7 +659,7 @@ export default function Game() {
             }
             setPendingPurchaseTx(null);
         }
-    }, [isPurchaseSuccess, pendingPurchaseTx, autoclickers, purchaseAutoclickerWithTokens, refetchPrestigeBalance, t, saveGame, walletAddress]);
+    }, [isPurchaseSuccess, pendingPurchaseTx, autoclickers, purchaseAutoclickerWithTokens, refetchPrestigeBalance, t, saveGame, walletAddress, setNotification, setPendingPurchaseTx]);
 
     const handlePrestigePurchase = useCallback(async (item: Autoclicker, totalPrestigeCost: number) => {
         if (!totalPrestigeCost) return;
@@ -681,7 +681,7 @@ export default function Game() {
                 setNotification({ message: t("transaction_sent"), type: 'success' });
             } else { throw new Error(t('transaction_error')); }
         } catch (error) { setNotification({ message: error instanceof Error ? error.message : String(error), type: 'error' }); }
-    }, [t, tokenDecimalsData]);
+    }, [t, tokenDecimalsData, setNotification, setPendingPurchaseTx]);
 
     const purchaseAutoclicker = useCallback((id: number) => {
         const autoclicker = autoclickers.find(a => a.id === id);
@@ -693,7 +693,7 @@ export default function Game() {
             if (prestigeBalance >= prestigeCost) { handlePrestigePurchase(autoclicker, prestigeCost); }
             else { setNotification({ message: t("not_enough_prestige_tokens"), type: 'error' }); }
         } else { purchaseAutoclickerWithTokens(id); }
-    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount, prestigeBalance, handlePrestigePurchase, purchaseAutoclickerWithTokens, t, calculatePrestigeBulkCost]);
+    }, [autoclickers, gameState.tokens, calculateBulkCost, buyAmount, prestigeBalance, handlePrestigePurchase, purchaseAutoclickerWithTokens, t, calculatePrestigeBulkCost, setNotification]);
 
     const purchaseUpgrade = useCallback((id: number) => {
         const upgrade = upgrades.find(u => u.id === id);
@@ -723,7 +723,7 @@ export default function Game() {
             setNotification({ message: t('bulk_purchase_success', { count: upgradesToPurchase.size }), type: 'success' });
             if (walletAddress) saveGame(walletAddress);
         }
-    }, [upgrades, gameState.tokens, checkRequirements, t, saveGame, walletAddress, setGameState, setUpgrades]);
+    }, [upgrades, gameState.tokens, checkRequirements, t, saveGame, walletAddress, setGameState, setUpgrades, setNotification]);
 
     const handleDevMode = () => {
         const code = prompt(t("dev_mode_prompt"));
@@ -733,7 +733,7 @@ export default function Game() {
         }
     };
 
-    if (!isClient || isLoading) {
+    if (!isClient) {
         return <div className="flex items-center justify-center min-h-screen">{t('loading')}</div>;
     }
 
@@ -748,6 +748,10 @@ export default function Game() {
                 </button>
             </div>
         );
+    }
+
+    if (isLoading || !isLoaded) {
+        return <div className="flex items-center justify-center min-h-screen">{t('loading')}</div>;
     }
 
     return (

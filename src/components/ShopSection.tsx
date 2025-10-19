@@ -3,13 +3,12 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import React from 'react';
 import { MiniKit, PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
-import { GameState } from './types';
 import clsx from "clsx";
 import { Clock } from "iconoir-react";
 
 interface ShopSectionProps {
   walletAddress: string | null;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+  onBoostPurchased: (newBonus: number) => void;
   setNotification: (notification: { message: string; type: 'success' | 'error' } | null) => void;
   totalCPS: number;
   prestigeBalance: number;
@@ -28,7 +27,18 @@ const boosts = [
 
 const PAYMENT_RECIPIENT_ADDRESS = '0x536bB672A282df8c89DDA57E79423cC505750E52';
 
-const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, setNotification, totalCPS, prestigeBalance, handleTimeWarpPurchase, formatNumber, timeWarpPrestigeCost, timeWarpWldCost, timeWarpCooldown }) => {
+const ShopSection: React.FC<ShopSectionProps> = ({ 
+    walletAddress, 
+    onBoostPurchased, 
+    setNotification, 
+    totalCPS, 
+    prestigeBalance, 
+    handleTimeWarpPurchase, 
+    formatNumber, 
+    timeWarpPrestigeCost, 
+    timeWarpWldCost, 
+    timeWarpCooldown 
+}) => {
   const { t } = useLanguage();
 
   const timeWarpReward = totalCPS * 86400; // 24 hours of production
@@ -85,10 +95,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({ walletAddress, setGameState, 
         const { success, newBonus, error } = await confirmRes.json();
 
         if (success) {
-          setGameState(prev => ({
-            ...prev,
-            permanentBoostBonus: newBonus,
-          }));
+          onBoostPurchased(newBonus);
           setNotification({ message: t("boost_purchased"), type: 'success' });
         } else {
           throw new Error(error || t("confirmation_failed"));

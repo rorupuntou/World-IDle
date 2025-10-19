@@ -110,7 +110,7 @@ export default function Game() {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [prestigeBalance, setPrestigeBalance] = useState(0);
     const [serverState, setServerState] = useState<FullGameState | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     const {
         gameState, setGameState,

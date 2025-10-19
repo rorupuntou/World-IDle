@@ -46,38 +46,45 @@ export function useGameSave(serverState: FullGameState | null) {
         setAchievements(initialAchievements.map(ac => fullState.achievements.find(la => la.id === ac.id) || ac));
     }, []);
 
+    // Load from local storage only once on initial mount
     useEffect(() => {
         const localSaveRaw = localStorage.getItem(SAVE_KEY);
-        const localSave = localSaveRaw ? JSON.parse(localSaveRaw) as FullGameState : null;
+        if (localSaveRaw) {
+            try {
+                const localSave = JSON.parse(localSaveRaw) as FullGameState;
+                if (localSave) {
+                    setFullState(localSave);
+                }
+            } catch (e) {
+                console.error("Error parsing local save:", e);
+                localStorage.removeItem(SAVE_KEY); // Clear corrupted save
+            }
+        }
+        setIsLoaded(true);
+    }, [setFullState]);
 
-        // Server state takes precedence
+    // React to server state changes
+    useEffect(() => {
         if (serverState) {
+            const localSaveRaw = localStorage.getItem(SAVE_KEY);
+            const localSave = localSaveRaw ? JSON.parse(localSaveRaw) as FullGameState : null;
+
             let finalState = serverState;
-            // But if local is newer, merge it, preserving server boost
-            if (localSave && localSave.gameState.lastSaved && serverState.gameState.lastSaved && localSave.gameState.lastSaved > serverState.gameState.lastSaved) {
+
+            // If local save is newer, merge, but always keep server's boost
+            if (localSave && localSave.gameState?.lastSaved && serverState.gameState?.lastSaved && localSave.gameState.lastSaved > serverState.gameState.lastSaved) {
                 finalState = {
                     ...localSave,
                     gameState: {
                         ...localSave.gameState,
-                        // CRITICAL: Always preserve the server's permanent boost bonus
                         permanentBoostBonus: serverState.gameState.permanentBoostBonus || localSave.gameState.permanentBoostBonus || 0,
-                    }
+                    },
                 };
             }
+            
             setFullState(finalState);
-            setIsLoaded(true);
-        } 
-        // If no server state, fall back to local storage for the initial load
-        else if (!isLoaded && localSave) {
-            setFullState(localSave);
-            setIsLoaded(true);
         }
-        // If no server state and no local state, mark as loaded so the game can start
-        else if (!isLoaded) {
-            setIsLoaded(true);
-        }
-
-    }, [serverState, setFullState, isLoaded]);
+    }, [serverState, setFullState]);
 
     return { 
         gameState, setGameState, 

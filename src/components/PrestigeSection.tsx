@@ -1,16 +1,14 @@
-
 import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
-
+import { parseEther } from 'viem';
 import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
     prestigeBoost: number;
     prestigeBalance: number;
     prestigeReward: number;
-    totalTokensEarned: number;
     isPrestigeReady: boolean;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
@@ -22,7 +20,6 @@ export default function PrestigeSection({
     prestigeBoost,
     prestigeBalance,
     prestigeReward,
-    totalTokensEarned,
     isPrestigeReady,
     isLoading,
     setIsLoading,
@@ -87,7 +84,7 @@ export default function PrestigeSection({
                             address: contractConfig.gameManagerAddress,
                             abi: contractConfig.gameManagerAbi,
                             functionName: 'prestige',
-                            args: [Math.floor(totalTokensEarned).toString()],
+                            args: [parseEther(Math.floor(prestigeReward).toString()).toString()],
                             value: '0x0',
                         },
                     ],

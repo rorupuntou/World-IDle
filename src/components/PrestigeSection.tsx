@@ -119,7 +119,7 @@ export default function PrestigeSection({
             
             {isPrestigeReady && (
                 <p className="text-center text-sm mt-3 text-yellow-200">
-                    {t('prestige_reward_message', { prestigeReward: prestigeReward.toLocaleString() })}
+                    {t('prestige_reward_message', { prestigeReward: (prestigeReward / 100000).toLocaleString() })}
                 </p>
             )}
 

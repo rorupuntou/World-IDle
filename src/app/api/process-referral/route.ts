@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 // Define the structure of the incoming request body
@@ -23,7 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Referrer and new user cannot be the same' }, { status: 400 });
   }
 
-  const supabase = createRouteHandlerClient({ cookies });
+  // Create a Supabase client with the service role key to bypass RLS
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
 
   // Call the PostgreSQL function to handle the logic atomically
   const { error } = await supabase.rpc('handle_referral', {

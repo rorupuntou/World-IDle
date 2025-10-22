@@ -58,14 +58,22 @@ export type Achievement = {
 
 export type BuyAmount = 1 | 10 | 100;
 
+export interface Referral {
+  id: string;
+  wallet_address: string;
+  claimed: boolean;
+}
+
 export type GameState = {
   tokens: number;
   humanityGems: number;
   tokensPerClick: number;
   permanentBoostBonus: number;
+  permanent_referral_boost: number; // For referral system boosts
   lastSaved?: number;
   wldTimeWarpsPurchased?: number;
   lastPrestigeTimeWarp?: number;
+  referrals?: Referral[];
 };
 
 export type StatsState = {

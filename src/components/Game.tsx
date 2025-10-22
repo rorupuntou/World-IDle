@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Rocket, Home, Shop as ShopIcon, Bookmark, Settings, Check, Xmark, SoundHigh, SoundOff } from 'iconoir-react';
+import { Rocket, Home, Shop as ShopIcon, Gift, Bookmark, Settings, Check, Xmark, SoundHigh, SoundOff } from 'iconoir-react';
 import { MiniKit, Tokens } from '@worldcoin/minikit-js';
 import { useReadContract } from "wagmi";
 import { useWaitForTransactionReceipt } from '@worldcoin/minikit-react';
@@ -19,6 +19,7 @@ import AchievementsSection from "./AchievementsSection";
 import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 import ShopSection from "./ShopSection";
+import ReferralsSection from "./ReferralsSection";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
@@ -276,7 +277,7 @@ export default function Game() {
             });
         });
 
-        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100) * (1 + (gameState.permanentBoostBonus || 0));
+        const finalGlobalMultiplier = globalMultiplier * (1 + prestigeBoost / 100) * (1 + (gameState.permanentBoostBonus || 0) + (gameState.permanent_referral_boost || 0));
 
         const autoclickerCPSValues = new Map<number, number>();
         let totalAutoclickerCPS = 0;
@@ -294,7 +295,7 @@ export default function Game() {
         const finalClickValue = baseClickValue + (totalAutoclickerCPS * cpsToClickPercent);
 
         return { totalCPS: totalAutoclickerCPS, clickValue: finalClickValue, autoclickerCPSValues };
-    }, [upgrades, autoclickers, prestigeBoost, gameState.permanentBoostBonus]);
+    }, [upgrades, autoclickers, prestigeBoost, gameState.permanentBoostBonus, gameState.permanent_referral_boost]);
 
     const handleVerifyWithMiniKit = async () => {
         if (!walletAddress) return;
@@ -796,7 +797,7 @@ export default function Game() {
                     humanityGems={gameState.humanityGems}
                     totalClicks={stats.totalClicks}
                     permanentBoostBonus={gameState.permanentBoostBonus || 0}
-                    formatNumber={formatNumber}
+                    permanent_referral_boost={gameState.permanent_referral_boost || 0}
                 />
 
                 <div className="flex flex-col gap-6">
@@ -876,6 +877,12 @@ export default function Game() {
                             />
                         </div>
                     )}
+                    {activeTab === 'referrals' && (
+                        <ReferralsSection
+                            walletAddress={walletAddress}
+                            gameState={gameState}
+                        />
+                    )}
                 </div>
 
                 <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-between items-center px-8 pb-safe-bottom">
@@ -891,6 +898,10 @@ export default function Game() {
                     <button onClick={() => setActiveTab('main')} className={`flex flex-col items-center gap-1 ${activeTab === 'main' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
                         <Home className="w-7 h-7" />
                         <span className="text-xs font-medium">{t('main_tab')}</span>
+                    </button>
+                    <button onClick={() => setActiveTab('referrals')} className={`flex flex-col items-center gap-1 ${activeTab === 'referrals' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
+                        <Gift className="w-7 h-7" />
+                        <span className="text-xs font-medium">{t('referrals_tab')}</span>
                     </button>
                     <button onClick={() => setActiveTab('shop')} className={`flex flex-col items-center gap-1 ${activeTab === 'shop' ? 'text-cyan-400' : 'text-slate-400'} transition-colors`}>
                         <ShopIcon className="w-7 h-7" />

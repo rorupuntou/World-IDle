@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('game_state')
-    .select('game_data')
+    .select('game_data, permanent_referral_boost')
     .eq('wallet_address', walletAddress)
     .single();
 
@@ -26,7 +26,14 @@ export async function GET(req: NextRequest) {
   console.log(`[LOAD-GAME] Data fetched from Supabase for ${walletAddress}:`, JSON.stringify(data, null, 2));
 
   if (data) {
-    const gameData = data.game_data;
+    // The game_data from DB is the FullGameState. We inject the boost value into it.
+    const gameData = data.game_data || {};
+    if (!gameData.gameState) {
+      // Ensure gameState exists for new or empty profiles
+      gameData.gameState = {};
+    }
+    gameData.gameState.permanent_referral_boost = data.permanent_referral_boost || 0;
+
     console.log(`[LOAD-GAME] Preparing to send gameData for ${walletAddress}:`, JSON.stringify(gameData, null, 2));
     return NextResponse.json({ success: true, gameData: gameData }, { status: 200 });
   } else {

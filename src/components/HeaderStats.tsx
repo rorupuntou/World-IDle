@@ -10,7 +10,7 @@ interface HeaderStatsProps {
     humanityGems: number;
     totalClicks: number;
     permanentBoostBonus: number;
-    formatNumber: (num: number) => string;
+    permanent_referral_boost: number;
 }
 
 export default function HeaderStats({
@@ -19,8 +19,16 @@ export default function HeaderStats({
     humanityGems,
     totalClicks,
     permanentBoostBonus,
-    formatNumber
+    permanent_referral_boost
 }: HeaderStatsProps) {
+    const formatNumber = (num: number): string => {
+        if (num === undefined || num === null) return '0';
+        if (num < 1000) return num.toFixed(0);
+        const suffixes = ['', 'k', 'M', 'B', 'T', 'P', 'E'];
+        const i = Math.floor(Math.log10(num) / 3);
+        const shortValue = (num / Math.pow(1000, i));
+        return shortValue.toFixed(i > 0 ? 2 : 0) + suffixes[i];
+    };
     const { t } = useLanguage();
     return (
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl text-center border border-slate-700 sticky top-4 z-20">
@@ -36,10 +44,10 @@ export default function HeaderStats({
                     <TestTube className="w-5 h-5" />
                     <p className="font-mono text-lg">{humanityGems}</p>
                 </div>
-                {permanentBoostBonus > 0 && (
+                {(permanentBoostBonus + permanent_referral_boost) > 0 && (
                     <div className="flex items-center gap-2 text-purple-400">
                         <ArrowUp className="w-5 h-5" />
-                        <p className="font-mono text-lg">+{permanentBoostBonus * 100}%</p>
+                        <p className="font-mono text-lg">+{Math.round((permanentBoostBonus + permanent_referral_boost) * 100)}%</p>
                     </div>
                 )}
             </div>

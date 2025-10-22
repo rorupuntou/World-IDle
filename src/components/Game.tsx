@@ -734,14 +734,17 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [gameState.lastPrestigeTimeWarp, setGameState]);
 
+  const offlineGainsProcessed = useRef(false);
+
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && !offlineGainsProcessed.current) {
       const lastSaved = gameState.lastSaved || Date.now();
       const elapsedSeconds = (Date.now() - lastSaved) / 1000;
       if (elapsedSeconds > 60) {
-        const maxOfflineSeconds = 86400;
+        const maxOfflineSeconds = 86400; // 24 hours
         const secondsToReward = Math.min(elapsedSeconds, maxOfflineSeconds);
         const offlineGains = secondsToReward * totalCPS;
+
         if (offlineGains > 1) {
           setGameState((prev) => ({
             ...prev,
@@ -757,16 +760,9 @@ export default function Game() {
           });
         }
       }
+      offlineGainsProcessed.current = true;
     }
-  }, [
-    isLoaded,
-    totalCPS,
-    gameState.lastSaved,
-    t,
-    formatNumber,
-    setGameState,
-    setStats,
-  ]);
+  }, [isLoaded, totalCPS, gameState.lastSaved, t, formatNumber, setGameState, setStats]);
 
   // Capture referral code from URL on initial load
   useEffect(() => {
@@ -787,10 +783,10 @@ export default function Game() {
       const referralCode = localStorage.getItem('pending_referral_code');
       if (!walletAddress || !referralCode) return;
 
-      // Attempt to process, then remove from local storage so it only runs once per link visit.
-      localStorage.removeItem('pending_referral_code');
-
-      if (referralCode === walletAddress) return; // Don't process self-referral
+      if (referralCode === walletAddress) {
+        localStorage.removeItem('pending_referral_code');
+        return; // Don't process self-referral
+      }
 
       try {
         const response = await fetch("/api/process-referral", {
@@ -805,11 +801,16 @@ export default function Game() {
         const data = await response.json();
 
         if (!response.ok) {
+          // If the referral has already been processed, remove the code from local storage
+          if (data.error && data.error.includes('already been processed')) {
+            localStorage.removeItem('pending_referral_code');
+          }
           throw new Error(data.error || 'Failed to process referral');
         }
 
         if (data.success) {
           setNotification({ message: t('referral_success'), type: 'success' });
+          localStorage.removeItem('pending_referral_code');
           // Reload game data to reflect the referral bonus
           await loadGameFromBackend(walletAddress);
         }
@@ -1596,7 +1597,7 @@ export default function Game() {
         </div>
         <div className="mt-4">
           <button
-            onClick={() => walletAddress && saveGame(walletAddress)}
+            onClick={() => walletAddress && saveGame(walletAddress, true)}
             className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 font-bold py-2 px-4 rounded-lg transition-colors"
           >
             <Bookmark className="w-5 h-5" />

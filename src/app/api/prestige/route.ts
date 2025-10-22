@@ -1,4 +1,3 @@
-
 import { type NextRequest, NextResponse } from "next/server";
 import { supabase } from '@/lib/supabaseClient';
 import { initialAchievements, initialAutoclickers, initialState, initialStats, initialUpgrades } from "@/app/data";
@@ -27,6 +26,7 @@ export async function POST(req: NextRequest) {
     // CORRECT: Extract the bonus from inside the game_data object
     const existingGameData = user_data?.game_data as FullGameState | null;
     const permanentBoostBonus = existingGameData?.gameState?.permanentBoostBonus || 0;
+    const permanentReferralBoost = existingGameData?.gameState?.permanent_referral_boost || 0;
 
     // 2. Create a fresh game state, preserving the permanent boost
     const resetData: FullGameState = {
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
             ...initialState,
             lastSaved: Date.now(),
             permanentBoostBonus: permanentBoostBonus, // Use the extracted value
+            permanent_referral_boost: permanentReferralBoost,
         },
         stats: initialStats,
         autoclickers: initialAutoclickers,

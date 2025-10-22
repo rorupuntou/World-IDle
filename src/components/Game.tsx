@@ -768,56 +768,63 @@ export default function Game() {
     setStats,
   ]);
 
+  // Capture referral code from URL on initial load
   useEffect(() => {
-    if (isLoaded && walletAddress) {
-      const searchParams = new URLSearchParams(window.location.search);
-      const referralCode = searchParams.get('code');
+    const searchParams = new URLSearchParams(window.location.search);
+    const referralCode = searchParams.get('code');
+    if (referralCode) {
+      localStorage.setItem('pending_referral_code', referralCode);
+      // Clean URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
-      if (referralCode && referralCode !== walletAddress) {
-        if (sessionStorage.getItem('processed_referral_code') === referralCode) {
-          return;
-        }
+  // Process referral code once wallet is connected
+  useEffect(() => {
+    const processReferral = async () => {
+      const referralCode = localStorage.getItem('pending_referral_code');
+      if (!walletAddress || !referralCode) return;
 
-        fetch("/api/process-referral", {
+      // Attempt to process, then remove from local storage so it only runs once per link visit.
+      localStorage.removeItem('pending_referral_code');
+
+      if (referralCode === walletAddress) return; // Don't process self-referral
+
+      try {
+        const response = await fetch("/api/process-referral", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             referrerCode: referralCode,
             newUserId: walletAddress,
           }),
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    try {
-                        const data = JSON.parse(text);
-                        throw new Error(data.error || response.statusText);
-                    } catch {
-                        // If parsing fails, throw the raw text or status text
-                        throw new Error(text || response.statusText);
-                    }
-                });
-            }
-            return response.text().then(text => text ? JSON.parse(text) : {});
-        })
-        .then(data => {
-          if (data.success) {
-            setNotification({ message: t('referral_success'), type: 'success' });
-            sessionStorage.setItem('processed_referral_code', referralCode);
-            loadGameFromBackend(walletAddress);
-          } else if (data.error) {
-            throw new Error(data.error);
-          }
-        })
-        .catch(error => {
-          if (error.message && !error.message.includes('already been processed') && !error.message.includes('cannot be the same')) {
-             console.error("Error processing referral:", error);
-             setNotification({ message: error.message || t('referral_error'), type: 'error' });
-          }
         });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to process referral');
+        }
+
+        if (data.success) {
+          setNotification({ message: t('referral_success'), type: 'success' });
+          // Reload game data to reflect the referral bonus
+          await loadGameFromBackend(walletAddress);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        // Don't bother user with errors about already processed or self-referrals
+        if (message && !message.includes('already been processed') && !message.includes('cannot be the same')) {
+          console.error("Error processing referral:", error);
+          setNotification({ message: message || t('referral_error'), type: 'error' });
+        }
       }
-    }
-  }, [isLoaded, walletAddress, t, setNotification, loadGameFromBackend]);
+    };
+
+    processReferral();
+  }, [walletAddress, loadGameFromBackend, setNotification, t]);
 
   useEffect(() => {
     if (!isLoaded) return;

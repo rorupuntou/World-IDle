@@ -24,7 +24,7 @@ export default function InvitePage({ code }: { code: string | null }) {
 	useEffect(() => {
         if (code) {
             const appId = process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_YOUR_APP_ID'; // Placeholder for your App ID
-            const path = encodeURIComponent(`/invite?code=${code}`);
+            const path = `/invite?code=${code}`; // The path within the mini-app
             const redirectUrl = `https://world.org/mini-app?app_id=${appId}&path=${path}`;
             
             // Redirect the user's browser to the World App universal link

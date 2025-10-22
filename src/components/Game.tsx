@@ -769,6 +769,49 @@ export default function Game() {
   ]);
 
   useEffect(() => {
+    if (isLoaded && walletAddress) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const referralCode = searchParams.get('code');
+
+      if (referralCode && referralCode !== walletAddress) {
+        if (sessionStorage.getItem('processed_referral_code') === referralCode) {
+          return;
+        }
+
+        fetch("/api/process-referral", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            referrerCode: referralCode,
+            newUserId: walletAddress,
+          }),
+        })
+        .then(res => {
+          if (res.ok) {
+            return res.json();
+          }
+          return res.json().then(errorData => {
+            throw new Error(errorData.error || 'Referral processing failed');
+          });
+        })
+        .then(data => {
+          if (data.success) {
+            setNotification({ message: t('referral_success'), type: 'success' });
+            sessionStorage.setItem('processed_referral_code', referralCode);
+            loadGameFromBackend(walletAddress);
+          }
+        })
+        .catch(error => {
+          if (error.message && !error.message.includes('already been processed') && !error.message.includes('cannot be the same')) {
+             console.error("Error processing referral:", error);
+             setNotification({ message: error.message || t('referral_error'), type: 'error' });
+          }
+        });
+      }
+    }
+  }, [isLoaded, walletAddress, t, setNotification, loadGameFromBackend]);
+
+  useEffect(() => {
     if (!isLoaded) return;
     const interval = setInterval(() => {
       const tokensToAdd = totalCPS / 10;

@@ -10,7 +10,7 @@ interface ReferralsSectionProps {
 }
 
 // TODO: Replace with your real App ID from the Worldcoin Developer Portal
-const YOUR_APP_ID = process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_YOUR_APP_ID';
+const YOUR_APP_ID = 'app_3b83f308b9f7ef9a01e4042f1f48721d';
 
 export default function ReferralsSection({ walletAddress, gameState }: ReferralsSectionProps) {
   const { t } = useLanguage();

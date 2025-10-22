@@ -407,5 +407,7 @@
   "referral_share_text": "I'm playing this awesome idle game. Join me using my link and we both get rewards! 🎁",
   "your_referrals_title": "Your Referrals",
   "reward_claimed": "Reward Claimed",
-  "no_referrals_yet": "You haven't referred anyone yet."
+  "no_referrals_yet": "You haven't referred anyone yet.",
+  "referral_success": "Referral processed successfully! Welcome bonus applied.",
+  "referral_error": "Failed to process referral."
 }

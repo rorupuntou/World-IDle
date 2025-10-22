@@ -407,5 +407,7 @@
   "referral_share_text": "Estoy jugando a este increíble juego idle. ¡Únete usando mi enlace y ambos ganaremos recompensas! 🎁",
   "your_referrals_title": "Tus Referidos",
   "reward_claimed": "Recompensa Reclamada",
-  "no_referrals_yet": "Aún no has referido a nadie."
+  "no_referrals_yet": "Aún no has referido a nadie.",
+  "referral_success": "¡Referido procesado con éxito! Bono de bienvenida aplicado.",
+  "referral_error": "Error al procesar el referido."
 }

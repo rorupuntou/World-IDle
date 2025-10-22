@@ -786,19 +786,27 @@ export default function Game() {
             newUserId: walletAddress,
           }),
         })
-        .then(res => {
-          if (res.ok) {
-            return res.json();
-          }
-          return res.json().then(errorData => {
-            throw new Error(errorData.error || 'Referral processing failed');
-          });
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        const data = JSON.parse(text);
+                        throw new Error(data.error || response.statusText);
+                    } catch {
+                        // If parsing fails, throw the raw text or status text
+                        throw new Error(text || response.statusText);
+                    }
+                });
+            }
+            return response.text().then(text => text ? JSON.parse(text) : {});
         })
         .then(data => {
           if (data.success) {
             setNotification({ message: t('referral_success'), type: 'success' });
             sessionStorage.setItem('processed_referral_code', referralCode);
             loadGameFromBackend(walletAddress);
+          } else if (data.error) {
+            throw new Error(data.error);
           }
         })
         .catch(error => {

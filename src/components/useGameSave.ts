@@ -20,13 +20,22 @@ export function useGameSave(serverState: FullGameState | null) {
         setStats(prev => ({ ...initialStats, ...prev, ...fullState.stats }));
 
         const savedAutoclickers = fullState.autoclickers || [];
-        setAutoclickers(initialAutoclickers.map(template => savedAutoclickers.find(saved => saved.id === template.id) || template));
+        setAutoclickers(initialAutoclickers.map(template => {
+            const saved = savedAutoclickers.find(s => s.id === template.id);
+            return saved ? { ...template, ...saved } : template;
+        }));
 
         const savedUpgrades = fullState.upgrades || [];
-        setUpgrades(initialUpgrades.map(template => savedUpgrades.find(saved => saved.id === template.id) || template));
+        setUpgrades(initialUpgrades.map(template => {
+            const saved = savedUpgrades.find(s => s.id === template.id);
+            return saved ? { ...template, ...saved } : template;
+        }));
 
         const savedAchievements = fullState.achievements || [];
-        setAchievements(initialAchievements.map(template => savedAchievements.find(saved => saved.id === template.id) || template));
+        setAchievements(initialAchievements.map(template => {
+            const saved = savedAchievements.find(s => s.id === template.id);
+            return saved ? { ...template, ...saved } : template;
+        }));
     }, []);
 
     useEffect(() => {

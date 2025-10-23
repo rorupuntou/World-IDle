@@ -41,6 +41,7 @@ import PrestigeSection from "./PrestigeSection";
 import AutoclickersSection from "./AutoclickersSection";
 import ShopSection from "./ShopSection";
 import ReferralsSection from "./ReferralsSection";
+import OfflineGainsModal from "./OfflineGainsModal";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import ItemDetailsModal from "./ItemDetailsModal";
@@ -186,6 +187,7 @@ export default function Game() {
   const [prestigeBalance, setPrestigeBalance] = useState(0);
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [offlineGains, setOfflineGains] = useState(0);
 
   const {
     gameState,
@@ -743,26 +745,23 @@ export default function Game() {
       if (elapsedSeconds > 60) {
         const maxOfflineSeconds = 86400; // 24 hours
         const secondsToReward = Math.min(elapsedSeconds, maxOfflineSeconds);
-        const offlineGains = secondsToReward * totalCPS;
+        const calculatedGains = secondsToReward * totalCPS;
 
-        if (offlineGains > 1) {
+        if (calculatedGains > 1) {
           setGameState((prev) => ({
             ...prev,
-            tokens: prev.tokens + offlineGains,
+            tokens: prev.tokens + calculatedGains,
           }));
           setStats((prev) => ({
             ...prev,
-            totalTokensEarned: prev.totalTokensEarned + offlineGains,
+            totalTokensEarned: prev.totalTokensEarned + calculatedGains,
           }));
-          setNotification({
-            message: t("offline_gains", { amount: formatNumber(offlineGains) }),
-            type: "success",
-          });
+          setOfflineGains(calculatedGains);
         }
       }
       offlineGainsProcessed.current = true;
     }
-  }, [isLoaded, totalCPS, gameState.lastSaved, t, formatNumber, setGameState, setStats]);
+  }, [isLoaded, totalCPS, gameState.lastSaved, setGameState, setStats]);
 
   // Capture referral code from URL on initial load
   useEffect(() => {
@@ -1416,6 +1415,13 @@ export default function Game() {
       <TelegramButton />
       <NewsTicker />
       <AnimatePresence>
+        {offlineGains > 0 && (
+          <OfflineGainsModal
+            amount={offlineGains}
+            onConfirm={() => setOfflineGains(0)}
+            formatNumber={formatNumber}
+          />
+        )}
         {floatingNumbers.map((num) => (
           <motion.div
             key={num.id}

@@ -76,9 +76,14 @@ export async function POST(request: Request) {
       .insert({ referrer_id: referrerCode, referee_id: newUserId });
 
     if (insertReferralError) {
-        // If this fails, we should ideally roll back the boost update.
-        // Since we can't do transactions here, we are in an inconsistent state.
-        console.error('CRITICAL: Failed to insert referral record after updating boost!', insertReferralError);
+        console.error('Failed to insert referral record.', insertReferralError);
+
+        // The unique constraint violation code in Postgres is '23505'
+        // This can happen in a race condition where two requests are processed at once.
+        if (insertReferralError.code === '23505') {
+            return NextResponse.json({ error: 'This user has already been referred.' }, { status: 409 });
+        }
+
         return NextResponse.json({ error: 'Failed to create referral record.' }, { status: 500 });
     }
 

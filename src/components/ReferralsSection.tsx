@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameState, Referral } from './types';
@@ -12,8 +13,46 @@ interface ReferralsSectionProps {
 // TODO: Replace with your real App ID from the Worldcoin Developer Portal
 const YOUR_APP_ID = 'app_3b83f308b9f7ef9a01e4042f1f48721d';
 
+interface RawReferral {
+  referee_id: string;
+  created_at: string;
+}
+
 export default function ReferralsSection({ walletAddress, gameState }: ReferralsSectionProps) {
   const { t } = useLanguage();
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReferrals = async () => {
+      if (!walletAddress) {
+        setIsLoading(false);
+        return;
+      }
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/get-referrals?walletAddress=${walletAddress}`);
+        const data = await response.json();
+        if (data.success) {
+          // The API returns referee_id, let's adapt it to the Referral type
+          const formattedReferrals = data.referrals.map((r: RawReferral, index: number) => ({
+            id: index, // The id is just for the key, so index is fine
+            wallet_address: r.referee_id,
+            created_at: r.created_at,
+          }));
+          setReferrals(formattedReferrals);
+        } else {
+          console.error("Failed to fetch referrals:", data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching referrals:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReferrals();
+  }, [walletAddress]);
 
   const handleShare = async () => {
     if (!walletAddress) return;
@@ -57,9 +96,11 @@ export default function ReferralsSection({ walletAddress, gameState }: Referrals
 
       <div className="mt-6">
         <h3 className="text-xl font-bold text-center text-slate-300 mb-3">{t('your_referrals_title')}</h3>
-        {gameState.referrals && gameState.referrals.length > 0 ? (
+        {isLoading ? (
+          <p className="text-center text-slate-500">{t('loading_referrals')}</p>
+        ) : referrals.length > 0 ? (
           <ul className="space-y-2">
-            {gameState.referrals.map((ref: Referral) => (
+            {referrals.map((ref: Referral) => (
               <li key={ref.id} className="bg-slate-700/50 p-3 rounded-lg flex justify-between items-center">
                 <p className="font-mono text-sm text-slate-400">
                   {`${ref.wallet_address.substring(0, 6)}...${ref.wallet_address.substring(ref.wallet_address.length - 4)}`}

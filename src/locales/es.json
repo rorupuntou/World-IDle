@@ -408,6 +408,7 @@
   "your_referrals_title": "Tus Referidos",
   "reward_claimed": "Recompensa Reclamada",
   "no_referrals_yet": "Aún no has referido a nadie.",
+  "loading_referrals": "Cargando referidos...",
   "referral_success": "¡Referido procesado con éxito! Bono de bienvenida aplicado.",
   "referral_error": "Error al procesar el referido."
 }

@@ -85,7 +85,6 @@
     "eff_multiply_click": "Multiplies click value by {value}.",
     "eff_add_click": "Adds {value} to click value.",
     "eff_multiply_global": "Multiplies total production by {value}.",
-    "eff_multiply_autoclicker": "Multiplies production of {name} by {value}.",
     "eff_add_cps_to_click": "Adds {percent}% of your CpS to click value.",
     "eff_add_cps_from_others": "Adds production to {name} based on other autoclickers.",
     "eff_multiply_by_other": "Multiplies production of {target} for each {source}.",
@@ -408,6 +407,7 @@
   "your_referrals_title": "Your Referrals",
   "reward_claimed": "Reward Claimed",
   "no_referrals_yet": "You haven't referred anyone yet.",
+  "loading_referrals": "Loading referrals...",
   "referral_success": "Referral processed successfully! Welcome bonus applied.",
   "referral_error": "Failed to process referral."
 }

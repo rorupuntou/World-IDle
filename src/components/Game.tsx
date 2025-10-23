@@ -748,20 +748,12 @@ export default function Game() {
         const calculatedGains = secondsToReward * totalCPS;
 
         if (calculatedGains > 1) {
-          setGameState((prev) => ({
-            ...prev,
-            tokens: prev.tokens + calculatedGains,
-          }));
-          setStats((prev) => ({
-            ...prev,
-            totalTokensEarned: prev.totalTokensEarned + calculatedGains,
-          }));
           setOfflineGains(calculatedGains);
         }
       }
       offlineGainsProcessed.current = true;
     }
-  }, [isLoaded, totalCPS, gameState.lastSaved, setGameState, setStats]);
+  }, [isLoaded, totalCPS, gameState.lastSaved]);
 
   // Capture referral code from URL on initial load
   useEffect(() => {
@@ -1369,6 +1361,20 @@ export default function Game() {
     }
   };
 
+  const handleClaimOfflineGains = useCallback(() => {
+    if (offlineGains > 0) {
+      setGameState((prev) => ({
+        ...prev,
+        tokens: prev.tokens + offlineGains,
+      }));
+      setStats((prev) => ({
+        ...prev,
+        totalTokensEarned: prev.totalTokensEarned + offlineGains,
+      }));
+      setOfflineGains(0);
+    }
+  }, [offlineGains, setGameState, setStats]);
+
   if (!isClient) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1418,7 +1424,7 @@ export default function Game() {
         {offlineGains > 0 && (
           <OfflineGainsModal
             amount={offlineGains}
-            onConfirm={() => setOfflineGains(0)}
+            onConfirm={handleClaimOfflineGains}
             formatNumber={formatNumber}
           />
         )}

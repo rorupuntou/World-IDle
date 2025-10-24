@@ -3,6 +3,7 @@ import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
+import { decodeAbiParameters } from 'viem';
 
 interface PrestigeSectionProps {
     prestigeBoost: number;
@@ -59,41 +60,24 @@ export default function PrestigeSection({
                 throw new Error((verifyFinalPayload as { message?: string }).message || t('error.verification_failed'));
             }
 
-            // 2. Send proof to our backend for verification and to get signature
-            const response = await fetch('/api/prestige-with-worldid', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    payload: verifyFinalPayload as ISuccessResult,
-                    action: 'prestige-game',
-                    signal: walletAddress,
-                }),
-            });
+            const proof = (verifyFinalPayload as ISuccessResult).proof as `0x${string}`;
+            const decodedProof = decodeAbiParameters([{ type: 'uint256[8]' }], proof)[0];
 
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                const errorDetail = result.detail || result.error || t('error.prestige_failed');
-                if (result.code === 'already_verified') {
-                    throw new Error(t('error.already_verified_prestige'));
-                }
-                throw new Error(errorDetail);
-            }
-
-            // 3. If backend is successful, send the prestige transaction with the signature
-            const { amount, nonce, signature } = result;
-
+            // 2. Send the prestige transaction with the proof
             const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [
                     {
                         address: contractConfig.gameManagerV2Address,
                         abi: contractConfig.gameManagerV2Abi,
                         functionName: 'prestige',
-                        args: [amount, nonce, signature],
+                        args: [
+                            (verifyFinalPayload as ISuccessResult).merkle_root,
+                            (verifyFinalPayload as ISuccessResult).nullifier_hash,
+                            decodedProof,
+                        ],
                         value: '0x0',
                     },
                 ],
-                formatPayload: false, // Added for debugging
             });
 
             if (txFinalPayload.status === 'error') {

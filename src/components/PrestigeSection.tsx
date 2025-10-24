@@ -97,7 +97,13 @@ export default function PrestigeSection({
             });
 
             if (txFinalPayload.status === 'error') {
-                throw new Error((txFinalPayload as { message?: string }).message || t('error.transaction_failed'));
+                const errorPayload = txFinalPayload as { message?: string, debug_url?: string };
+                console.error("Transaction failed payload:", JSON.stringify(errorPayload, null, 2));
+                let errorMessage = errorPayload.message || t('error.transaction_failed');
+                if (errorPayload.debug_url) {
+                    errorMessage += `\n\nDEBUG URL (copy and paste in browser):\n${errorPayload.debug_url}`;
+                }
+                throw new Error(errorMessage);
             }
 
             if (txFinalPayload.transaction_id) {

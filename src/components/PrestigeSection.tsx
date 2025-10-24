@@ -13,6 +13,7 @@ interface PrestigeSectionProps {
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
     setPendingPrestigeTxId: (txId: string) => void;
+    saveGame: (walletAddress: string, immediate?: boolean) => Promise<void>;
 }
 
 export default function PrestigeSection({
@@ -24,10 +25,13 @@ export default function PrestigeSection({
     setIsLoading,
     walletAddress,
     setPendingPrestigeTxId,
+    saveGame,
 }: PrestigeSectionProps) {
     const { t } = useLanguage();
 
     const handlePrestige = async () => {
+        await saveGame(walletAddress, true); // Force save before prestiging
+
         if (!MiniKit.isInstalled()) {
             console.error("World App not installed");
             alert(t('error.wallet_not_installed'));

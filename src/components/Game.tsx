@@ -1180,6 +1180,7 @@ export default function Game() {
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
                 setPendingPrestigeTxId={setPendingPrestigeTxId}
+                saveGame={saveGame}
               />
               {!stats.isVerified && (
                 <div className="mt-4">

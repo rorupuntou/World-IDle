@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
-import { parseEther } from 'viem';
 import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
@@ -13,7 +12,7 @@ interface PrestigeSectionProps {
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
-    setPendingPrestigeTxId: (txId: string) => void; // New prop
+    setPendingPrestigeTxId: (txId: string) => void;
 }
 
 export default function PrestigeSection({
@@ -24,7 +23,7 @@ export default function PrestigeSection({
     isLoading,
     setIsLoading,
     walletAddress,
-    setPendingPrestigeTxId, // New prop
+    setPendingPrestigeTxId,
 }: PrestigeSectionProps) {
     const { t } = useLanguage();
 
@@ -56,7 +55,7 @@ export default function PrestigeSection({
                 throw new Error((verifyFinalPayload as { message?: string }).message || t('error.verification_failed'));
             }
 
-            // 2. Send proof to our backend for verification
+            // 2. Send proof to our backend for verification and to get signature
             const response = await fetch('/api/prestige-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -69,36 +68,37 @@ export default function PrestigeSection({
 
             const result = await response.json();
 
-            if (!response.ok) {
+            if (!response.ok || !result.success) {
+                const errorDetail = result.detail || result.error || t('error.prestige_failed');
                 if (result.code === 'already_verified') {
                     throw new Error(t('error.already_verified_prestige'));
                 }
-                throw new Error(result.detail || t('error.prestige_failed'));
+                throw new Error(errorDetail);
             }
 
-            // 3. If backend verification is successful, send the prestige transaction through GameManager
-            if (result.success) {
-                const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                    transaction: [
-                        {
-                            address: contractConfig.gameManagerV2Address,
-                            abi: contractConfig.gameManagerV2Abi,
-                            functionName: 'prestige',
-                            args: [parseEther(Math.floor(prestigeReward).toString()).toString()],
-                            value: '0x0',
-                        },
-                    ],
-                });
+            // 3. If backend is successful, send the prestige transaction with the signature
+            const { amount, nonce, signature } = result;
 
-                if (txFinalPayload.status === 'error') {
-                    throw new Error((txFinalPayload as { message?: string }).message || t('error.transaction_failed'));
-                }
+            const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
+                transaction: [
+                    {
+                        address: contractConfig.gameManagerV2Address,
+                        abi: contractConfig.gameManagerV2Abi,
+                        functionName: 'prestige',
+                        args: [amount, nonce, signature],
+                        value: '0x0',
+                    },
+                ],
+            });
 
-                if (txFinalPayload.transaction_id) {
-                    setPendingPrestigeTxId(txFinalPayload.transaction_id);
-                } else {
-                    throw new Error(t('error.transaction_id_missing'));
-                }
+            if (txFinalPayload.status === 'error') {
+                throw new Error((txFinalPayload as { message?: string }).message || t('error.transaction_failed'));
+            }
+
+            if (txFinalPayload.transaction_id) {
+                setPendingPrestigeTxId(txFinalPayload.transaction_id);
+            } else {
+                throw new Error(t('error.transaction_id_missing'));
             }
 
         } catch (error) {

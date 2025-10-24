@@ -15,15 +15,7 @@ import {
   SoundOff,
 } from "iconoir-react";
 import { MiniKit, Tokens } from "@worldcoin/minikit-js";
-import { useReadContract } from "wagmi";
-import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
-import {
-  formatUnits,
-  createPublicClient,
-  http,
-  defineChain,
-  parseUnits,
-} from "viem";
+import { parseUnits } from "viem";
 
 import {
   Autoclicker,
@@ -32,7 +24,7 @@ import {
   FullGameState,
   Effect,
 } from "./types";
-import { initialState, newsFeed } from "@/app/data";
+import { newsFeed } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
@@ -49,24 +41,13 @@ import LanguageSelector from "./LanguageSelector";
 import TelegramButton from "./TelegramButton";
 import { useGameSave } from "./useGameSave";
 
+// Import new hooks
+import { useAudio } from "@/hooks/useAudio";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useGameCalculations } from "@/hooks/useGameCalculations";
+import { useBlockchain } from "@/hooks/useBlockchain";
+
 const PRICE_INCREASE_RATE = 1.15;
-
-const worldChain = defineChain({
-  id: contractConfig.worldChainId,
-  name: "World Chain",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://worldchain-mainnet.g.alchemy.com/public"] },
-  },
-  blockExplorers: {
-    default: { name: "Worldscan", url: "https://worldscan.org" },
-  },
-});
-
-const client = createPublicClient({
-  chain: worldChain,
-  transport: http(),
-});
 
 function choose<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -91,7 +72,9 @@ const Toast = ({
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? "bg-lime-400/70" : "bg-red-500/70"}`}
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${
+        isSuccess ? "bg-lime-400/70" : "bg-red-500/70"
+      }`}
     >
       {isSuccess ? (
         <Check className="w-6 h-6" />
@@ -147,10 +130,6 @@ export default function Game() {
   const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(
     null
   );
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
   const [floatingNumbers, setFloatingNumbers] = useState<
     { id: number; value: string; x: number; y: number }[]
@@ -181,14 +160,15 @@ export default function Game() {
   >(null);
   const [devModeActive, setDevModeActive] = useState(false);
   const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
-  const [isMuted, setIsMuted] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [prestigeBalance, setPrestigeBalance] = useState(0);
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [offlineGains, setOfflineGains] = useState(0);
 
+  // Custom Hooks
+  const { isMuted, toggleMute, triggerInteraction } = useAudio(
+    "/music/background-music.mp3"
+  );
+  const { notification, setNotification } = useNotifications();
   const {
     gameState,
     setGameState,
@@ -204,6 +184,45 @@ export default function Game() {
     setFullState,
     isLoaded,
   } = useGameSave(serverState);
+
+  const {
+    wIdleBalance,
+    legacyPrestigeBalance,
+    tokenDecimalsData,
+    isConfirmingPurchase,
+    isPurchaseSuccess,
+    isConfirmingPrestige,
+    isPrestigeSuccess,
+    isTimeWarpSuccess,
+    isSwapSuccess,
+    refetchBalances,
+  } = useBlockchain(
+    walletAddress,
+    pendingPurchaseTx,
+    pendingPrestigeTxId,
+    pendingTimeWarpTx,
+    pendingSwapTxId
+  );
+
+  const {
+    prestigeBoost,
+    totalCPS,
+    clickValue,
+    autoclickerCPSValues,
+    checkRequirements,
+    availableUpgradesCount,
+    sortedUpgrades,
+    wIdlePrestigeReward,
+    canPrestige,
+    timeWarpPrestigeCost,
+    timeWarpWldCost,
+  } = useGameCalculations(
+    upgrades,
+    autoclickers,
+    wIdleBalance,
+    gameState,
+    stats
+  );
 
   const showItemDetails = (
     item: {
@@ -231,223 +250,6 @@ export default function Game() {
     if (num < 1e12) return `${(num / 1e9).toFixed(2)}B`;
     return `${(num / 1e12).toFixed(2)}T`;
   }, []);
-
-  const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } =
-    useReadContract({
-      address: contractConfig.prestigeTokenAddress,
-      abi: contractConfig.prestigeTokenAbi,
-      functionName: "balanceOf",
-      args: [walletAddress!],
-      query: { enabled: !!walletAddress },
-    });
-
-  const { data: tokenDecimalsData } = useReadContract({
-    address: contractConfig.prestigeTokenAddress,
-    abi: contractConfig.prestigeTokenAbi,
-    functionName: "decimals",
-    query: { enabled: !!walletAddress },
-  });
-
-  const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } =
-    useWaitForTransactionReceipt({
-      client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-      transactionId: pendingPurchaseTx?.txId ?? "",
-    });
-
-  const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } =
-    useWaitForTransactionReceipt({
-      client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-      transactionId: pendingPrestigeTxId ?? "",
-    });
-
-  const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
-    client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-    transactionId: pendingTimeWarpTx?.txId ?? "",
-  });
-
-  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
-    client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-    transactionId: pendingSwapTxId ?? "",
-  });
-
-  useEffect(() => {
-    const audio = new Audio("/music/background-music.mp3");
-    audio.loop = true;
-    audio.volume = 0.25;
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.src = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = isMuted;
-      if (hasInteracted && !isMuted) {
-        audioRef.current
-          .play()
-          .catch((error) => console.error("Audio play failed:", error));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isMuted, hasInteracted]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!audioRef.current) return;
-      if (document.hidden) {
-        audioRef.current.pause();
-      } else {
-        if (hasInteracted && !isMuted) {
-          audioRef.current
-            .play()
-            .catch((error) =>
-              console.error("Audio play failed on visibility change:", error)
-            );
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [hasInteracted, isMuted]);
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-  };
-
-  const prestigeBoost = useMemo(
-    () => 15 * Math.log10(prestigeBalance + 1),
-    [prestigeBalance]
-  );
-
-  const timeWarpPrestigeCost = useMemo(() => {
-    const baseCost = 25;
-    const balanceFactor = Math.floor(prestigeBalance / 100);
-    return baseCost + balanceFactor;
-  }, [prestigeBalance]);
-
-  const timeWarpWldCost = useMemo(() => {
-    const baseCost = 0.1;
-    const purchasedCount = gameState.wldTimeWarpsPurchased || 0;
-    return baseCost * Math.pow(1.25, purchasedCount);
-  }, [gameState.wldTimeWarpsPurchased]);
-
-  const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
-    const purchasedUpgrades = upgrades.filter((u) => u.purchased);
-    let clickMultiplier = 1;
-    let clickAddition = 0;
-    let globalMultiplier = 1;
-    let cpsToClickPercent = 0;
-
-    const autoclickerMultipliers = new Map<number, number>();
-    autoclickers.forEach((a) => autoclickerMultipliers.set(a.id, 1));
-
-    const autoclickerAdditions = new Map<number, number>();
-    autoclickers.forEach((a) => autoclickerAdditions.set(a.id, 0));
-
-    purchasedUpgrades.forEach((upg) => {
-      upg.effect.forEach((eff) => {
-        switch (eff.type) {
-          case "multiplyClick":
-            clickMultiplier *= eff.value;
-            break;
-          case "addClick":
-            clickAddition += eff.value;
-            break;
-          case "multiplyGlobal":
-            globalMultiplier *= eff.value;
-            break;
-          case "multiplyAutoclicker":
-            autoclickerMultipliers.set(
-              eff.targetId,
-              (autoclickerMultipliers.get(eff.targetId) || 1) * eff.value
-            );
-            break;
-          case "addCpSToClick":
-            cpsToClickPercent += eff.percent;
-            break;
-          case "multiplyAutoclickerByOtherCount": {
-            const sourceAutoclicker = autoclickers.find(
-              (a) => a.id === eff.sourceId
-            );
-            const sourceCount = sourceAutoclicker
-              ? sourceAutoclicker.purchased
-              : 0;
-            const multiplier = 1 + sourceCount * eff.value;
-            autoclickerMultipliers.set(
-              eff.targetId,
-              (autoclickerMultipliers.get(eff.targetId) || 1) * multiplier
-            );
-            break;
-          }
-          case "addCpSToAutoclickerFromOthers": {
-            const otherAutoclickersCount = autoclickers.reduce(
-              (sum, a) => (a.id === eff.targetId ? sum : sum + a.purchased),
-              0
-            );
-            autoclickerAdditions.set(
-              eff.targetId,
-              (autoclickerAdditions.get(eff.targetId) || 0) +
-                otherAutoclickersCount * eff.value
-            );
-            break;
-          }
-        }
-      });
-    });
-
-    const finalGlobalMultiplier =
-      globalMultiplier *
-      (1 + prestigeBoost / 100) *
-      (1 +
-        (gameState.permanentBoostBonus || 0) +
-        (gameState.permanent_referral_boost || 0));
-
-    const autoclickerCPSValues = new Map<number, number>();
-    let totalAutoclickerCPS = 0;
-
-    autoclickers.forEach((auto) => {
-      const baseCPS = auto.purchased * auto.tps;
-      const multipliedCPS =
-        baseCPS * (autoclickerMultipliers.get(auto.id) || 1);
-      const addedCPS = autoclickerAdditions.get(auto.id) || 0;
-      const finalIndividualCPS =
-        (multipliedCPS + addedCPS) * finalGlobalMultiplier;
-      autoclickerCPSValues.set(auto.id, finalIndividualCPS);
-      totalAutoclickerCPS += finalIndividualCPS;
-    });
-
-    const baseClickValue =
-      initialState.tokensPerClick * clickMultiplier + clickAddition;
-    const finalClickValue =
-      baseClickValue + totalAutoclickerCPS * cpsToClickPercent;
-
-    return {
-      totalCPS: totalAutoclickerCPS,
-      clickValue: finalClickValue,
-      autoclickerCPSValues,
-    };
-  }, [
-    upgrades,
-    autoclickers,
-    prestigeBoost,
-    gameState.permanentBoostBonus,
-    gameState.permanent_referral_boost,
-  ]);
 
   const handleVerifyWithMiniKit = async () => {
     if (!walletAddress) return;
@@ -530,66 +332,6 @@ export default function Game() {
     }
   };
 
-  const checkRequirements = useCallback(
-    (req: Requirement | undefined): boolean => {
-      if (!req) return true;
-      if (
-        req.totalTokensEarned !== undefined &&
-        stats.totalTokensEarned < req.totalTokensEarned
-      )
-        return false;
-      if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks)
-        return false;
-      if (req.tps !== undefined && totalCPS < req.tps) return false;
-      if (req.verified !== undefined && req.verified && !stats.isVerified)
-        return false;
-      if (req.autoclickers !== undefined) {
-        const autoclickerReqs = Array.isArray(req.autoclickers)
-          ? req.autoclickers
-          : [req.autoclickers];
-        for (const autoReq of autoclickerReqs) {
-          const auto = autoclickers.find((a) => a.id === autoReq.id);
-          if (!auto || auto.purchased < autoReq.amount) return false;
-        }
-      }
-      if (req.eachAutoclickerAmount !== undefined) {
-        for (const auto of autoclickers) {
-          if (auto.purchased < req.eachAutoclickerAmount) {
-            return false;
-          }
-        }
-      }
-      return true;
-    },
-    [stats, totalCPS, autoclickers]
-  );
-
-  const availableUpgradesCount = useMemo(() => {
-    return upgrades.filter(
-      (u) =>
-        !u.purchased && checkRequirements(u.req) && gameState.tokens >= u.cost
-    ).length;
-  }, [upgrades, gameState.tokens, checkRequirements]);
-
-  const sortedUpgrades = useMemo(() => {
-    return [...upgrades].sort((a, b) => {
-      const aAvailable = checkRequirements(a.req) && gameState.tokens >= a.cost;
-      const bAvailable = checkRequirements(b.req) && gameState.tokens >= b.cost;
-      if (aAvailable && !bAvailable) return -1;
-      if (!aAvailable && bAvailable) return 1;
-      return a.cost - b.cost;
-    });
-  }, [upgrades, gameState.tokens, checkRequirements]);
-
-  const prestigeReward = useMemo(() => {
-    if (stats.totalTokensEarned <= 0) return 0;
-    return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000)) * 1000;
-  }, [stats.totalTokensEarned]);
-
-  const canPrestige = useMemo(() => {
-    return prestigeReward >= 1;
-  }, [prestigeReward]);
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -597,17 +339,6 @@ export default function Game() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeTab]);
-
-  useEffect(() => {
-    const decimals =
-      typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
-    if (typeof prestigeTokenBalanceData === "bigint") {
-      const balance = parseFloat(
-        formatUnits(prestigeTokenBalanceData, decimals)
-      );
-      setPrestigeBalance(balance);
-    }
-  }, [prestigeTokenBalanceData, tokenDecimalsData]);
 
   const loadGameFromBackend = useCallback(
     async (address: string) => {
@@ -630,7 +361,7 @@ export default function Game() {
         setIsLoading(false);
       }
     },
-    [t]
+    [t, setNotification]
   );
 
   useEffect(() => {
@@ -648,7 +379,7 @@ export default function Game() {
         }
         setNotification({ message: t("prestige_success"), type: "success" });
         setFullState(data.gameData);
-        refetchPrestigeBalance();
+        refetchBalances();
       } catch (error) {
         console.error("Prestige failed:", error);
         setNotification({
@@ -665,9 +396,10 @@ export default function Game() {
   }, [
     isPrestigeSuccess,
     walletAddress,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
     setFullState,
+    setNotification,
   ]);
 
   useEffect(() => {
@@ -689,25 +421,26 @@ export default function Game() {
         ...prev,
         totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward,
       }));
-      refetchPrestigeBalance();
+      refetchBalances();
       setPendingTimeWarpTx(null);
     }
   }, [
     isTimeWarpSuccess,
     pendingTimeWarpTx,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
     setGameState,
     setStats,
+    setNotification,
   ]);
 
   useEffect(() => {
     if (isSwapSuccess) {
       setNotification({ message: t("swap_success"), type: "success" });
-      refetchPrestigeBalance();
+      refetchBalances();
       setPendingSwapTxId(undefined);
     }
-  }, [isSwapSuccess, refetchPrestigeBalance, t]);
+  }, [isSwapSuccess, refetchBalances, t, setNotification]);
 
   useEffect(() => {
     const updateCooldown = () => {
@@ -720,7 +453,9 @@ export default function Game() {
           const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
           const seconds = Math.floor((timeLeft / 1000) % 60);
           setTimeWarpCooldown(
-            `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+            `${hours.toString().padStart(2, "0")}:${minutes
+              .toString()
+              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
           );
         } else {
           setTimeWarpCooldown("");
@@ -758,24 +493,24 @@ export default function Game() {
   // Capture referral code from URL on initial load
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    const referralCode = searchParams.get('code');
+    const referralCode = searchParams.get("code");
     if (referralCode) {
-      localStorage.setItem('pending_referral_code', referralCode);
+      localStorage.setItem("pending_referral_code", referralCode);
       // Clean URL
       const url = new URL(window.location.href);
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url.toString());
+      url.searchParams.delete("code");
+      window.history.replaceState({}, "", url.toString());
     }
   }, []);
 
   // Process referral code once wallet is connected
   useEffect(() => {
     const processReferral = async () => {
-      const referralCode = localStorage.getItem('pending_referral_code');
+      const referralCode = localStorage.getItem("pending_referral_code");
       if (!walletAddress || !referralCode) return;
 
       if (referralCode === walletAddress) {
-        localStorage.removeItem('pending_referral_code');
+        localStorage.removeItem("pending_referral_code");
         return; // Don't process self-referral
       }
 
@@ -793,24 +528,34 @@ export default function Game() {
 
         if (!response.ok) {
           // If the referral has already been processed, remove the code from local storage
-          if (data.error && data.error.includes('already been processed')) {
-            localStorage.removeItem('pending_referral_code');
+          if (data.error && data.error.includes("already been processed")) {
+            localStorage.removeItem("pending_referral_code");
           }
-          throw new Error(data.error || 'Failed to process referral');
+          throw new Error(data.error || "Failed to process referral");
         }
 
         if (data.success) {
-          setNotification({ message: t('referral_success'), type: 'success' });
-          localStorage.removeItem('pending_referral_code');
+          setNotification({
+            message: t("referral_success"),
+            type: "success",
+          });
+          localStorage.removeItem("pending_referral_code");
           // Reload game data to reflect the referral bonus
           await loadGameFromBackend(walletAddress);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         // Don't bother user with errors about already processed or self-referrals
-        if (message && !message.includes('already been processed') && !message.includes('cannot be the same')) {
+        if (
+          message &&
+          !message.includes("already been processed") &&
+          !message.includes("cannot be the same")
+        ) {
           console.error("Error processing referral:", error);
-          setNotification({ message: message || t('referral_error'), type: 'error' });
+          setNotification({
+            message: message || t("referral_error"),
+            type: "error",
+          });
         }
       }
     };
@@ -870,7 +615,7 @@ export default function Game() {
   ]);
 
   const handleConnect = useCallback(async () => {
-    if (!hasInteracted) setHasInteracted(true);
+    triggerInteraction();
     if (!MiniKit.isInstalled()) {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
@@ -899,14 +644,7 @@ export default function Game() {
         type: "error",
       });
     }
-  }, [
-    loadGameFromBackend,
-    t,
-    hasInteracted,
-    setHasInteracted,
-    setNotification,
-    setWalletAddress,
-  ]);
+  }, [loadGameFromBackend, t, triggerInteraction, setNotification]);
 
   const onBoostPurchased = useCallback(
     (boostToAdd: number) => {
@@ -934,7 +672,7 @@ export default function Game() {
             });
           }
         }
-        if (prestigeBalance < timeWarpPrestigeCost) {
+        if (legacyPrestigeBalance < timeWarpPrestigeCost) {
           return setNotification({
             message: t("not_enough_prestige_tokens"),
             type: "error",
@@ -1069,7 +807,7 @@ export default function Game() {
     },
     [
       totalCPS,
-      prestigeBalance,
+      legacyPrestigeBalance,
       tokenDecimalsData,
       t,
       walletAddress,
@@ -1086,7 +824,7 @@ export default function Game() {
 
   const handleManualClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!hasInteracted) setHasInteracted(true);
+      triggerInteraction();
       const value = clickValue;
       setFloatingNumbers((current) => [
         ...current,
@@ -1112,10 +850,9 @@ export default function Game() {
     [
       clickValue,
       formatNumber,
-      hasInteracted,
+      triggerInteraction,
       setGameState,
       setStats,
-      setHasInteracted,
       setFloatingNumbers,
     ]
   );
@@ -1180,7 +917,7 @@ export default function Game() {
           type: "success",
         });
         purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
-        refetchPrestigeBalance();
+        refetchBalances();
         if (walletAddress) saveGame(walletAddress);
       }
       setPendingPurchaseTx(null);
@@ -1190,12 +927,11 @@ export default function Game() {
     pendingPurchaseTx,
     autoclickers,
     purchaseAutoclickerWithTokens,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
     saveGame,
     walletAddress,
     setNotification,
-    setPendingPurchaseTx,
   ]);
 
   const handlePrestigePurchase = useCallback(
@@ -1259,7 +995,7 @@ export default function Game() {
       if (gameState.tokens < tokenCost) return;
       if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
         const prestigeCost = calculatePrestigeBulkCost(autoclicker, buyAmount);
-        if (prestigeBalance >= prestigeCost) {
+        if (legacyPrestigeBalance >= prestigeCost) {
           handlePrestigePurchase(autoclicker, prestigeCost);
         } else {
           setNotification({
@@ -1276,7 +1012,7 @@ export default function Game() {
       gameState.tokens,
       calculateBulkCost,
       buyAmount,
-      prestigeBalance,
+      legacyPrestigeBalance,
       handlePrestigePurchase,
       purchaseAutoclickerWithTokens,
       t,
@@ -1336,7 +1072,9 @@ export default function Game() {
         )
       );
       setNotification({
-        message: t("bulk_purchase_success", { count: upgradesToPurchase.size }),
+        message: t("bulk_purchase_success", {
+          count: upgradesToPurchase.size,
+        }),
         type: "success",
       });
       if (walletAddress) saveGame(walletAddress);
@@ -1508,12 +1246,12 @@ export default function Game() {
                 devModeActive={devModeActive}
                 isConfirmingPurchase={isConfirmingPurchase}
                 pendingPurchaseTx={pendingPurchaseTx}
-                prestigeBalance={prestigeBalance}
+                prestigeBalance={legacyPrestigeBalance}
               />
               <PrestigeSection
                 prestigeBoost={prestigeBoost}
-                prestigeBalance={prestigeBalance}
-                prestigeReward={prestigeReward}
+                prestigeBalance={wIdleBalance}
+                prestigeReward={wIdlePrestigeReward}
                 isPrestigeReady={canPrestige}
                 isLoading={isLoading || isConfirmingPrestige}
                 setIsLoading={setIsLoading}
@@ -1551,7 +1289,7 @@ export default function Game() {
                 onBoostPurchased={onBoostPurchased}
                 setNotification={setNotification}
                 totalCPS={totalCPS}
-                prestigeBalance={prestigeBalance}
+                prestigeBalance={legacyPrestigeBalance}
                 handleTimeWarpPurchase={handleTimeWarpPurchase}
                 formatNumber={formatNumber}
                 timeWarpPrestigeCost={timeWarpPrestigeCost}
@@ -1575,7 +1313,9 @@ export default function Game() {
         <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-between items-center px-8 pb-safe-bottom">
           <button
             onClick={() => setActiveTab("upgrades")}
-            className={`relative flex flex-col items-center gap-1 ${activeTab === "upgrades" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
+            className={`relative flex flex-col items-center gap-1 ${
+              activeTab === "upgrades" ? "text-cyan-400" : "text-slate-400"
+            } transition-colors`}
           >
             <Rocket className="w-7 h-7" />
             <span className="text-xs font-medium">{t("upgrades_tab")}</span>
@@ -1587,21 +1327,27 @@ export default function Game() {
           </button>
           <button
             onClick={() => setActiveTab("main")}
-            className={`flex flex-col items-center gap-1 ${activeTab === "main" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
+            className={`flex flex-col items-center gap-1 ${
+              activeTab === "main" ? "text-cyan-400" : "text-slate-400"
+            } transition-colors`}
           >
             <Home className="w-7 h-7" />
             <span className="text-xs font-medium">{t("main_tab")}</span>
           </button>
           <button
             onClick={() => setActiveTab("referrals")}
-            className={`flex flex-col items-center gap-1 ${activeTab === "referrals" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
+            className={`flex flex-col items-center gap-1 ${
+              activeTab === "referrals" ? "text-cyan-400" : "text-slate-400"
+            } transition-colors`}
           >
             <Gift className="w-7 h-7" />
             <span className="text-xs font-medium">{t("referrals_tab")}</span>
           </button>
           <button
             onClick={() => setActiveTab("shop")}
-            className={`flex flex-col items-center gap-1 ${activeTab === "shop" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
+            className={`flex flex-col items-center gap-1 ${
+              activeTab === "shop" ? "text-cyan-400" : "text-slate-400"
+            } transition-colors`}
           >
             <ShopIcon className="w-7 h-7" />
             <span className="text-xs font-medium">{t("shop_tab")}</span>

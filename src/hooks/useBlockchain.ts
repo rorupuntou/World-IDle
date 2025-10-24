@@ -1,0 +1,102 @@
+import { useState, useEffect } from "react";
+import { useReadContract } from "wagmi";
+import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
+import { formatUnits, createPublicClient, http, defineChain } from "viem";
+import { contractConfig } from "@/app/contracts/config";
+
+const worldChain = defineChain({
+  id: contractConfig.worldChainId,
+  name: "World Chain",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://worldchain-mainnet.g.alchemy.com/public"] },
+  },
+  blockExplorers: {
+    default: { name: "Worldscan", url: "https://worldscan.org" },
+  },
+});
+
+const client = createPublicClient({
+  chain: worldChain,
+  transport: http(),
+});
+
+export const useBlockchain = (
+  walletAddress: `0x${string}` | null,
+  pendingPurchaseTx: { txId: string; itemId: number } | null,
+  pendingPrestigeTxId: string | undefined,
+  pendingTimeWarpTx: { txId: string; reward: number; type: "prestige" | "wld" } | null,
+  pendingSwapTxId: string | undefined
+) => {
+  const [wIdleBalance, setWIdleBalance] = useState(0);
+
+  const { data: wIdleTokenBalanceData, refetch: refetchWIdleBalance } =
+    useReadContract({
+      address: contractConfig.wIdleTokenAddress,
+      abi: contractConfig.wIdleTokenAbi,
+      functionName: "balanceOf",
+      args: [walletAddress!],
+      query: { enabled: !!walletAddress },
+    });
+
+  const { data: tokenDecimalsData } = useReadContract({
+    address: contractConfig.wIdleTokenAddress, // Changed to wIdle token
+    abi: contractConfig.wIdleTokenAbi, // Changed to wIdle token
+    functionName: "decimals",
+    query: { enabled: !!walletAddress },
+  });
+
+  const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } =
+    useWaitForTransactionReceipt({
+      client,
+      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+      transactionId: pendingPurchaseTx?.txId ?? "",
+    });
+
+  const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } =
+    useWaitForTransactionReceipt({
+      client,
+      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+      transactionId: pendingPrestigeTxId ?? "",
+    });
+
+  const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
+    client,
+    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+    transactionId: pendingTimeWarpTx?.txId ?? "",
+  });
+
+  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
+    client,
+    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+    transactionId: pendingSwapTxId ?? "",
+  });
+
+  useEffect(() => {
+    const decimals =
+      typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
+    if (typeof wIdleTokenBalanceData === "bigint") {
+      const balance = parseFloat(
+        formatUnits(wIdleTokenBalanceData, decimals)
+      );
+      setWIdleBalance(balance);
+    }
+  }, [wIdleTokenBalanceData, tokenDecimalsData]);
+
+  const refetchBalances = () => {
+    refetchWIdleBalance();
+  }
+
+  return {
+    client,
+    wIdleBalance,
+    tokenDecimalsData,
+    isConfirmingPurchase,
+    isPurchaseSuccess,
+    isConfirmingPrestige,
+    isPrestigeSuccess,
+    isTimeWarpSuccess,
+    isSwapSuccess,
+    refetchBalances,
+  };
+};

@@ -235,7 +235,7 @@ export default function Game() {
     }
     try {
       const { finalPayload } = await MiniKit.commandsAsync.verify({
-        action: "world-idle-login",
+        action: "prestige-game",
         signal: walletAddress,
       });
 
@@ -259,7 +259,7 @@ export default function Game() {
         body: JSON.stringify({
           proof: finalPayload,
           signal: walletAddress,
-          action: "world-idle-login",
+          action: "prestige-game",
         }),
       });
 

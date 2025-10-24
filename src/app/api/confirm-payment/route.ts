@@ -61,7 +61,6 @@ export async function POST(req: NextRequest) {
         const gameData = existingData ? existingData.game_data : {};
         
         // Calculate new multiplier
-        const currentMultiplier = gameData.permanentBoostMultiplier || 1;
         const purchasedBoost = boosts[boostId];
         // This logic assumes we store the full multiplier, not the bonus. Let's adjust to the bonus logic.
         const currentBonus = gameData.permanentBoostBonus || 0;

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
+import { MiniKit } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
@@ -45,26 +45,12 @@ export default function PrestigeSection({
 
         setIsLoading(true);
 
-        const verifyPayload: VerifyCommandInput = {
-            action: 'prestige-game',
-            signal: walletAddress,
-            verification_level: VerificationLevel.Orb,
-        };
-
         try {
-            // 1. Verify with World ID
-            const { finalPayload: verifyFinalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
-
-            if (verifyFinalPayload.status === 'error') {
-                throw new Error((verifyFinalPayload as { message?: string }).message || t('error.verification_failed'));
-            }
-
-            // 2. Send proof to our backend for verification and to get signature
+            // 1. Send proof to our backend for verification and to get signature
             const response = await fetch('/api/prestige-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    payload: verifyFinalPayload as ISuccessResult,
                     action: 'prestige-game',
                     signal: walletAddress,
                 }),
@@ -80,7 +66,7 @@ export default function PrestigeSection({
                 throw new Error(errorDetail);
             }
 
-            // 3. If backend is successful, send the prestige transaction with the signature
+            // 2. If backend is successful, send the prestige transaction with the signature
             const { amount, nonce, signature } = result;
 
             const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
@@ -93,7 +79,6 @@ export default function PrestigeSection({
                         value: '0x0',
                     },
                 ],
-                formatPayload: false, // Added for debugging
             });
 
             if (txFinalPayload.status === 'error') {

@@ -150,6 +150,7 @@ export default function Game() {
   >();
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
 
   // Custom Hooks
   const { isMuted, toggleMute, triggerInteraction } = useAudio(

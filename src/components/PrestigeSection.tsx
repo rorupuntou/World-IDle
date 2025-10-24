@@ -81,8 +81,8 @@ export default function PrestigeSection({
                 const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
                     transaction: [
                         {
-                            address: contractConfig.gameManagerAddress,
-                            abi: contractConfig.gameManagerAbi,
+                            address: contractConfig.gameManagerV2Address,
+                            abi: contractConfig.gameManagerV2Abi,
                             functionName: 'prestige',
                             args: [parseEther(Math.floor(prestigeReward).toString()).toString()],
                             value: '0x0',

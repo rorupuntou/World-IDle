@@ -93,6 +93,7 @@ export default function PrestigeSection({
                         value: '0x0',
                     },
                 ],
+                formatPayload: false, // Added for debugging
             });
 
             if (txFinalPayload.status === 'error') {

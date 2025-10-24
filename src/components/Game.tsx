@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -46,6 +46,10 @@ import { useAudio } from "@/hooks/useAudio";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useGameCalculations } from "@/hooks/useGameCalculations";
 import { useBlockchain } from "@/hooks/useBlockchain";
+import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
+import { useItemDetails } from "@/hooks/useItemDetails";
+import { useDevMode } from "@/hooks/useDevMode";
+import { useOfflineGains } from "@/hooks/useOfflineGains";
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -131,9 +135,6 @@ export default function Game() {
     null
   );
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
-  const [floatingNumbers, setFloatingNumbers] = useState<
-    { id: number; value: string; x: number; y: number }[]
-  >([]);
   const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{
     txId: string;
     itemId: number;
@@ -147,28 +148,17 @@ export default function Game() {
   const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<
     string | undefined
   >();
-  const [selectedItem, setSelectedItem] = useState<
-    | ({
-        name: string;
-        desc?: string;
-        req?: Requirement;
-        effect?: Effect[];
-        id?: number;
-        cost?: number;
-      } & { itemType?: "upgrade" | "achievement" | "autoclicker" })
-    | null
-  >(null);
-  const [devModeActive, setDevModeActive] = useState(false);
-  const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [offlineGains, setOfflineGains] = useState(0);
 
   // Custom Hooks
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
     "/music/background-music.mp3"
   );
   const { notification, setNotification } = useNotifications();
+  const { floatingNumbers, addFloatingNumber } = useFloatingNumbers();
+  const { selectedItem, showItemDetails, closeItemDetails } = useItemDetails();
+  const { devModeActive, handleDevMode } = useDevMode(setNotification, t);
   const {
     gameState,
     setGameState,
@@ -184,10 +174,9 @@ export default function Game() {
     setFullState,
     isLoaded,
   } = useGameSave(serverState);
-
+  
   const {
     wIdleBalance,
-    legacyPrestigeBalance,
     tokenDecimalsData,
     isConfirmingPurchase,
     isPurchaseSuccess,
@@ -202,45 +191,35 @@ export default function Game() {
     pendingPrestigeTxId,
     pendingTimeWarpTx,
     pendingSwapTxId
-  );
-
-  const {
-    prestigeBoost,
+    );
+    
+    const {
+        prestigeBoost,
+        totalCPS,
+        clickValue,
+        autoclickerCPSValues,
+        checkRequirements,
+        availableUpgradesCount,
+        sortedUpgrades,
+        wIdlePrestigeReward,
+        canPrestige,
+        timeWarpPrestigeCost,
+        timeWarpWldCost,
+    } = useGameCalculations(
+        upgrades,
+        autoclickers,
+        wIdleBalance,
+        gameState,
+        stats
+        );
+        
+  const { offlineGains, handleClaimOfflineGains } = useOfflineGains(
+    isLoaded,
     totalCPS,
-    clickValue,
-    autoclickerCPSValues,
-    checkRequirements,
-    availableUpgradesCount,
-    sortedUpgrades,
-    wIdlePrestigeReward,
-    canPrestige,
-    timeWarpPrestigeCost,
-    timeWarpWldCost,
-  } = useGameCalculations(
-    upgrades,
-    autoclickers,
-    wIdleBalance,
-    gameState,
-    stats
+    gameState.lastSaved,
+    setGameState,
+    setStats
   );
-
-  const showItemDetails = (
-    item: {
-      name: string;
-      desc?: string;
-      req?: Requirement;
-      effect?: Effect[];
-      id?: number;
-      cost?: number;
-    },
-    itemType: "upgrade" | "achievement" | "autoclicker"
-  ) => {
-    setSelectedItem({ ...item, itemType });
-  };
-
-  const closeItemDetails = () => {
-    setSelectedItem(null);
-  };
 
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
@@ -471,25 +450,6 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [gameState.lastPrestigeTimeWarp, setGameState]);
 
-  const offlineGainsProcessed = useRef(false);
-
-  useEffect(() => {
-    if (isLoaded && !offlineGainsProcessed.current) {
-      const lastSaved = gameState.lastSaved || Date.now();
-      const elapsedSeconds = (Date.now() - lastSaved) / 1000;
-      if (elapsedSeconds > 60) {
-        const maxOfflineSeconds = 86400; // 24 hours
-        const secondsToReward = Math.min(elapsedSeconds, maxOfflineSeconds);
-        const calculatedGains = secondsToReward * totalCPS;
-
-        if (calculatedGains > 1) {
-          setOfflineGains(calculatedGains);
-        }
-      }
-      offlineGainsProcessed.current = true;
-    }
-  }, [isLoaded, totalCPS, gameState.lastSaved]);
-
   // Capture referral code from URL on initial load
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -672,7 +632,7 @@ export default function Game() {
             });
           }
         }
-        if (legacyPrestigeBalance < timeWarpPrestigeCost) {
+        if (wIdleBalance < timeWarpPrestigeCost) {
           return setNotification({
             message: t("not_enough_prestige_tokens"),
             type: "error",
@@ -689,8 +649,8 @@ export default function Game() {
           const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
             transaction: [
               {
-                address: contractConfig.prestigeTokenAddress,
-                abi: contractConfig.prestigeTokenAbi,
+                address: contractConfig.wIdleTokenAddress,
+                abi: contractConfig.wIdleTokenAbi,
                 functionName: "transfer",
                 args: [
                   "0x000000000000000000000000000000000000dEaD",
@@ -807,7 +767,7 @@ export default function Game() {
     },
     [
       totalCPS,
-      legacyPrestigeBalance,
+      wIdleBalance,
       tokenDecimalsData,
       t,
       walletAddress,
@@ -826,20 +786,7 @@ export default function Game() {
     (e: React.MouseEvent<HTMLButtonElement>) => {
       triggerInteraction();
       const value = clickValue;
-      setFloatingNumbers((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          value: `+${formatNumber(value)}`,
-          x: e.clientX,
-          y: e.clientY,
-        },
-      ]);
-      setTimeout(() => {
-        setFloatingNumbers((current) =>
-          current.filter((n) => n.id !== e.timeStamp)
-        );
-      }, 2000);
+      addFloatingNumber(`+${formatNumber(value)}`, e.clientX, e.clientY);
       setGameState((prev) => ({ ...prev, tokens: prev.tokens + value }));
       setStats((prev) => ({
         ...prev,
@@ -853,7 +800,7 @@ export default function Game() {
       triggerInteraction,
       setGameState,
       setStats,
-      setFloatingNumbers,
+      addFloatingNumber,
     ]
   );
 
@@ -945,8 +892,8 @@ export default function Game() {
         const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
             {
-              address: contractConfig.prestigeTokenAddress,
-              abi: contractConfig.prestigeTokenAbi,
+              address: contractConfig.wIdleTokenAddress,
+              abi: contractConfig.wIdleTokenAbi,
               functionName: "transfer",
               args: [
                 "0x000000000000000000000000000000000000dEaD",
@@ -995,7 +942,7 @@ export default function Game() {
       if (gameState.tokens < tokenCost) return;
       if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
         const prestigeCost = calculatePrestigeBulkCost(autoclicker, buyAmount);
-        if (legacyPrestigeBalance >= prestigeCost) {
+        if (wIdleBalance >= prestigeCost) {
           handlePrestigePurchase(autoclicker, prestigeCost);
         } else {
           setNotification({
@@ -1012,7 +959,7 @@ export default function Game() {
       gameState.tokens,
       calculateBulkCost,
       buyAmount,
-      legacyPrestigeBalance,
+      wIdleBalance,
       handlePrestigePurchase,
       purchaseAutoclickerWithTokens,
       t,
@@ -1090,28 +1037,6 @@ export default function Game() {
     setUpgrades,
     setNotification,
   ]);
-
-  const handleDevMode = () => {
-    const code = prompt(t("dev_mode_prompt"));
-    if (code === "1312") {
-      setDevModeActive(true);
-      setNotification({ message: t("dev_mode_activated"), type: "success" });
-    }
-  };
-
-  const handleClaimOfflineGains = useCallback(() => {
-    if (offlineGains > 0) {
-      setGameState((prev) => ({
-        ...prev,
-        tokens: prev.tokens + offlineGains,
-      }));
-      setStats((prev) => ({
-        ...prev,
-        totalTokensEarned: prev.totalTokensEarned + offlineGains,
-      }));
-      setOfflineGains(0);
-    }
-  }, [offlineGains, setGameState, setStats]);
 
   if (!isClient) {
     return (
@@ -1246,7 +1171,7 @@ export default function Game() {
                 devModeActive={devModeActive}
                 isConfirmingPurchase={isConfirmingPurchase}
                 pendingPurchaseTx={pendingPurchaseTx}
-                prestigeBalance={legacyPrestigeBalance}
+                prestigeBalance={wIdleBalance}
               />
               <PrestigeSection
                 prestigeBoost={prestigeBoost}
@@ -1289,7 +1214,7 @@ export default function Game() {
                 onBoostPurchased={onBoostPurchased}
                 setNotification={setNotification}
                 totalCPS={totalCPS}
-                prestigeBalance={legacyPrestigeBalance}
+                prestigeBalance={wIdleBalance}
                 handleTimeWarpPurchase={handleTimeWarpPurchase}
                 formatNumber={formatNumber}
                 timeWarpPrestigeCost={timeWarpPrestigeCost}

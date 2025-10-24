@@ -3,7 +3,7 @@ import {
   Autoclicker,
   Upgrade,
   GameState,
-  Stats,
+  StatsState,
   Requirement,
 } from "@/components/types";
 import { initialState } from "@/app/data";
@@ -13,7 +13,7 @@ export const useGameCalculations = (
   autoclickers: Autoclicker[],
   wIdleBalance: number,
   gameState: GameState,
-  stats: Stats
+  stats: StatsState
 ) => {
   const prestigeBoost = useMemo(
     () => 15 * Math.log10(wIdleBalance + 1),

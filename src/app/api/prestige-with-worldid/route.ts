@@ -2,8 +2,26 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/minikit-js';
 import { supabase } from '@/lib/supabaseClient';
 import { privateKeyToAccount } from 'viem/accounts';
-import { createWalletClient, http, keccak256, encodePacked, parseEther, toBytes } from 'viem';
-import { mainnet } from 'viem/chains';
+import { createWalletClient, http, keccak256, encodePacked, parseEther, toBytes, defineChain } from 'viem';
+
+// Define World Chain for Viem
+const worldChain = defineChain({
+  id: 480,
+  name: 'World Chain',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ether',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://worldchain-mainnet.g.alchemy.com/public'],
+    },
+  },
+  blockExplorers: {
+    default: { name: 'World Chain Explorer', url: 'https://explorer.worldcoin.org' },
+  },
+});
 
 const APP_ID = (process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_fe80f47dce293e5f434ea9553098015d') as `app_${string}`;
 
@@ -23,7 +41,7 @@ export async function POST(req: NextRequest) {
     const account = privateKeyToAccount(privateKey);
     const client = createWalletClient({
         account,
-        chain: mainnet,
+        chain: worldChain, // Use World Chain for signing
         transport: http(),
     });
 

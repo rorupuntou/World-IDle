@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -19,10 +19,7 @@ import { parseUnits } from "viem";
 
 import {
   Autoclicker,
-  BuyAmount,
-  Requirement,
-  FullGameState,
-  Effect,
+  BuyAmount, FullGameState
 } from "./types";
 import { newsFeed } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";

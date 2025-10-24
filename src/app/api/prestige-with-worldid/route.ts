@@ -6,18 +6,6 @@ import { createWalletClient, http, keccak256, encodePacked, parseEther, toBytes 
 import { mainnet } from 'viem/chains';
 
 const APP_ID = (process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_fe80f47dce293e5f434ea9553098015d') as `app_${string}`;
-const privateKey = process.env.PRIVATE_KEY as `0x${string}` | undefined;
-
-if (!privateKey) {
-  throw new Error('PRIVATE_KEY environment variable not set');
-}
-
-const account = privateKeyToAccount(privateKey);
-const client = createWalletClient({
-  account,
-  chain: mainnet,
-  transport: http(),
-});
 
 interface IRequestPayload {
     payload: ISuccessResult;
@@ -26,6 +14,19 @@ interface IRequestPayload {
 }
 
 export async function POST(req: NextRequest) {
+    const privateKey = process.env.PRIVATE_KEY as `0x${string}` | undefined;
+
+    if (!privateKey) {
+        return NextResponse.json({ success: false, error: 'PRIVATE_KEY environment variable not set' }, { status: 500 });
+    }
+
+    const account = privateKeyToAccount(privateKey);
+    const client = createWalletClient({
+        account,
+        chain: mainnet,
+        transport: http(),
+    });
+
     const { payload, action, signal: walletAddress } = (await req.json()) as IRequestPayload;
 
     const verifyRes = (await verifyCloudProof(payload, APP_ID, action, walletAddress)) as IVerifyResponse;

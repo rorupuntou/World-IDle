@@ -235,7 +235,7 @@ export default function Game() {
     }
     try {
       const { finalPayload } = await MiniKit.commandsAsync.verify({
-        action: "prestige-game",
+        action: "verify-humanity",
         signal: walletAddress,
         verification_level: VerificationLevel.Orb,
       });
@@ -260,7 +260,7 @@ export default function Game() {
         body: JSON.stringify({
           proof: finalPayload,
           signal: walletAddress,
-          action: "prestige-game",
+          action: "verify-humanity",
         }),
       });
 

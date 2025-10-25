@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Star } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MiniKit } from '@worldcoin/minikit-js';
+import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
 
 interface PrestigeSectionProps {
@@ -46,28 +46,42 @@ export default function PrestigeSection({
         setIsLoading(true);
 
         try {
-            // 1. Send proof to our backend for verification and to get signature
+            // 1. Get proof from World App
+            const { finalPayload } = await MiniKit.commandsAsync.verify({
+                action: 'prestige-game',
+                signal: walletAddress,
+                verification_level: VerificationLevel.Device,
+            });
+
+            if (finalPayload.status === 'error') {
+                const errorPayload = finalPayload as { message?: string, debug_url?: string };
+                console.error("DEBUG (MiniKit Error): " + JSON.stringify(errorPayload, null, 2));
+                throw new Error(errorPayload.message || "Verification failed in World App.");
+            }
+
+            // 2. Send proof to our backend for verification and to get signature
             const response = await fetch('/api/prestige-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    payload: finalPayload,
                     action: 'prestige-game',
                     signal: walletAddress,
                 }),
             });
 
-            const result = await response.json();
+            const backendResult = await response.json();
 
-            if (!response.ok || !result.success) {
-                const errorDetail = result.detail || result.error || t('error.prestige_failed');
-                if (result.code === 'already_verified') {
+            if (!response.ok || !backendResult.success) {
+                const errorDetail = backendResult.detail || backendResult.error || t('error.prestige_failed');
+                if (backendResult.code === 'already_verified') {
                     throw new Error(t('error.already_verified_prestige'));
                 }
                 throw new Error(errorDetail);
             }
 
-            // 2. If backend is successful, send the prestige transaction with the signature
-            const { amount, nonce, signature } = result;
+            // 3. If backend is successful, send the prestige transaction with the signature
+            const { amount, nonce, signature } = backendResult;
 
             const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
                 transaction: [

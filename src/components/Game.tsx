@@ -7,7 +7,6 @@ import {
   Home,
   Shop as ShopIcon,
   Gift,
-  Bookmark,
   Settings,
   Check,
   Xmark,
@@ -199,8 +198,6 @@ export default function Game() {
         checkRequirements,
         availableUpgradesCount,
         sortedUpgrades,
-        wIdlePrestigeReward,
-        canPrestige,
         timeWarpPrestigeCost,
         timeWarpWldCost,
     } = useGameCalculations(
@@ -211,13 +208,20 @@ export default function Game() {
         stats
         );
         
-  const { offlineGains, handleClaimOfflineGains } = useOfflineGains(
+  const { offlineGains, handleClaimOfflineGains: originalHandleClaim } = useOfflineGains(
     isLoaded,
     totalCPS,
     gameState.lastSaved,
     setGameState,
     setStats
   );
+
+  const handleClaimOfflineGains = useCallback(() => {
+      originalHandleClaim();
+      if (walletAddress) {
+          saveGame(walletAddress);
+      }
+  }, [originalHandleClaim, walletAddress, saveGame]);
 
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
@@ -401,6 +405,7 @@ export default function Game() {
       }));
       refetchBalances();
       setPendingTimeWarpTx(null);
+      if (walletAddress) saveGame(walletAddress);
     }
   }, [
     isTimeWarpSuccess,
@@ -410,6 +415,8 @@ export default function Game() {
     setGameState,
     setStats,
     setNotification,
+    walletAddress, 
+    saveGame
   ]);
 
   useEffect(() => {
@@ -537,7 +544,7 @@ export default function Game() {
 
   useEffect(() => {
     if (!isLoaded || !walletAddress) return;
-    const saveInterval = setInterval(() => saveGame(walletAddress), 15000);
+    const saveInterval = setInterval(() => saveGame(walletAddress), 30000);
     return () => clearInterval(saveInterval);
   }, [saveGame, walletAddress, isLoaded]);
 
@@ -612,7 +619,7 @@ export default function Game() {
         permanentBoostBonus: (prev.permanentBoostBonus || 0) + boostToAdd,
       }));
       if (walletAddress) {
-        saveGame(walletAddress, true);
+        saveGame(walletAddress);
       }
     },
     [walletAddress, setGameState, saveGame]
@@ -1175,8 +1182,6 @@ export default function Game() {
               <PrestigeSection
                 prestigeBoost={prestigeBoost}
                 prestigeBalance={wIdleBalance}
-                prestigeReward={wIdlePrestigeReward}
-                isPrestigeReady={canPrestige}
                 isLoading={isLoading || isConfirmingPrestige}
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
@@ -1276,15 +1281,6 @@ export default function Game() {
           >
             <ShopIcon className="w-7 h-7" />
             <span className="text-xs font-medium">{t("shop_tab")}</span>
-          </button>
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={() => walletAddress && saveGame(walletAddress, true)}
-            className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            <Bookmark className="w-5 h-5" />
-            {t("save_game")}
           </button>
         </div>
       </div>

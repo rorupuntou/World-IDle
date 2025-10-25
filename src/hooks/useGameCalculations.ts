@@ -174,15 +174,6 @@ export const useGameCalculations = (
     });
   }, [upgrades, gameState.tokens, checkRequirements]);
 
-  const wIdlePrestigeReward = useMemo(() => {
-    if (stats.totalTokensEarned <= 0) return 0;
-    return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000)) * 1000;
-  }, [stats.totalTokensEarned]);
-
-  const canPrestige = useMemo(() => {
-    return wIdlePrestigeReward >= 1;
-  }, [wIdlePrestigeReward]);
-
   const timeWarpPrestigeCost = useMemo(() => {
     const baseCost = 25;
     const balanceFactor = Math.floor(wIdleBalance / 100);
@@ -203,8 +194,6 @@ export const useGameCalculations = (
     checkRequirements,
     availableUpgradesCount,
     sortedUpgrades,
-    wIdlePrestigeReward,
-    canPrestige,
     timeWarpPrestigeCost,
     timeWarpWldCost,
   };

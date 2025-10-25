@@ -1,5 +1,6 @@
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Star } from 'iconoir-react';
+import { Star, Refresh } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
@@ -7,20 +8,16 @@ import { contractConfig } from '@/app/contracts/config';
 interface PrestigeSectionProps {
     prestigeBoost: number;
     prestigeBalance: number;
-    prestigeReward: number;
-    isPrestigeReady: boolean;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
     setPendingPrestigeTxId: (txId: string) => void;
-    saveGame: (walletAddress: string, immediate?: boolean) => Promise<void>;
+    saveGame: (walletAddress: string) => Promise<void>;
 }
 
 export default function PrestigeSection({
     prestigeBoost,
     prestigeBalance,
-    prestigeReward,
-    isPrestigeReady,
     isLoading,
     setIsLoading,
     walletAddress,
@@ -28,9 +25,37 @@ export default function PrestigeSection({
     saveGame,
 }: PrestigeSectionProps) {
     const { t } = useLanguage();
+    const [prestigeReward, setPrestigeReward] = useState(0);
+    const [isFetchingReward, setIsFetchingReward] = useState(false);
+
+    const fetchPrestigeReward = useCallback(async () => {
+        if (!walletAddress) return;
+        setIsFetchingReward(true);
+        try {
+            await saveGame(walletAddress); // Ensure latest state is saved before fetching reward
+            const response = await fetch(`/api/get-prestige-reward?walletAddress=${walletAddress}`);
+            const data = await response.json();
+            if (data.success) {
+                setPrestigeReward(data.prestigeReward);
+            } else {
+                console.error("Failed to fetch prestige reward:", data.error);
+            }
+        } catch (error) {
+            console.error("Error fetching prestige reward:", error);
+        } finally {
+            setIsFetchingReward(false);
+        }
+    }, [walletAddress, saveGame]);
+
+    useEffect(() => {
+        fetchPrestigeReward();
+    }, [fetchPrestigeReward]);
 
     const handlePrestige = async () => {
-        await saveGame(walletAddress, true); // Force save before prestiging
+        if (prestigeReward <= 0) {
+            alert(t('error.no_prestige_reward'));
+            return;
+        }
 
         if (!MiniKit.isInstalled()) {
             console.error("World App not installed");
@@ -38,15 +63,9 @@ export default function PrestigeSection({
             return;
         }
 
-        if (prestigeReward <= 0) {
-            alert(t('error.no_prestige_reward'));
-            return;
-        }
-
         setIsLoading(true);
 
         try {
-            // 1. Get proof from World App
             const { finalPayload } = await MiniKit.commandsAsync.verify({
                 action: 'prestige-game',
                 signal: walletAddress,
@@ -59,7 +78,6 @@ export default function PrestigeSection({
                 throw new Error(errorPayload.message || "Verification failed in World App.");
             }
 
-            // 2. Send proof to our backend for verification and to get signature
             const response = await fetch('/api/prestige-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -80,7 +98,6 @@ export default function PrestigeSection({
                 throw new Error(errorDetail);
             }
 
-            // 3. If backend is successful, send the prestige transaction with the signature
             const { amount, nonce, signature } = backendResult;
 
             const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
@@ -119,6 +136,8 @@ export default function PrestigeSection({
         }
     };
 
+    const isPrestigeReady = prestigeReward >= 1;
+
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
@@ -127,15 +146,18 @@ export default function PrestigeSection({
             </p>
             <p className="text-xs text-slate-400 mt-2">{t('prestige_balance_message', { prestigeBalance: prestigeBalance.toLocaleString() })}</p>
             
-            {isPrestigeReady && (
-                <p className="text-center text-sm mt-3 text-yellow-200">
+            <div className="text-center text-sm mt-3 text-yellow-200 flex items-center justify-center gap-2">
+                <span>
                     {t('prestige_reward_message', { prestigeReward: (prestigeReward / 100000).toLocaleString() })}
-                </p>
-            )}
+                </span>
+                <button onClick={fetchPrestigeReward} disabled={isFetchingReward} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
+                    <Refresh className={`w-4 h-4 ${isFetchingReward ? 'animate-spin' : ''}`} />
+                </button>
+            </div>
 
             <motion.button
                 onClick={handlePrestige}
-                disabled={!isPrestigeReady || isLoading}
+                disabled={!isPrestigeReady || isLoading || isFetchingReward}
                 whileHover={{ scale: 1.05 }}
                 className="w-full mt-4 bg-yellow-500/80 hover:bg-yellow-500/100 text-stone-900 font-bold py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/80 flex items-center justify-center"
             >

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GameState, StatsState, Autoclicker, Upgrade, Achievement, FullGameState } from '@/components/types';
 import { 
     initialState, initialStats, initialAutoclickers, 
-    initialUpgrades, initialAchievements, SAVE_KEY 
+    initialUpgrades, initialAchievements
 } from '@/app/data';
 
 export function useGameSave(serverState: FullGameState | null) {
@@ -39,35 +39,16 @@ export function useGameSave(serverState: FullGameState | null) {
     }, []);
 
     useEffect(() => {
-        let localSave: FullGameState | null = null;
-        const localSaveRaw = localStorage.getItem(SAVE_KEY);
-        if (localSaveRaw) {
-            try {
-                localSave = JSON.parse(localSaveRaw) as FullGameState;
-            } catch (e) {
-                console.error("Error parsing local save:", e);
-                localStorage.removeItem(SAVE_KEY);
-            }
-        }
-
-        if (serverState && localSave) {
-            const serverTime = serverState.gameState?.lastSaved || 0;
-            const localTime = localSave.gameState?.lastSaved || 0;
-            if (serverTime >= localTime) {
-                setFullState(serverState);
-            } else {
-                setFullState(localSave);
-            }
-        } else if (serverState) {
+        if (serverState) {
             setFullState(serverState);
-        } else if (localSave) {
-            setFullState(localSave);
+        } else {
+            // If there's no server state (e.g., new user), we ensure the game starts from a clean slate.
+            setFullState({}); // This will reset to initial values
         }
-
         setIsLoaded(true);
     }, [serverState, setFullState]);
 
-    const saveGame = useCallback(async (walletAddress: string, immediate = false) => {
+    const saveGame = useCallback(async (walletAddress: string) => {
         const currentState: FullGameState = { 
             gameState: { ...gameState, lastSaved: Date.now() },
             stats, 
@@ -76,9 +57,6 @@ export function useGameSave(serverState: FullGameState | null) {
             achievements 
         };
         
-        localStorage.setItem(SAVE_KEY, JSON.stringify(currentState));
-        if (immediate) console.log("Game saved locally.");
-
         try {
             const response = await fetch('/api/save-game', {
                 method: 'POST',
@@ -86,9 +64,7 @@ export function useGameSave(serverState: FullGameState | null) {
                 body: JSON.stringify({ walletAddress, gameData: currentState }),
             });
             const data = await response.json();
-            if (data.success) {
-                if (immediate) console.log("Game saved to server.");
-            } else {
+            if (!data.success) {
                 console.error("Failed to save game to server:", data.error);
             }
         } catch (error) {

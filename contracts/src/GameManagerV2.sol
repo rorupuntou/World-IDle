@@ -18,10 +18,10 @@ contract GameManagerV2 is Ownable, Pausable {
     address public signerAddress;
     uint256 public cooldownPeriod;
 
-    mapping(address => uint256) public lastPrestigeTimestamp;
+    mapping(address => uint256) public lastClaimTimestamp;
     mapping(uint256 => bool) public usedNonces;
 
-    event PrestigeClaimed(address indexed player, uint256 amount);
+    event WIdleClaimed(address indexed player, uint256 amount);
 
     /**
      * @dev Sets up the GameManager with necessary addresses and initial values.
@@ -35,16 +35,16 @@ contract GameManagerV2 is Ownable, Pausable {
     }
 
     /**
-     * @dev Allows a player to claim their prestige rewards after a successful game reset.
+     * @dev Allows a player to claim their wIDle rewards after a successful game reset.
      * The call must be accompanied by a valid signature from the backend.
      * @param amount The amount of wIDle tokens to be minted, validated by the backend.
      * @param nonce A unique number to prevent replay attacks.
      * @param signature The cryptographic signature from the backend.
      */
-    function prestige(uint256 amount, uint256 nonce, bytes memory signature) public whenNotPaused {
+    function claimWIdle(uint256 amount, uint256 nonce, bytes memory signature) public whenNotPaused {
         // 1. Cooldown Check
-        if (lastPrestigeTimestamp[msg.sender] != 0) {
-            require(block.timestamp >= lastPrestigeTimestamp[msg.sender] + cooldownPeriod, "GameManagerV2: Cooldown active");
+        if (lastClaimTimestamp[msg.sender] != 0) {
+            require(block.timestamp >= lastClaimTimestamp[msg.sender] + cooldownPeriod, "GameManagerV2: Cooldown active");
         }
 
         // 2. Nonce Check
@@ -58,12 +58,12 @@ contract GameManagerV2 is Ownable, Pausable {
         usedNonces[nonce] = true;
 
         // 5. Update cooldown timestamp
-        lastPrestigeTimestamp[msg.sender] = block.timestamp;
+        lastClaimTimestamp[msg.sender] = block.timestamp;
 
         // 6. Mint new tokens
         wIDleToken.mint(msg.sender, amount);
 
-        emit PrestigeClaimed(msg.sender, amount);
+        emit WIdleClaimed(msg.sender, amount);
     }
 
     /**

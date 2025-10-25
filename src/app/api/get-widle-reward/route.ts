@@ -21,18 +21,18 @@ export async function GET(req: NextRequest) {
         }
 
         if (!existingData) {
-            return NextResponse.json({ success: true, prestigeReward: 0 });
+            return NextResponse.json({ success: true, wIdleReward: 0 });
         }
 
         const gameData = existingData.game_data as { stats: { totalTokensEarned: number } };
         const totalTokensEarned = gameData.stats.totalTokensEarned || 0;
 
-        const prestigeReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
+        const wIdleReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
 
-        return NextResponse.json({ success: true, prestigeReward });
+        return NextResponse.json({ success: true, wIdleReward });
 
     } catch (error) {
-        console.error('Error fetching prestige reward:', error);
+        console.error('Error fetching wIDle reward:', error);
         const message = error instanceof Error ? error.message : 'An unknown error occurred.';
         return NextResponse.json({ success: false, error: 'Internal Server Error', detail: message }, { status: 500 });
     }

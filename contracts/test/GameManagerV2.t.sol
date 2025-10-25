@@ -31,7 +31,7 @@ contract GameManagerV2Test is Test {
         token.setGameManager(address(gameManager));
     }
 
-    function test_SuccessfulPrestige() public {
+    function test_SuccessfulWIdleClaim() public {
         uint256 amount = 100 ether;
         uint256 nonce = 1;
 
@@ -41,13 +41,13 @@ contract GameManagerV2Test is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encode(r, s, v);
 
-        // Player calls prestige with the valid signature
+        // Player calls claimWIdle with the valid signature
         vm.prank(player);
-        gameManager.prestige(amount, nonce, signature);
+        gameManager.claimWIdle(amount, nonce, signature);
 
         assertEq(token.balanceOf(player), amount, "Player should receive tokens");
         assertTrue(gameManager.usedNonces(nonce), "Nonce should be marked as used");
-        assertEq(gameManager.lastPrestigeTimestamp(player), block.timestamp, "Cooldown timestamp should be updated");
+        assertEq(gameManager.lastClaimTimestamp(player), block.timestamp, "Cooldown timestamp should be updated");
     }
 
     function test_Fail_InvalidSignature() public {
@@ -63,7 +63,7 @@ contract GameManagerV2Test is Test {
 
         vm.prank(player);
         vm.expectRevert("GameManagerV2: Invalid signature");
-        gameManager.prestige(amount, nonce, signature);
+        gameManager.claimWIdle(amount, nonce, signature);
     }
 
     function test_Fail_ReplayAttack() public {
@@ -77,7 +77,7 @@ contract GameManagerV2Test is Test {
 
         // First call is successful
         vm.prank(player);
-        gameManager.prestige(amount, nonce, signature);
+        gameManager.claimWIdle(amount, nonce, signature);
 
         // Advance time past the cooldown to specifically test the nonce failure
         uint256 cooldown = gameManager.cooldownPeriod();
@@ -86,7 +86,7 @@ contract GameManagerV2Test is Test {
         // Second call with the same nonce should fail
         vm.prank(player);
         vm.expectRevert("GameManagerV2: Nonce already used");
-        gameManager.prestige(amount, nonce, signature);
+        gameManager.claimWIdle(amount, nonce, signature);
     }
 
     function test_Cooldown() public {
@@ -94,28 +94,28 @@ contract GameManagerV2Test is Test {
         uint256 nonce1 = 1;
         uint256 nonce2 = 2;
 
-        // --- First prestige call (successful) ---
+        // --- First claimWIdle call (successful) ---
         bytes32 hash1 = keccak256(abi.encodePacked(player, amount, nonce1));
         (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(signerPrivateKey, keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash1)));
         bytes memory sig1 = abi.encode(r1, s1, v1);
         vm.prank(player);
-        gameManager.prestige(amount, nonce1, sig1);
+        gameManager.claimWIdle(amount, nonce1, sig1);
 
-        // --- Second prestige call (should fail due to cooldown) ---
+        // --- Second claimWIdle call (should fail due to cooldown) ---
         bytes32 hash2 = keccak256(abi.encodePacked(player, amount, nonce2));
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(signerPrivateKey, keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash2)));
         bytes memory sig2 = abi.encode(r2, s2, v2);
         vm.prank(player);
         vm.expectRevert("GameManagerV2: Cooldown active");
-        gameManager.prestige(amount, nonce2, sig2);
+        gameManager.claimWIdle(amount, nonce2, sig2);
 
         // --- Advance time past the cooldown ---
         uint256 cooldown = gameManager.cooldownPeriod();
         vm.warp(block.timestamp + cooldown + 1);
 
-        // --- Third prestige call (should now succeed) ---
+        // --- Third claimWIdle call (should now succeed) ---
         vm.prank(player);
-        gameManager.prestige(amount, nonce2, sig2);
+        gameManager.claimWIdle(amount, nonce2, sig2);
         assertEq(token.balanceOf(player), 2 * amount);
     }
 
@@ -134,7 +134,7 @@ contract GameManagerV2Test is Test {
         gameManager.pause();
         vm.prank(player);
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        gameManager.prestige(1, 1, "");
+        gameManager.claimWIdle(1, 1, "");
         gameManager.unpause();
     }
 }

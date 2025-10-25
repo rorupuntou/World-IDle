@@ -15,7 +15,7 @@ export const useGameCalculations = (
   gameState: GameState,
   stats: StatsState
 ) => {
-  const prestigeBoost = useMemo(
+  const wIdleBoost = useMemo(
     () => 15 * Math.log10(wIdleBalance + 1),
     [wIdleBalance]
   );
@@ -86,7 +86,7 @@ export const useGameCalculations = (
 
     const finalGlobalMultiplier =
       globalMultiplier *
-      (1 + prestigeBoost / 100) *
+      (1 + wIdleBoost / 100) *
       (1 +
         (gameState.permanentBoostBonus || 0) +
         (gameState.permanent_referral_boost || 0));
@@ -118,7 +118,7 @@ export const useGameCalculations = (
   }, [
     upgrades,
     autoclickers,
-    prestigeBoost,
+    wIdleBoost,
     gameState.permanentBoostBonus,
     gameState.permanent_referral_boost,
   ]);
@@ -174,7 +174,7 @@ export const useGameCalculations = (
     });
   }, [upgrades, gameState.tokens, checkRequirements]);
 
-  const timeWarpPrestigeCost = useMemo(() => {
+  const timeWarpWIdleCost = useMemo(() => {
     const baseCost = 25;
     const balanceFactor = Math.floor(wIdleBalance / 100);
     return baseCost + balanceFactor;
@@ -187,14 +187,14 @@ export const useGameCalculations = (
   }, [gameState.wldTimeWarpsPurchased]);
 
   return {
-    prestigeBoost,
+    wIdleBoost,
     totalCPS,
     clickValue,
     autoclickerCPSValues,
     checkRequirements,
     availableUpgradesCount,
     sortedUpgrades,
-    timeWarpPrestigeCost,
+    timeWarpWIdleCost,
     timeWarpWldCost,
   };
 };

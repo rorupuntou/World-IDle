@@ -24,8 +24,8 @@ const client = createPublicClient({
 export const useBlockchain = (
   walletAddress: `0x${string}` | null,
   pendingPurchaseTx: { txId: string; itemId: number } | null,
-  pendingPrestigeTxId: string | undefined,
-  pendingTimeWarpTx: { txId: string; reward: number; type: "prestige" | "wld" } | null,
+  pendingWIdleTxId: string | undefined,
+  pendingTimeWarpTx: { txId: string; reward: number; type: "widle" | "wld" } | null,
   pendingSwapTxId: string | undefined
 ) => {
   const [wIdleBalance, setWIdleBalance] = useState(0);
@@ -53,11 +53,11 @@ export const useBlockchain = (
       transactionId: pendingPurchaseTx?.txId ?? "",
     });
 
-  const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } =
+  const { isLoading: isConfirmingWIdle, isSuccess: isWIdleSuccess } =
     useWaitForTransactionReceipt({
       client,
       appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-      transactionId: pendingPrestigeTxId ?? "",
+      transactionId: pendingWIdleTxId ?? "",
     });
 
   const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
@@ -93,8 +93,8 @@ export const useBlockchain = (
     tokenDecimalsData,
     isConfirmingPurchase,
     isPurchaseSuccess,
-    isConfirmingPrestige,
-    isPrestigeSuccess,
+    isConfirmingWIdle,
+    isWIdleSuccess,
     isTimeWarpSuccess,
     isSwapSuccess,
     refetchBalances,

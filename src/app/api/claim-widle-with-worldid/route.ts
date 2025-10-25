@@ -72,13 +72,13 @@ export async function POST(req: NextRequest) {
         const gameData = existingData.game_data as { stats: { totalTokensEarned: number } };
         const totalTokensEarned = gameData.stats.totalTokensEarned || 0;
 
-        const prestigeReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
+        const wIdleReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
 
-        if (prestigeReward < 1) {
-            return NextResponse.json({ success: false, error: 'Not eligible for prestige.' }, { status: 400 });
+        if (wIdleReward < 1) {
+            return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });
         }
 
-        const amountInWei = parseEther(prestigeReward.toString());
+        const amountInWei = parseEther(wIdleReward.toString());
         const nonce = BigInt(Date.now());
 
         const messageHash = keccak256(encodePacked(
@@ -87,13 +87,13 @@ export async function POST(req: NextRequest) {
         ));
         
         const signature = await client.signMessage({
-            message: { raw: toBytes(messageHash) },
+            message: { raw: toBytes(.messageHash) },
         });
 
         return NextResponse.json({ success: true, amount: amountInWei.toString(), nonce: nonce.toString(), signature });
 
     } catch (error) {
-        console.error('Error during prestige process:', error);
+        console.error('Error during wIDle claim process:', error);
         const message = error instanceof Error ? error.message : 'An unknown error occurred.';
         return NextResponse.json({ success: false, error: 'Internal Server Error', detail: message }, { status: 500 });
     }

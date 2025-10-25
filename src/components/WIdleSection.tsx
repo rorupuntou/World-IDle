@@ -5,55 +5,58 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
 
-interface PrestigeSectionProps {
-    prestigeBoost: number;
-    prestigeBalance: number;
+interface WIdleSectionProps {
+    wIdleBoost: number;
+    wIdleBalance: number;
     isLoading: boolean;
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
-    setPendingPrestigeTxId: (txId: string) => void;
+    setPendingWIdleTxId: (txId: string) => void;
     saveGame: (walletAddress: string) => Promise<void>;
 }
 
-export default function PrestigeSection({
-    prestigeBoost,
-    prestigeBalance,
+export default function WIdleSection({
+    wIdleBoost,
+    wIdleBalance,
     isLoading,
     setIsLoading,
     walletAddress,
-    setPendingPrestigeTxId,
+    setPendingWIdleTxId,
     saveGame,
-}: PrestigeSectionProps) {
+}: WIdleSectionProps) {
     const { t } = useLanguage();
-    const [prestigeReward, setPrestigeReward] = useState(0);
+    const [wIdleReward, setWIdleReward] = useState(0);
     const [isFetchingReward, setIsFetchingReward] = useState(false);
 
-    const fetchPrestigeReward = useCallback(async () => {
+    const fetchWIdleReward = useCallback(async () => {
         if (!walletAddress) return;
         setIsFetchingReward(true);
         try {
-            await saveGame(walletAddress); // Ensure latest state is saved before fetching reward
-            const response = await fetch(`/api/get-prestige-reward?walletAddress=${walletAddress}`);
+            // We save before fetching to get a more accurate reward based on the latest state.
+            await saveGame(walletAddress);
+            const response = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`);
             const data = await response.json();
             if (data.success) {
-                setPrestigeReward(data.prestigeReward);
+                setWIdleReward(data.wIdleReward);
             } else {
-                console.error("Failed to fetch prestige reward:", data.error);
+                console.error("Failed to fetch wIDle reward:", data.error);
             }
         } catch (error) {
-            console.error("Error fetching prestige reward:", error);
+            console.error("Error fetching wIDle reward:", error);
         } finally {
             setIsFetchingReward(false);
         }
     }, [walletAddress, saveGame]);
 
     useEffect(() => {
-        fetchPrestigeReward();
-    }, [fetchPrestigeReward]);
+        fetchWIdleReward(); // Initial fetch
+        const interval = setInterval(fetchWIdleReward, 30000); // Fetch every 30 seconds
+        return () => clearInterval(interval); // Cleanup interval on component unmount
+    }, [fetchWIdleReward]);
 
-    const handlePrestige = async () => {
-        if (prestigeReward <= 0) {
-            alert(t('error.no_prestige_reward'));
+    const handleClaimWIdle = async () => {
+        if (wIdleReward <= 0) {
+            alert(t('error.no_widle_reward'));
             return;
         }
 
@@ -67,7 +70,7 @@ export default function PrestigeSection({
 
         try {
             const { finalPayload } = await MiniKit.commandsAsync.verify({
-                action: 'prestige-game',
+                action: 'claim-widle',
                 signal: walletAddress,
                 verification_level: VerificationLevel.Device,
             });
@@ -78,12 +81,12 @@ export default function PrestigeSection({
                 throw new Error(errorPayload.message || "Verification failed in World App.");
             }
 
-            const response = await fetch('/api/prestige-with-worldid', {
+            const response = await fetch('/api/claim-widle-with-worldid', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     payload: finalPayload,
-                    action: 'prestige-game',
+                    action: 'claim-widle',
                     signal: walletAddress,
                 }),
             });
@@ -91,9 +94,9 @@ export default function PrestigeSection({
             const backendResult = await response.json();
 
             if (!response.ok || !backendResult.success) {
-                const errorDetail = backendResult.detail || backendResult.error || t('error.prestige_failed');
+                const errorDetail = backendResult.detail || backendResult.error || t('error.widle_claim_failed');
                 if (backendResult.code === 'already_verified') {
-                    throw new Error(t('error.already_verified_prestige'));
+                    throw new Error(t('error.already_verified_widle'));
                 }
                 throw new Error(errorDetail);
             }
@@ -105,7 +108,7 @@ export default function PrestigeSection({
                     {
                         address: contractConfig.gameManagerV2Address,
                         abi: contractConfig.gameManagerV2Abi,
-                        functionName: 'prestige',
+                        functionName: 'claimWIdle',
                         args: [amount, nonce, signature],
                         value: '0x0',
                     },
@@ -123,7 +126,7 @@ export default function PrestigeSection({
             }
 
             if (txFinalPayload.transaction_id) {
-                setPendingPrestigeTxId(txFinalPayload.transaction_id);
+                setPendingWIdleTxId(txFinalPayload.transaction_id);
             } else {
                 throw new Error(t('error.transaction_id_missing'));
             }
@@ -136,28 +139,27 @@ export default function PrestigeSection({
         }
     };
 
-    const isPrestigeReady = prestigeReward >= 1;
+    const isWIdleReady = wIdleReward >= 1;
 
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
-            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('prestige')}</h3>
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('widle')}</h3>
             <p className="text-sm text-slate-300">
-                {t('prestige_bonus_part1')}<b className="text-yellow-300">+{prestigeBoost.toFixed(2)}%</b>{t('prestige_bonus_part2')}
-            </p>
-            <p className="text-xs text-slate-400 mt-2">{t('prestige_balance_message', { prestigeBalance: prestigeBalance.toLocaleString() })}</p>
+                {t('widle_bonus_part1')}<b className="text-yellow-300">+{wIdleBoost.toFixed(2)}%</b>{t('widle_bonus_part2')}            </p>
+            <p className="text-xs text-slate-400 mt-2">{t('widle_balance_message', { wIdleBalance: wIdleBalance.toLocaleString() })}</p>
             
             <div className="text-center text-sm mt-3 text-yellow-200 flex items-center justify-center gap-2">
                 <span>
-                    {t('prestige_reward_message', { prestigeReward: (prestigeReward / 100000).toLocaleString() })}
+                    {t('widle_reward_message', { wIdleReward: (wIdleReward / 100000).toLocaleString() })}
                 </span>
-                <button onClick={fetchPrestigeReward} disabled={isFetchingReward} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
+                <button onClick={fetchWIdleReward} disabled={isFetchingReward} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
                     <Refresh className={`w-4 h-4 ${isFetchingReward ? 'animate-spin' : ''}`} />
                 </button>
             </div>
 
             <motion.button
-                onClick={handlePrestige}
-                disabled={!isPrestigeReady || isLoading || isFetchingReward}
+                onClick={handleClaimWIdle}
+                disabled={!isWIdleReady || isLoading || isFetchingReward}
                 whileHover={{ scale: 1.05 }}
                 className="w-full mt-4 bg-yellow-500/80 hover:bg-yellow-500/100 text-stone-900 font-bold py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/80 flex items-center justify-center"
             >
@@ -169,7 +171,7 @@ export default function PrestigeSection({
                         </svg>
                         {t('processing')}
                     </>
-                ) : t('prestige_button')}
+                ) : t('widle_button')}
             </motion.button>
         </div>
     );

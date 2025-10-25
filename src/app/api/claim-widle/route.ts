@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, gameData: updateData.game_data }, { status: 200 });
 
   } catch (error: unknown) {
-    console.error("Prestige process failed:", error);
+        console.error('wIDle claim failed:', error);
     let errorMessage = "An unexpected error occurred during prestige.";
     if (error instanceof Error) {
         errorMessage = error.message;

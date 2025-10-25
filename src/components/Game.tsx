@@ -25,7 +25,7 @@ import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
-import PrestigeSection from "./PrestigeSection";
+import WIdleSection from "./WIdleSection";
 import AutoclickersSection from "./AutoclickersSection";
 import ShopSection from "./ShopSection";
 import ReferralsSection from "./ReferralsSection";
@@ -138,10 +138,10 @@ export default function Game() {
   const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{
     txId: string;
     reward: number;
-    type: "prestige" | "wld";
+    type: "widle" | "wld";
   } | null>(null);
   const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
-  const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<
+  const [pendingWIdleTxId, setPendingWIdleTxId] = useState<
     string | undefined
   >();
   const [serverState, setServerState] = useState<FullGameState | null>(null);
@@ -177,28 +177,28 @@ export default function Game() {
     tokenDecimalsData,
     isConfirmingPurchase,
     isPurchaseSuccess,
-    isConfirmingPrestige,
-    isPrestigeSuccess,
+    isConfirmingWIdle,
+    isWIdleSuccess,
     isTimeWarpSuccess,
     isSwapSuccess,
     refetchBalances,
   } = useBlockchain(
     walletAddress,
     pendingPurchaseTx,
-    pendingPrestigeTxId,
+    pendingWIdleTxId,
     pendingTimeWarpTx,
     pendingSwapTxId
     );
     
     const {
-        prestigeBoost,
+        wIdleBoost,
         totalCPS,
         clickValue,
         autoclickerCPSValues,
         checkRequirements,
         availableUpgradesCount,
         sortedUpgrades,
-        timeWarpPrestigeCost,
+        timeWarpWIdleCost,
         timeWarpWldCost,
     } = useGameCalculations(
         upgrades,
@@ -347,36 +347,36 @@ export default function Game() {
   );
 
   useEffect(() => {
-    const handlePrestige = async () => {
+    const handleWIdleClaim = async () => {
       if (!walletAddress) return;
       try {
-        const res = await fetch("/api/prestige", {
+        const res = await fetch("/api/claim-widle", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ walletAddress }),
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || "Failed to prestige from server.");
+          throw new Error(data.error || "Failed to claim wIDle from server.");
         }
-        setNotification({ message: t("prestige_success"), type: "success" });
+        setNotification({ message: t("widle_claim_success"), type: "success" });
         setFullState(data.gameData);
         refetchBalances();
       } catch (error) {
-        console.error("Prestige failed:", error);
+        console.error("wIDle claim failed:", error);
         setNotification({
           message: error instanceof Error ? error.message : String(error),
           type: "error",
         });
       } finally {
-        setPendingPrestigeTxId(undefined);
+        setPendingWIdleTxId(undefined);
       }
     };
-    if (isPrestigeSuccess) {
-      handlePrestige();
+    if (isWIdleSuccess) {
+      handleWIdleClaim();
     }
   }, [
-    isPrestigeSuccess,
+    isWIdleSuccess,
     walletAddress,
     refetchBalances,
     t,
@@ -387,11 +387,11 @@ export default function Game() {
   useEffect(() => {
     if (isTimeWarpSuccess && pendingTimeWarpTx) {
       setNotification({ message: t("time_warp_success"), type: "success" });
-      if (pendingTimeWarpTx.type === "prestige") {
+      if (pendingTimeWarpTx.type === "widle") {
         setGameState((prev) => ({
           ...prev,
           tokens: prev.tokens + pendingTimeWarpTx.reward,
-          lastPrestigeTimeWarp: Date.now(),
+          lastWIdleTimeWarp: Date.now(),
         }));
       } else {
         setGameState((prev) => ({
@@ -429,9 +429,9 @@ export default function Game() {
 
   useEffect(() => {
     const updateCooldown = () => {
-      if (gameState.lastPrestigeTimeWarp) {
+      if (gameState.lastWIdleTimeWarp) {
         const twentyFourHours = 24 * 60 * 60 * 1000;
-        const timePassed = Date.now() - gameState.lastPrestigeTimeWarp;
+        const timePassed = Date.now() - gameState.lastWIdleTimeWarp;
         const timeLeft = twentyFourHours - timePassed;
         if (timeLeft > 0) {
           const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
@@ -446,7 +446,7 @@ export default function Game() {
           setTimeWarpCooldown("");
           setGameState((prev) => ({
             ...prev,
-            lastPrestigeTimeWarp: undefined,
+            lastWIdleTimeWarp: undefined,
           }));
         }
       }
@@ -454,7 +454,7 @@ export default function Game() {
     updateCooldown();
     const interval = setInterval(updateCooldown, 1000);
     return () => clearInterval(interval);
-  }, [gameState.lastPrestigeTimeWarp, setGameState]);
+  }, [gameState.lastWIdleTimeWarp, setGameState]);
 
   // Capture referral code from URL on initial load
   useEffect(() => {
@@ -626,21 +626,21 @@ export default function Game() {
   );
 
   const handleTimeWarpPurchase = useCallback(
-    async (type: "prestige" | "wld") => {
+    async (type: "widle" | "wld") => {
       const reward = totalCPS * 86400;
-      if (type === "prestige") {
-        if (gameState.lastPrestigeTimeWarp) {
+      if (type === "widle") {
+        if (gameState.lastWIdleTimeWarp) {
           const twentyFourHours = 24 * 60 * 60 * 1000;
-          if (Date.now() - gameState.lastPrestigeTimeWarp < twentyFourHours) {
+          if (Date.now() - gameState.lastWIdleTimeWarp < twentyFourHours) {
             return setNotification({
               message: t("time_warp_cooldown"),
               type: "error",
             });
           }
         }
-        if (wIdleBalance < timeWarpPrestigeCost) {
+        if (wIdleBalance < timeWarpWIdleCost) {
           return setNotification({
-            message: t("not_enough_prestige_tokens"),
+            message: t("not_enough_widle_tokens"),
             type: "error",
           });
         }
@@ -648,7 +648,7 @@ export default function Game() {
           const decimals =
             typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
           const amountToBurnInWei = parseUnits(
-            timeWarpPrestigeCost.toString(),
+            timeWarpWIdleCost.toString(),
             decimals
           );
 
@@ -678,7 +678,7 @@ export default function Game() {
             setPendingTimeWarpTx({
               txId: finalPayload.transaction_id,
               reward,
-              type: "prestige",
+              type: "widle",
             });
             setNotification({
               message: t("transaction_sent"),
@@ -777,9 +777,9 @@ export default function Game() {
       tokenDecimalsData,
       t,
       walletAddress,
-      timeWarpPrestigeCost,
+      timeWarpWIdleCost,
       timeWarpWldCost,
-      gameState.lastPrestigeTimeWarp,
+      gameState.lastWIdleTimeWarp,
       saveGame,
       setGameState,
       setStats,
@@ -822,7 +822,7 @@ export default function Game() {
     []
   );
 
-  const calculatePrestigeBulkCost = useCallback(
+  const calculateWIdleBulkCost = useCallback(
     (item: Autoclicker, amount: BuyAmount) => {
       if (!item.prestigeCost) return 0;
       let totalCost = 0;
@@ -887,14 +887,14 @@ export default function Game() {
     setNotification,
   ]);
 
-  const handlePrestigePurchase = useCallback(
-    async (item: Autoclicker, totalPrestigeCost: number) => {
-      if (!totalPrestigeCost) return;
+  const handleWIdlePurchase = useCallback(
+    async (item: Autoclicker, totalWIdleCost: number) => {
+      if (!totalWIdleCost) return;
       try {
         const decimals =
           typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
         const amountToBurnInWei =
-          BigInt(totalPrestigeCost) * BigInt(10 ** decimals);
+          BigInt(totalWIdleCost) * BigInt(10 ** decimals);
         const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
             {
@@ -947,12 +947,12 @@ export default function Game() {
       const tokenCost = calculateBulkCost(autoclicker, buyAmount);
       if (gameState.tokens < tokenCost) return;
       if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
-        const prestigeCost = calculatePrestigeBulkCost(autoclicker, buyAmount);
-        if (wIdleBalance >= prestigeCost) {
-          handlePrestigePurchase(autoclicker, prestigeCost);
+        const wIdleCost = calculateWIdleBulkCost(autoclicker, buyAmount);
+        if (wIdleBalance >= wIdleCost) {
+          handleWIdlePurchase(autoclicker, wIdleCost);
         } else {
           setNotification({
-            message: t("not_enough_prestige_tokens"),
+            message: t("not_enough_widle_tokens"),
             type: "error",
           });
         }
@@ -966,10 +966,10 @@ export default function Game() {
       calculateBulkCost,
       buyAmount,
       wIdleBalance,
-      handlePrestigePurchase,
+      handleWIdlePurchase,
       purchaseAutoclickerWithTokens,
       t,
-      calculatePrestigeBulkCost,
+      calculateWIdleBulkCost,
       setNotification,
     ]
   );
@@ -1170,22 +1170,22 @@ export default function Game() {
                 checkRequirements={checkRequirements}
                 showRequirements={showItemDetails}
                 calculateBulkCost={calculateBulkCost}
-                calculatePrestigeBulkCost={calculatePrestigeBulkCost}
+                calculateWIdleBulkCost={calculateWIdleBulkCost}
                 purchaseAutoclicker={purchaseAutoclicker}
                 formatNumber={formatNumber}
                 autoclickerCPSValues={autoclickerCPSValues}
                 devModeActive={devModeActive}
                 isConfirmingPurchase={isConfirmingPurchase}
                 pendingPurchaseTx={pendingPurchaseTx}
-                prestigeBalance={wIdleBalance}
+                wIdleBalance={wIdleBalance}
               />
-              <PrestigeSection
-                prestigeBoost={prestigeBoost}
-                prestigeBalance={wIdleBalance}
-                isLoading={isLoading || isConfirmingPrestige}
+              <WIdleSection
+                wIdleBoost={wIdleBoost}
+                wIdleBalance={wIdleBalance}
+                isLoading={isLoading || isConfirmingWIdle}
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
-                setPendingPrestigeTxId={setPendingPrestigeTxId}
+                setPendingWIdleTxId={setPendingWIdleTxId}
                 saveGame={saveGame}
               />
               {!stats.isVerified && (
@@ -1219,10 +1219,10 @@ export default function Game() {
                 onBoostPurchased={onBoostPurchased}
                 setNotification={setNotification}
                 totalCPS={totalCPS}
-                prestigeBalance={wIdleBalance}
+                wIdleBalance={wIdleBalance}
                 handleTimeWarpPurchase={handleTimeWarpPurchase}
                 formatNumber={formatNumber}
-                timeWarpPrestigeCost={timeWarpPrestigeCost}
+                timeWarpWIdleCost={timeWarpWIdleCost}
                 timeWarpWldCost={timeWarpWldCost}
                 timeWarpCooldown={timeWarpCooldown}
               />

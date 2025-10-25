@@ -14,7 +14,7 @@ import {
   SoundHigh,
   SoundOff,
 } from "iconoir-react";
-import { MiniKit, Tokens } from "@worldcoin/minikit-js";
+import { MiniKit, Tokens, VerificationLevel } from "@worldcoin/minikit-js";
 import { parseUnits } from "viem";
 
 import {
@@ -237,6 +237,7 @@ export default function Game() {
       const { finalPayload } = await MiniKit.commandsAsync.verify({
         action: "prestige-game",
         signal: walletAddress,
+        verification_level: VerificationLevel.Orb,
       });
 
       if (finalPayload.status === "error") {

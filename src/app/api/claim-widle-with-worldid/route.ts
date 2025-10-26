@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         ));
         
         const signature = await client.signMessage({
-            message: { raw: toBytes(.messageHash) },
+            message: { raw: toBytes(messageHash) },
         });
 
         return NextResponse.json({ success: true, amount: amountInWei.toString(), nonce: nonce.toString(), signature });

@@ -170,26 +170,7 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [handleFetchWIdleReward]);
 
-  const handleFetchWIdleReward = useCallback(async () => {
-    if (!walletAddress) return;
-    try {
-      const res = await fetch(
-        `/api/get-widle-reward?walletAddress=${walletAddress}`
-      );
-      const data = await res.json();
-      if (data.success) {
-        setWIdleServerReward(data.reward);
-      }
-    } catch (error) {
-      console.error("Failed to fetch wIDle reward:", error);
-    }
-  }, [walletAddress]);
-
-  useEffect(() => {
-    handleFetchWIdleReward();
-    const interval = setInterval(handleFetchWIdleReward, 30000);
-    return () => clearInterval(interval);
-  }, [handleFetchWIdleReward]);
+  
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
     "/music/background-music.mp3"
   );
@@ -209,9 +190,10 @@ export default function Game() {
     achievements,
     setAchievements,
     saveGame,
+    resetGame,
     setFullState,
     isLoaded,
-  } = useGameSave(serverState);
+  } = useGameSave(serverState, walletAddress);
   
   const {
     wIdleBalance,
@@ -241,7 +223,6 @@ export default function Game() {
         sortedUpgrades,
         timeWarpWIdleCost,
         timeWarpWldCost,
-        wIdleReward,
         canClaimWIdle,
     } = useGameCalculations(
         upgrades,
@@ -831,6 +812,7 @@ export default function Game() {
       setStats,
       setNotification,
       setPendingTimeWarpTx,
+      saveCurrentGame,
     ]
   );
 
@@ -1344,4 +1326,4 @@ export default function Game() {
         <Settings className="w-5 h-5" />
       </button>
     </>
-  );
+  

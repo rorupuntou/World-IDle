@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Star, Refresh } from 'iconoir-react';
+import { Star, Refresh, Trash } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { contractConfig } from '@/app/contracts/config';
@@ -118,6 +117,12 @@ export default function WIdleSection({
         }
     };
 
+    const handleResetGame = () => {
+        if (window.confirm(t('confirm_reset'))) {
+            resetGame();
+        }
+    };
+
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('widle')}</h3>
@@ -150,6 +155,10 @@ export default function WIdleSection({
                     </>
                 ) : t('widle_button')}
             </motion.button>
+            <button onClick={handleResetGame} className="w-full mt-2 text-sm text-red-500 hover:underline flex items-center justify-center gap-1">
+                <Trash className="w-4 h-4" />
+                {t('reset_game')}
+            </button>
         </div>
     );
 }

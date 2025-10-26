@@ -35,7 +35,7 @@ export const useBlockchain = (
       address: contractConfig.wIdleTokenAddress,
       abi: contractConfig.wIdleTokenAbi,
       functionName: "balanceOf",
-      args: [walletAddress!],
+      args: [walletAddress ?? `0x${'0'.repeat(40)}`],
       query: { enabled: !!walletAddress },
     });
 

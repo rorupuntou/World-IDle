@@ -801,7 +801,6 @@ export default function Game() {
       timeWarpWIdleCost,
       timeWarpWldCost,
       gameState.lastWIdleTimeWarp,
-      saveGame,
       setGameState,
       setStats,
       setNotification,

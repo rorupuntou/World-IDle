@@ -707,10 +707,7 @@ export default function Game() {
               reward,
               type: "widle",
             });
-            setNotification({
-              message: t("transaction_sent"),
-              type: "success",
-            });
+            setNotification({ message: t("transaction_sent"), type: "success" });
           } else {
             throw new Error(t("transaction_error"));
           }
@@ -774,10 +771,7 @@ export default function Game() {
                 ...prev,
                 totalTokensEarned: prev.totalTokensEarned + data.rewardAmount,
               }));
-              setNotification({
-                message: t("time_warp_success"),
-                type: "success",
-              });
+              setNotification({ message: t("time_warp_success"), type: "success" });
               saveCurrentGame();
             } else {
               throw new Error(data.error || t("confirmation_failed"));
@@ -1278,9 +1272,7 @@ export default function Game() {
         <div className="fixed bottom-0 left-0 right-0 h-20 bg-slate-900/90 backdrop-blur-lg border-t border-slate-700 flex justify-between items-center px-8 pb-safe-bottom">
           <button
             onClick={() => setActiveTab("upgrades")}
-            className={`relative flex flex-col items-center gap-1 ${
-              activeTab === "upgrades" ? "text-cyan-400" : "text-slate-400"
-            } transition-colors`}
+            className={`relative flex flex-col items-center gap-1 ${activeTab === "upgrades" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
           >
             <Rocket className="w-7 h-7" />
             <span className="text-xs font-medium">{t("upgrades_tab")}</span>
@@ -1292,27 +1284,21 @@ export default function Game() {
           </button>
           <button
             onClick={() => setActiveTab("main")}
-            className={`flex flex-col items-center gap-1 ${
-              activeTab === "main" ? "text-cyan-400" : "text-slate-400"
-            } transition-colors`}
+            className={`flex flex-col items-center gap-1 ${activeTab === "main" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
           >
             <Home className="w-7 h-7" />
             <span className="text-xs font-medium">{t("main_tab")}</span>
           </button>
           <button
             onClick={() => setActiveTab("referrals")}
-            className={`flex flex-col items-center gap-1 ${
-              activeTab === "referrals" ? "text-cyan-400" : "text-slate-400"
-            } transition-colors`}
+            className={`flex flex-col items-center gap-1 ${activeTab === "referrals" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
           >
             <Gift className="w-7 h-7" />
             <span className="text-xs font-medium">{t("referrals_tab")}</span>
           </button>
           <button
             onClick={() => setActiveTab("shop")}
-            className={`flex flex-col items-center gap-1 ${
-              activeTab === "shop" ? "text-cyan-400" : "text-slate-400"
-            } transition-colors`}
+            className={`flex flex-col items-center gap-1 ${activeTab === "shop" ? "text-cyan-400" : "text-slate-400"} transition-colors`}
           >
             <ShopIcon className="w-7 h-7" />
             <span className="text-xs font-medium">{t("shop_tab")}</span>
@@ -1326,4 +1312,5 @@ export default function Game() {
         <Settings className="w-5 h-5" />
       </button>
     </>
-  
+  );
+}

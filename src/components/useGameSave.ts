@@ -1,19 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, StatsState, Autoclicker, Upgrade, Achievement, FullGameState } from '@/components/types';
 import { 
     initialState, initialStats, initialAutoclickers, 
     initialUpgrades, initialAchievements
 } from '@/app/data';
 
-export function useGameSave(serverState: FullGameState | null) {
+
+
+
+export function useGameSave(serverState: FullGameState | null, walletAddress: string | null) {
     const [gameState, setGameState] = useState<GameState>(initialState);
     const [stats, setStats] = useState<StatsState>(initialStats);
     const [autoclickers, setAutoclickers] = useState<Autoclicker[]>(initialAutoclickers);
     const [upgrades, setUpgrades] = useState<Upgrade[]>(initialUpgrades);
     const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements);
     const [isLoaded, setIsLoaded] = useState(false);
+
+    // To prevent saving initial/empty state on first load
+    const isInitialized = useRef(false);
 
     const setFullState = useCallback((fullState: Partial<FullGameState>) => {
         setGameState(prev => ({ ...initialState, ...prev, ...fullState.gameState }));
@@ -42,26 +48,23 @@ export function useGameSave(serverState: FullGameState | null) {
         if (serverState) {
             setFullState(serverState);
         } else {
-            // If there's no server state (e.g., new user), we ensure the game starts from a clean slate.
-            setFullState({}); // This will reset to initial values
+            setFullState({}); // Reset to initial values for new user
         }
         setIsLoaded(true);
+        // Mark as initialized after a short delay to allow state to settle
+        setTimeout(() => {
+            isInitialized.current = true;
+        }, 1000);
     }, [serverState, setFullState]);
 
-    const saveGame = useCallback(async (walletAddress: string) => {
-        const currentState: FullGameState = { 
-            gameState: { ...gameState, lastSaved: Date.now() },
-            stats, 
-            autoclickers, 
-            upgrades, 
-            achievements 
-        };
+    const saveGame = useCallback(async (stateToSave: FullGameState) => {
+        if (!walletAddress) return;
         
         try {
             const response = await fetch('/api/save-game', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ walletAddress, gameData: currentState }),
+                body: JSON.stringify({ walletAddress, gameData: stateToSave }),
             });
             const data = await response.json();
             if (!data.success) {
@@ -70,7 +73,36 @@ export function useGameSave(serverState: FullGameState | null) {
         } catch (error) {
             console.error("Error saving game to server:", error);
         }
-    }, [gameState, stats, autoclickers, upgrades, achievements]);
+    }, [walletAddress]);
+
+    
+
+    const resetGame = useCallback(async () => {
+        if (!walletAddress) return;
+
+        const permanentBoost = gameState.permanentBoostBonus || 0;
+        const permanentReferralBoost = gameState.permanent_referral_boost || 0;
+        const wldTimeWarps = gameState.wldTimeWarpsPurchased || 0;
+        const isVerified = stats.isVerified;
+
+        const newGameState = { ...initialState, permanentBoostBonus: permanentBoost, permanent_referral_boost: permanentReferralBoost, wldTimeWarpsPurchased: wldTimeWarps };
+        const newStats = { ...initialStats, isVerified: isVerified };
+        const newAutoclickers = initialAutoclickers.map(a => ({ ...a, purchased: 0 }));
+        const newUpgrades = initialUpgrades.map(u => ({ ...u, purchased: false }));
+        const newAchievements = initialAchievements.map(a => ({ ...a, unlocked: false }));
+
+        const resetState: FullGameState = {
+            gameState: { ...newGameState, lastSaved: Date.now() },
+            stats: newStats,
+            autoclickers: newAutoclickers,
+            upgrades: newUpgrades,
+            achievements: newAchievements,
+        };
+
+        setFullState(resetState);
+        await saveGame(resetState);
+
+    }, [walletAddress, gameState, stats.isVerified, saveGame, setFullState]);
 
     return { 
         gameState, setGameState, 
@@ -78,7 +110,8 @@ export function useGameSave(serverState: FullGameState | null) {
         autoclickers, setAutoclickers, 
         upgrades, setUpgrades, 
         achievements, setAchievements, 
-        saveGame,
+        saveGame: (state: FullGameState) => saveGame(state), // Keep an explicit save for critical moments if needed
+        resetGame,
         setFullState,
         isLoaded
     };

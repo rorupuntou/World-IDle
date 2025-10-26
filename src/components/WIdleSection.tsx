@@ -12,7 +12,10 @@ interface WIdleSectionProps {
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
     setPendingWIdleTxId: (txId: string) => void;
-    saveGame: (walletAddress: string) => Promise<void>;
+    resetGame: () => void;
+    wIdleReward: number;
+    canClaimWIdle: boolean;
+    handleFetchWIdleReward: () => void;
 }
 
 export default function WIdleSection({
@@ -22,40 +25,16 @@ export default function WIdleSection({
     setIsLoading,
     walletAddress,
     setPendingWIdleTxId,
-    saveGame,
+    resetGame,
+    wIdleReward,
+    canClaimWIdle,
+    handleFetchWIdleReward,
 }: WIdleSectionProps) {
     const { t } = useLanguage();
-    const [wIdleReward, setWIdleReward] = useState(0);
-    const [isFetchingReward, setIsFetchingReward] = useState(false);
-
-    const fetchWIdleReward = useCallback(async () => {
-        if (!walletAddress) return;
-        setIsFetchingReward(true);
-        try {
-            // We save before fetching to get a more accurate reward based on the latest state.
-            await saveGame(walletAddress);
-            const response = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`);
-            const data = await response.json();
-            if (data.success) {
-                setWIdleReward(data.wIdleReward);
-            } else {
-                console.error("Failed to fetch wIDle reward:", data.error);
-            }
-        } catch (error) {
-            console.error("Error fetching wIDle reward:", error);
-        } finally {
-            setIsFetchingReward(false);
-        }
-    }, [walletAddress, saveGame]);
-
-    useEffect(() => {
-        fetchWIdleReward(); // Initial fetch
-        const interval = setInterval(fetchWIdleReward, 30000); // Fetch every 30 seconds
-        return () => clearInterval(interval); // Cleanup interval on component unmount
-    }, [fetchWIdleReward]);
+    
 
     const handleClaimWIdle = async () => {
-        if (wIdleReward <= 0) {
+        if (!canClaimWIdle) {
             alert(t('error.no_widle_reward'));
             return;
         }
@@ -139,8 +118,6 @@ export default function WIdleSection({
         }
     };
 
-    const isWIdleReady = wIdleReward >= 1;
-
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('widle')}</h3>
@@ -150,16 +127,16 @@ export default function WIdleSection({
             
             <div className="text-center text-sm mt-3 text-yellow-200 flex items-center justify-center gap-2">
                 <span>
-                    {t('widle_reward_message', { wIdleReward: (wIdleReward / 100000).toLocaleString() })}
+                    {t('widle_reward_message', { wIdleReward: (wIdleReward).toLocaleString() })}
                 </span>
-                <button onClick={fetchWIdleReward} disabled={isFetchingReward} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
-                    <Refresh className={`w-4 h-4 ${isFetchingReward ? 'animate-spin' : ''}`} />
+                <button onClick={handleFetchWIdleReward} disabled={isLoading} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
+                    <Refresh className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
             </div>
 
             <motion.button
                 onClick={handleClaimWIdle}
-                disabled={!isWIdleReady || isLoading || isFetchingReward}
+                disabled={!canClaimWIdle || isLoading}
                 whileHover={{ scale: 1.05 }}
                 className="w-full mt-4 bg-yellow-500/80 hover:bg-yellow-500/100 text-stone-900 font-bold py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/80 flex items-center justify-center"
             >

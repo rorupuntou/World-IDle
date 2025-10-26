@@ -11,10 +11,10 @@ interface ShopSectionProps {
   onBoostPurchased: (newBonus: number) => void;
   setNotification: (notification: { message: string; type: 'success' | 'error' } | null) => void;
   totalCPS: number;
-  prestigeBalance: number;
-  handleTimeWarpPurchase: (type: 'prestige' | 'wld') => void;
+  wIdleBalance: number;
+  handleTimeWarpPurchase: (type: 'widle' | 'wld') => void;
   formatNumber: (num: number) => string;
-  timeWarpPrestigeCost: number;
+  timeWarpWIdleCost: number;
   timeWarpWldCost: number;
   timeWarpCooldown: string;
 }
@@ -32,10 +32,10 @@ const ShopSection: React.FC<ShopSectionProps> = ({
     onBoostPurchased, 
     setNotification, 
     totalCPS, 
-    prestigeBalance, 
+    wIdleBalance, 
     handleTimeWarpPurchase, 
     formatNumber, 
-    timeWarpPrestigeCost, 
+    timeWarpWIdleCost, 
     timeWarpWldCost, 
     timeWarpCooldown 
 }) => {
@@ -111,7 +111,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({
     }
   };
 
-  const canAffordPrestigeWarp = prestigeBalance >= timeWarpPrestigeCost;
+  const canAffordWIdleWarp = wIdleBalance >= timeWarpWIdleCost;
 
   return (
     <div className="flex flex-col gap-6">
@@ -171,17 +171,17 @@ const ShopSection: React.FC<ShopSectionProps> = ({
               </div>
             ) : (
               <button
-                onClick={() => handleTimeWarpPurchase('prestige')}
+                onClick={() => handleTimeWarpPurchase('widle')}
                 className={clsx(
                   "w-full text-white font-bold py-2 px-4 rounded-lg transition-colors",
                   {
-                    "bg-pink-600 hover:bg-pink-700": canAffordPrestigeWarp,
-                    "bg-slate-600 opacity-70 cursor-not-allowed": !canAffordPrestigeWarp,
+                    "bg-pink-600 hover:bg-pink-700": canAffordWIdleWarp,
+                    "bg-slate-600 opacity-70 cursor-not-allowed": !canAffordWIdleWarp,
                   }
                 )}
-                disabled={!canAffordPrestigeWarp}
+                disabled={!canAffordWIdleWarp}
               >
-                {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
+                {t('buy_with_widle', { price: timeWarpWIdleCost })}
               </button>
             )}
             <button

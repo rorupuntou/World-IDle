@@ -186,6 +186,15 @@ export const useGameCalculations = (
     return baseCost * Math.pow(1.25, purchasedCount);
   }, [gameState.wldTimeWarpsPurchased]);
 
+  const wIdleReward = useMemo(() => {
+    const reward = Math.floor(Math.sqrt(stats.totalTokensEarned / 1e9));
+    return reward > 0 ? reward : 0;
+  }, [stats.totalTokensEarned]);
+
+  const canClaimWIdle = useMemo(() => {
+    return wIdleReward > 0;
+  }, [wIdleReward]);
+
   return {
     wIdleBoost,
     totalCPS,
@@ -196,5 +205,7 @@ export const useGameCalculations = (
     sortedUpgrades,
     timeWarpWIdleCost,
     timeWarpWldCost,
+    wIdleReward,
+    canClaimWIdle,
   };
 };

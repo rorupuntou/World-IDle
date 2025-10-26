@@ -147,8 +147,49 @@ export default function Game() {
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
+  const [wIdleServerReward, setWIdleServerReward] = useState(0);
 
-  // Custom Hooks
+  const handleFetchWIdleReward = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      const res = await fetch(
+        `/api/get-widle-reward?walletAddress=${walletAddress}`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setWIdleServerReward(data.reward);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wIDle reward:", error);
+    }
+  }, [walletAddress]);
+
+  useEffect(() => {
+    handleFetchWIdleReward();
+    const interval = setInterval(handleFetchWIdleReward, 30000);
+    return () => clearInterval(interval);
+  }, [handleFetchWIdleReward]);
+
+  const handleFetchWIdleReward = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      const res = await fetch(
+        `/api/get-widle-reward?walletAddress=${walletAddress}`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setWIdleServerReward(data.reward);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wIDle reward:", error);
+    }
+  }, [walletAddress]);
+
+  useEffect(() => {
+    handleFetchWIdleReward();
+    const interval = setInterval(handleFetchWIdleReward, 30000);
+    return () => clearInterval(interval);
+  }, [handleFetchWIdleReward]);
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
     "/music/background-music.mp3"
   );
@@ -200,6 +241,8 @@ export default function Game() {
         sortedUpgrades,
         timeWarpWIdleCost,
         timeWarpWldCost,
+        wIdleReward,
+        canClaimWIdle,
     } = useGameCalculations(
         upgrades,
         autoclickers,
@@ -216,12 +259,22 @@ export default function Game() {
     setStats
   );
 
+  const saveCurrentGame = useCallback(() => {
+    if (!walletAddress) return;
+    const currentState: FullGameState = { 
+        gameState, 
+        stats, 
+        autoclickers, 
+        upgrades, 
+        achievements 
+    };
+    saveGame(currentState);
+}, [walletAddress, gameState, stats, autoclickers, upgrades, achievements, saveGame]);
+
   const handleClaimOfflineGains = useCallback(() => {
       originalHandleClaim();
-      if (walletAddress) {
-          saveGame(walletAddress);
-      }
-  }, [originalHandleClaim, walletAddress, saveGame]);
+      saveCurrentGame();
+  }, [originalHandleClaim, saveCurrentGame]);
 
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
@@ -405,7 +458,7 @@ export default function Game() {
       }));
       refetchBalances();
       setPendingTimeWarpTx(null);
-      if (walletAddress) saveGame(walletAddress);
+      saveCurrentGame();
     }
   }, [
     isTimeWarpSuccess,
@@ -415,8 +468,7 @@ export default function Game() {
     setGameState,
     setStats,
     setNotification,
-    walletAddress, 
-    saveGame
+    saveCurrentGame
   ]);
 
   useEffect(() => {
@@ -542,11 +594,7 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [totalCPS, isLoaded, setGameState, setStats]);
 
-  useEffect(() => {
-    if (!isLoaded || !walletAddress) return;
-    const saveInterval = setInterval(() => saveGame(walletAddress), 30000);
-    return () => clearInterval(saveInterval);
-  }, [saveGame, walletAddress, isLoaded]);
+  
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -618,11 +666,9 @@ export default function Game() {
         ...prev,
         permanentBoostBonus: (prev.permanentBoostBonus || 0) + boostToAdd,
       }));
-      if (walletAddress) {
-        saveGame(walletAddress);
-      }
+      saveCurrentGame();
     },
-    [walletAddress, setGameState, saveGame]
+    [setGameState, saveCurrentGame]
   );
 
   const handleTimeWarpPurchase = useCallback(
@@ -751,7 +797,7 @@ export default function Game() {
                 message: t("time_warp_success"),
                 type: "success",
               });
-              if (walletAddress) saveGame(walletAddress);
+              saveCurrentGame();
             } else {
               throw new Error(data.error || t("confirmation_failed"));
             }
@@ -794,11 +840,17 @@ export default function Game() {
       const value = clickValue;
       addFloatingNumber(`+${formatNumber(value)}`, e.clientX, e.clientY);
       setGameState((prev) => ({ ...prev, tokens: prev.tokens + value }));
-      setStats((prev) => ({
-        ...prev,
-        totalTokensEarned: prev.totalTokensEarned + value,
-        totalClicks: prev.totalClicks + 1,
-      }));
+      setStats((prev) => {
+        const newTotalClicks = prev.totalClicks + 1;
+        if (newTotalClicks % 100 === 0) {
+          saveCurrentGame();
+        }
+        return {
+          ...prev,
+          totalTokensEarned: prev.totalTokensEarned + value,
+          totalClicks: newTotalClicks,
+        };
+      });
     },
     [
       clickValue,
@@ -807,6 +859,7 @@ export default function Game() {
       setGameState,
       setStats,
       addFloatingNumber,
+      saveCurrentGame,
     ]
   );
 
@@ -871,7 +924,7 @@ export default function Game() {
         });
         purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
         refetchBalances();
-        if (walletAddress) saveGame(walletAddress);
+        saveCurrentGame();
       }
       setPendingPurchaseTx(null);
     }
@@ -882,8 +935,7 @@ export default function Game() {
     purchaseAutoclickerWithTokens,
     refetchBalances,
     t,
-    saveGame,
-    walletAddress,
+    saveCurrentGame,
     setNotification,
   ]);
 
@@ -987,15 +1039,14 @@ export default function Game() {
         setUpgrades((prev) =>
           prev.map((u) => (u.id === id ? { ...u, purchased: true } : u))
         );
-        if (walletAddress) saveGame(walletAddress);
+        saveCurrentGame();
       }
     },
     [
       upgrades,
       gameState.tokens,
       checkRequirements,
-      saveGame,
-      walletAddress,
+      saveCurrentGame,
       setGameState,
       setUpgrades,
     ]
@@ -1030,15 +1081,14 @@ export default function Game() {
         }),
         type: "success",
       });
-      if (walletAddress) saveGame(walletAddress);
+      saveCurrentGame();
     }
   }, [
     upgrades,
     gameState.tokens,
     checkRequirements,
     t,
-    saveGame,
-    walletAddress,
+    saveCurrentGame,
     setGameState,
     setUpgrades,
     setNotification,
@@ -1186,7 +1236,10 @@ export default function Game() {
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
                 setPendingWIdleTxId={setPendingWIdleTxId}
-                saveGame={saveGame}
+                resetGame={resetGame}
+                wIdleReward={wIdleServerReward}
+                canClaimWIdle={canClaimWIdle}
+                handleFetchWIdleReward={handleFetchWIdleReward}
               />
               {!stats.isVerified && (
                 <div className="mt-4">
@@ -1292,4 +1345,3 @@ export default function Game() {
       </button>
     </>
   );
-}

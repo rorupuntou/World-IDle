@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MiniKit } from '@worldcoin/minikit-js';
+import safeMiniKit from '@/lib/safeMiniKit';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameState, Referral } from './types';
 
@@ -62,11 +62,14 @@ export default function ReferralsSection({ walletAddress, gameState }: Referrals
     const inviteLink = `https://world.org/mini-app?app_id=${YOUR_APP_ID}&path=${path}`;
 
     try {
-      await MiniKit.commandsAsync.share({
+      const resp = await safeMiniKit.safeCall('share', {
         title: t('referral_share_title'),
         text: t('referral_share_text'),
         url: inviteLink,
       });
+      if (!resp.ok) {
+        console.error('Share failed:', resp);
+      }
     } catch (error) {
       console.error("Share failed:", error);
     }

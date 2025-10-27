@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Star, Refresh, Trash } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
-import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
+import { VerificationLevel } from '@worldcoin/minikit-js';
+import safeMiniKit from '@/lib/safeMiniKit';
 import { contractConfig } from '@/app/contracts/config';
 
 interface WIdleSectionProps {
@@ -38,8 +39,8 @@ export default function WIdleSection({
             return;
         }
 
-        if (!MiniKit.isInstalled()) {
-            console.error("World App not installed");
+        if (!safeMiniKit.isAvailable()) {
+            console.error("World App not available / MiniKit not installed");
             alert(t('error.wallet_not_installed'));
             return;
         }
@@ -47,23 +48,17 @@ export default function WIdleSection({
         setIsLoading(true);
 
         try {
-            const verifyResp = await MiniKit.commandsAsync.verify({
+            const verifyResp = await safeMiniKit.safeCall('verify', {
                 action: 'claim-widle',
                 signal: walletAddress,
                 verification_level: VerificationLevel.Device,
             });
 
-            if (!verifyResp || !verifyResp.finalPayload) {
+            if (!verifyResp.ok || !verifyResp.finalPayload) {
                 throw new Error('Verification failed: no response from MiniKit');
             }
 
-            const { finalPayload } = verifyResp;
-
-            if (finalPayload.status === 'error') {
-                const errorPayload = finalPayload as { message?: string, debug_url?: string };
-                console.error("DEBUG (MiniKit Error): " + JSON.stringify(errorPayload, null, 2));
-                throw new Error(errorPayload.message || "Verification failed in World App.");
-            }
+            const finalPayload = verifyResp.finalPayload;
 
             const response = await fetch('/api/claim-widle-with-worldid', {
                 method: 'POST',
@@ -87,7 +82,7 @@ export default function WIdleSection({
 
             const { amount, nonce, signature } = backendResult;
 
-                const txResp = await MiniKit.commandsAsync.sendTransaction({
+                const txResp = await safeMiniKit.safeCall('sendTransaction', {
                     transaction: [
                         {
                             address: contractConfig.gameManagerV2Address,
@@ -99,18 +94,17 @@ export default function WIdleSection({
                     ],
                 });
 
-                if (!txResp || !txResp.finalPayload) {
+                if (!txResp.ok || !txResp.finalPayload) {
                     throw new Error('Transaction failed: no response from MiniKit');
                 }
 
-                const { finalPayload: txFinalPayload } = txResp;
+                const txFinalPayload = txResp.finalPayload as { status?: string; message?: string; debug_url?: string; transaction_id?: string };
 
                 if (txFinalPayload.status === 'error') {
-                    const errorPayload = txFinalPayload as { message?: string, debug_url?: string };
-                    console.error("Transaction failed payload:", JSON.stringify(errorPayload, null, 2));
-                    let errorMessage = errorPayload.message || t('error.transaction_failed');
-                    if (errorPayload.debug_url) {
-                        errorMessage += `\n\nDEBUG URL (copy and paste in browser):\n${errorPayload.debug_url}`;
+                    console.error('Transaction failed payload:', JSON.stringify(txFinalPayload, null, 2));
+                    let errorMessage = txFinalPayload.message || t('error.transaction_failed');
+                    if (txFinalPayload.debug_url) {
+                        errorMessage += `\n\nDEBUG URL (copy and paste in browser):\n${txFinalPayload.debug_url}`;
                     }
                     throw new Error(errorMessage);
                 }

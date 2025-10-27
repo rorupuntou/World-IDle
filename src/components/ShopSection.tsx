@@ -2,7 +2,8 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import React from 'react';
-import { MiniKit, PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
+import { PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
+import safeMiniKit from '@/lib/safeMiniKit';
 import clsx from "clsx";
 import { Clock } from "iconoir-react";
 
@@ -48,7 +49,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({
       setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
-    if (!MiniKit.isInstalled()) {
+    if (!safeMiniKit.isAvailable()) {
       setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
@@ -80,13 +81,13 @@ const ShopSection: React.FC<ShopSectionProps> = ({
         description: `Purchase of ${t(selectedBoost.name)}`,
       };
 
-      const payResp = await MiniKit.commandsAsync.pay(payload);
+      const payResp = await safeMiniKit.safeCall('pay', payload);
 
-      if (!payResp || !payResp.finalPayload) {
+      if (!payResp.ok || !payResp.finalPayload) {
         throw new Error(t('payment_cancelled'));
       }
 
-      const { finalPayload } = payResp;
+      const finalPayload = payResp.finalPayload as { status?: string; message?: string };
 
       if (finalPayload.status === 'success') {
         setNotification({ message: t("payment_sent_verifying"), type: 'success' });

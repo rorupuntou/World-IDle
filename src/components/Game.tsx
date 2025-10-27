@@ -13,7 +13,8 @@ import {
   SoundHigh,
   SoundOff,
 } from "iconoir-react";
-import { MiniKit, Tokens, VerificationLevel } from "@worldcoin/minikit-js";
+import { Tokens, VerificationLevel } from "@worldcoin/minikit-js";
+import safeMiniKit from "@/lib/safeMiniKit";
 import { parseUnits } from "viem";
 
 import {
@@ -201,33 +202,42 @@ export default function Game() {
 
   // Ensure MiniKit is initialized when this client component mounts.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     try {
-      MiniKit.install();
+      // Attempt to install/init MiniKit if available in the host
+      // Some hosts expose MiniKit synchronously; this is best-effort.
+      const host = globalThis as unknown as { MiniKit?: { install?: () => void } };
+      if (host.MiniKit && typeof host.MiniKit.install === "function") {
+        try {
+          host.MiniKit.install?.();
+        } catch {
+          // ignore installation errors
+        }
+      }
     } catch (err) {
-      // Non-fatal: log for debugging in case MiniKit API changes
-      // or the host environment doesn't support it.
-      // The UI already checks MiniKit.isInstalled() before calling commands.
       // eslint-disable-next-line no-console
-      console.warn('MiniKit.install() failed or is not available in this environment', err);
+      console.warn("MiniKit.install() attempt failed", err);
     }
   }, []);
 
   // MiniKit / env diagnostics (client-only)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const mk = MiniKit as unknown as {
-        isInstalled?: () => boolean;
-        commandsAsync?: Record<string, unknown>;
+      // Prefer reading the global MiniKit injected by the host (if any)
+      const mkHost = globalThis as unknown as {
+        MiniKit?: {
+          isInstalled?: () => boolean;
+          commandsAsync?: Record<string, unknown>;
+        };
       };
-      const isInstalled = typeof mk.isInstalled === 'function' ? mk.isInstalled() : null;
-      const hasCommandsAsync = typeof mk.commandsAsync !== 'undefined';
-      const verifyAvailable = hasCommandsAsync && typeof mk.commandsAsync!.verify === 'function';
-      const payAvailable = hasCommandsAsync && typeof mk.commandsAsync!.pay === 'function';
-      const sendTransactionAvailable = hasCommandsAsync && typeof mk.commandsAsync!.sendTransaction === 'function';
-      const walletAuthAvailable = hasCommandsAsync && typeof mk.commandsAsync!.walletAuth === 'function';
+      const mk = mkHost.MiniKit;
+      const isInstalled = typeof mk?.isInstalled === 'function' ? mk.isInstalled() : null;
+  const hasCommandsAsync = !!mk && typeof mk.commandsAsync !== 'undefined';
+  const verifyAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.verify === 'function';
+  const payAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.pay === 'function';
+  const sendTransactionAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.sendTransaction === 'function';
+  const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
 
       const info = {
         appId: process.env.NEXT_PUBLIC_WLD_APP_ID || null,
@@ -330,35 +340,24 @@ export default function Game() {
 
   const handleVerifyWithMiniKit = async () => {
     if (!walletAddress) return;
-    if (!MiniKit.isInstalled()) {
+    if (!safeMiniKit.isAvailable()) {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      const verifyResp = await MiniKit.commandsAsync.verify({
+      const verifyResp = await safeMiniKit.safeCall("verify", {
         action: "verify-humanity",
         signal: walletAddress,
         verification_level: VerificationLevel.Orb,
       });
 
-      if (!verifyResp || !verifyResp.finalPayload) {
+      if (!verifyResp.ok) {
+        // Provide a friendly notification while logging details
+        // eslint-disable-next-line no-console
+        console.error("MiniKit verify failed:", verifyResp);
         return setNotification({ message: t("verification_failed"), type: "error" });
       }
 
-      const { finalPayload } = verifyResp;
-
-      if (finalPayload.status === "error") {
-        const errorPayload = finalPayload as {
-          message?: string;
-          debug_url?: string;
-        };
-        console.error(
-          "DEBUG (MiniKit Error): " + JSON.stringify(errorPayload, null, 2)
-        );
-        return setNotification({
-          message: errorPayload.message || "Verification failed in World App.",
-          type: "error",
-        });
-      }
+      const finalPayload = verifyResp.finalPayload;
 
       const res = await fetch("/api/verify-worldid", {
         method: "POST",
@@ -679,20 +678,17 @@ export default function Game() {
 
   const handleConnect = useCallback(async () => {
     triggerInteraction();
-    if (!MiniKit.isInstalled()) {
+    if (!safeMiniKit.isAvailable()) {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      const result = await MiniKit.commandsAsync.walletAuth({
+      const result = await safeMiniKit.safeCall("walletAuth", {
         nonce: String(Math.random()),
       });
-      if (!result || !result.finalPayload) {
+      if (!result.ok || !result.finalPayload) {
         throw new Error(t("auth_failed"));
       }
-      if (result.finalPayload.status === "error") {
-        throw new Error(t("auth_failed"));
-      }
-      const address = result.finalPayload.message.match(
+      const address = (result.finalPayload as { message?: string }).message?.match(
         /0x[a-fA-F0-9]{40}/
       )?.[0] as `0x${string}` | undefined;
       if (address) {
@@ -750,7 +746,7 @@ export default function Game() {
             decimals
           );
 
-          const sendResp = await MiniKit.commandsAsync.sendTransaction({
+          const sendResp = await safeMiniKit.safeCall("sendTransaction", {
             transaction: [
               {
                 address: contractConfig.wIdleTokenAddress,
@@ -764,18 +760,14 @@ export default function Game() {
               },
             ],
           });
-
-          if (!sendResp || !sendResp.finalPayload) {
+          if (!sendResp.ok || !sendResp.finalPayload) {
             throw new Error("Error sending transaction: no response from MiniKit");
           }
 
-          const { finalPayload } = sendResp;
+          const finalPayload = sendResp.finalPayload as { status?: string; message?: string; transaction_id?: string };
 
           if (finalPayload.status === "error") {
-            throw new Error(
-              (finalPayload as { message?: string }).message ||
-                "Error sending transaction"
-            );
+            throw new Error(finalPayload.message || "Error sending transaction");
           }
 
           if (finalPayload.transaction_id) {
@@ -806,7 +798,7 @@ export default function Game() {
           if (!initRes.ok) throw new Error(t("payment_failed_init"));
           const { reference } = await initRes.json();
 
-          const payResp = await MiniKit.commandsAsync.pay({
+          const payResp = await safeMiniKit.safeCall("pay", {
             reference,
             to: "0x536bB672A282df8c89DDA57E79423cC505750E52",
             tokens: [
@@ -820,17 +812,13 @@ export default function Game() {
             ],
             description: t("time_warp_purchase_desc"),
           });
-
-          if (!payResp || !payResp.finalPayload) {
-            throw new Error(t('payment_cancelled'));
+          if (!payResp.ok || !payResp.finalPayload) {
+            throw new Error(t("payment_cancelled"));
           }
 
-          const { finalPayload } = payResp;
+          const finalPayload = payResp.finalPayload as { status?: string; transaction_id?: string; message?: string };
 
-          if (
-            finalPayload.status === "success" &&
-            finalPayload.transaction_id
-          ) {
+          if (finalPayload.status === "success" && finalPayload.transaction_id) {
             setNotification({
               message: t("payment_sent_verifying"),
               type: "success",
@@ -1005,7 +993,7 @@ export default function Game() {
           typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
         const amountToBurnInWei =
           BigInt(totalWIdleCost) * BigInt(10 ** decimals);
-        const sendResp = await MiniKit.commandsAsync.sendTransaction({
+        const sendResp = await safeMiniKit.safeCall("sendTransaction", {
           transaction: [
             {
               address: contractConfig.wIdleTokenAddress,
@@ -1019,22 +1007,15 @@ export default function Game() {
             },
           ],
         });
-
-        if (!sendResp || !sendResp.finalPayload) {
+        if (!sendResp.ok || !sendResp.finalPayload) {
           throw new Error("Error sending transaction: no response from MiniKit");
         }
 
-        const { finalPayload } = sendResp;
+        const finalPayload = sendResp.finalPayload as { status?: string; message?: string; debug_url?: string; transaction_id?: string };
 
         if (finalPayload.status === "error") {
-          const errorPayload = finalPayload as {
-            message?: string;
-            debug_url?: string;
-          };
-          console.error("DEBUG: " + JSON.stringify(errorPayload, null, 2));
-          throw new Error(
-            errorPayload.message || "Error sending transaction with MiniKit."
-          );
+          console.error("DEBUG: " + JSON.stringify(finalPayload, null, 2));
+          throw new Error(finalPayload.message || "Error sending transaction with MiniKit.");
         }
 
         if (finalPayload.transaction_id) {

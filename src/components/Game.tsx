@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -194,6 +194,26 @@ export default function Game() {
     setFullState,
     isLoaded,
   } = useGameSave(serverState, walletAddress);
+
+  // Ensure MiniKit is initialized when this client component mounts.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      MiniKit.install();
+    } catch (err) {
+      // Non-fatal: log for debugging in case MiniKit API changes
+      // or the host environment doesn't support it.
+      // The UI already checks MiniKit.isInstalled() before calling commands.
+      // eslint-disable-next-line no-console
+      console.warn('MiniKit.install() failed or is not available in this environment', err);
+    }
+  }, []);
+
+  // Keep a ref to the latest saveGame to avoid forcing it into callback deps
+  const saveGameRef = useRef(saveGame);
+  useEffect(() => {
+    saveGameRef.current = saveGame;
+  }, [saveGame]);
   
   const {
     wIdleBalance,
@@ -249,8 +269,8 @@ export default function Game() {
         upgrades, 
         achievements 
     };
-    saveGame(currentState);
-}, [walletAddress, gameState, stats, autoclickers, upgrades, achievements, saveGame]);
+  saveGameRef.current?.(currentState);
+}, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
 
   const handleClaimOfflineGains = useCallback(() => {
       originalHandleClaim();
@@ -272,11 +292,17 @@ export default function Game() {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      const { finalPayload } = await MiniKit.commandsAsync.verify({
+      const verifyResp = await MiniKit.commandsAsync.verify({
         action: "verify-humanity",
         signal: walletAddress,
         verification_level: VerificationLevel.Orb,
       });
+
+      if (!verifyResp || !verifyResp.finalPayload) {
+        return setNotification({ message: t("verification_failed"), type: "error" });
+      }
+
+      const { finalPayload } = verifyResp;
 
       if (finalPayload.status === "error") {
         const errorPayload = finalPayload as {
@@ -618,6 +644,9 @@ export default function Game() {
       const result = await MiniKit.commandsAsync.walletAuth({
         nonce: String(Math.random()),
       });
+      if (!result || !result.finalPayload) {
+        throw new Error(t("auth_failed"));
+      }
       if (result.finalPayload.status === "error") {
         throw new Error(t("auth_failed"));
       }
@@ -679,7 +708,7 @@ export default function Game() {
             decimals
           );
 
-          const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+          const sendResp = await MiniKit.commandsAsync.sendTransaction({
             transaction: [
               {
                 address: contractConfig.wIdleTokenAddress,
@@ -693,6 +722,12 @@ export default function Game() {
               },
             ],
           });
+
+          if (!sendResp || !sendResp.finalPayload) {
+            throw new Error("Error sending transaction: no response from MiniKit");
+          }
+
+          const { finalPayload } = sendResp;
 
           if (finalPayload.status === "error") {
             throw new Error(
@@ -729,7 +764,7 @@ export default function Game() {
           if (!initRes.ok) throw new Error(t("payment_failed_init"));
           const { reference } = await initRes.json();
 
-          const { finalPayload } = await MiniKit.commandsAsync.pay({
+          const payResp = await MiniKit.commandsAsync.pay({
             reference,
             to: "0x536bB672A282df8c89DDA57E79423cC505750E52",
             tokens: [
@@ -743,6 +778,12 @@ export default function Game() {
             ],
             description: t("time_warp_purchase_desc"),
           });
+
+          if (!payResp || !payResp.finalPayload) {
+            throw new Error(t('payment_cancelled'));
+          }
+
+          const { finalPayload } = payResp;
 
           if (
             finalPayload.status === "success" &&
@@ -922,7 +963,7 @@ export default function Game() {
           typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
         const amountToBurnInWei =
           BigInt(totalWIdleCost) * BigInt(10 ** decimals);
-        const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+        const sendResp = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
             {
               address: contractConfig.wIdleTokenAddress,
@@ -936,6 +977,12 @@ export default function Game() {
             },
           ],
         });
+
+        if (!sendResp || !sendResp.finalPayload) {
+          throw new Error("Error sending transaction: no response from MiniKit");
+        }
+
+        const { finalPayload } = sendResp;
 
         if (finalPayload.status === "error") {
           const errorPayload = finalPayload as {

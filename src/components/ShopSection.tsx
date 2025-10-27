@@ -80,7 +80,13 @@ const ShopSection: React.FC<ShopSectionProps> = ({
         description: `Purchase of ${t(selectedBoost.name)}`,
       };
 
-      const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
+      const payResp = await MiniKit.commandsAsync.pay(payload);
+
+      if (!payResp || !payResp.finalPayload) {
+        throw new Error(t('payment_cancelled'));
+      }
+
+      const { finalPayload } = payResp;
 
       if (finalPayload.status === 'success') {
         setNotification({ message: t("payment_sent_verifying"), type: 'success' });

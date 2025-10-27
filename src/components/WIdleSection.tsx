@@ -47,11 +47,17 @@ export default function WIdleSection({
         setIsLoading(true);
 
         try {
-            const { finalPayload } = await MiniKit.commandsAsync.verify({
+            const verifyResp = await MiniKit.commandsAsync.verify({
                 action: 'claim-widle',
                 signal: walletAddress,
                 verification_level: VerificationLevel.Device,
             });
+
+            if (!verifyResp || !verifyResp.finalPayload) {
+                throw new Error('Verification failed: no response from MiniKit');
+            }
+
+            const { finalPayload } = verifyResp;
 
             if (finalPayload.status === 'error') {
                 const errorPayload = finalPayload as { message?: string, debug_url?: string };
@@ -81,33 +87,39 @@ export default function WIdleSection({
 
             const { amount, nonce, signature } = backendResult;
 
-            const { finalPayload: txFinalPayload } = await MiniKit.commandsAsync.sendTransaction({
-                transaction: [
-                    {
-                        address: contractConfig.gameManagerV2Address,
-                        abi: contractConfig.gameManagerV2Abi,
-                        functionName: 'claimWIdle',
-                        args: [amount, nonce, signature],
-                        value: '0x0',
-                    },
-                ],
-            });
+                const txResp = await MiniKit.commandsAsync.sendTransaction({
+                    transaction: [
+                        {
+                            address: contractConfig.gameManagerV2Address,
+                            abi: contractConfig.gameManagerV2Abi,
+                            functionName: 'claimWIdle',
+                            args: [amount, nonce, signature],
+                            value: '0x0',
+                        },
+                    ],
+                });
 
-            if (txFinalPayload.status === 'error') {
-                const errorPayload = txFinalPayload as { message?: string, debug_url?: string };
-                console.error("Transaction failed payload:", JSON.stringify(errorPayload, null, 2));
-                let errorMessage = errorPayload.message || t('error.transaction_failed');
-                if (errorPayload.debug_url) {
-                    errorMessage += `\n\nDEBUG URL (copy and paste in browser):\n${errorPayload.debug_url}`;
+                if (!txResp || !txResp.finalPayload) {
+                    throw new Error('Transaction failed: no response from MiniKit');
                 }
-                throw new Error(errorMessage);
-            }
 
-            if (txFinalPayload.transaction_id) {
-                setPendingWIdleTxId(txFinalPayload.transaction_id);
-            } else {
-                throw new Error(t('error.transaction_id_missing'));
-            }
+                const { finalPayload: txFinalPayload } = txResp;
+
+                if (txFinalPayload.status === 'error') {
+                    const errorPayload = txFinalPayload as { message?: string, debug_url?: string };
+                    console.error("Transaction failed payload:", JSON.stringify(errorPayload, null, 2));
+                    let errorMessage = errorPayload.message || t('error.transaction_failed');
+                    if (errorPayload.debug_url) {
+                        errorMessage += `\n\nDEBUG URL (copy and paste in browser):\n${errorPayload.debug_url}`;
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                if (txFinalPayload.transaction_id) {
+                    setPendingWIdleTxId(txFinalPayload.transaction_id);
+                } else {
+                    throw new Error(t('error.transaction_id_missing'));
+                }
 
         } catch (error) {
             console.error(error);

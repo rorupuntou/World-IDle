@@ -11,7 +11,7 @@ interface ReferralsSectionProps {
 }
 
 // TODO: Replace with your real App ID from the Worldcoin Developer Portal
-const YOUR_APP_ID = 'app_3b83f308b9f7ef9a01e4042f1f48721d';
+const YOUR_APP_ID = 'app_fe80f47dce293e5f434ea9553098015d';
 
 interface RawReferral {
   referee_id: string;

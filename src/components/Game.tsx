@@ -216,7 +216,8 @@ export default function Game() {
           console.info("MiniKit.install() call, appId=", appId ?? "(none)");
           if (appId) {
             // @ts-expect-error - host-specific signature
-            host.MiniKit.install?.({ app_id: appId });
+            // Pass both keys (snake_case and camelCase) because different host implementations expect different names
+            host.MiniKit.install?.({ app_id: appId, appId });
           } else {
             host.MiniKit.install?.();
           }

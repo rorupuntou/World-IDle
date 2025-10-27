@@ -16,7 +16,43 @@ function extractPayload(body: unknown): SiwePayload | null {
 
 export async function POST(req: NextRequest) {
   try {
-  const body = await req.json();
+    const body = await req.json();
+    // Diagnostic: log the top-level body keys and a small preview to help debug mismatch between message/signature
+    // eslint-disable-next-line no-console
+    console.error("siwe/verify: received body keys", Object.keys(body || {}));
+    // if body has finalPayload or payload, log their keys and a short preview
+    if (body && typeof body === "object") {
+      const b = body as Record<string, unknown>;
+      if (b.finalPayload) {
+        try {
+          const fp = b.finalPayload as Record<string, unknown>;
+          // eslint-disable-next-line no-console
+          console.error("siwe/verify: finalPayload keys", Object.keys(fp));
+          if (typeof fp.message === "string") {
+            // eslint-disable-next-line no-console
+            console.error("siwe/verify: finalPayload.message preview", (fp.message as string).slice(0, 200));
+          }
+          if (typeof fp.signature === "string") {
+            // eslint-disable-next-line no-console
+            console.error("siwe/verify: finalPayload.signature length", (fp.signature as string).length);
+          }
+        } catch (err) {
+          // ignore preview logging errors
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify: error previewing finalPayload", err);
+        }
+      }
+      if (b.payload) {
+        try {
+          const p = b.payload as Record<string, unknown>;
+          // eslint-disable-next-line no-console
+          console.error("siwe/verify: payload keys", Object.keys(p));
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify: error previewing payload", err);
+        }
+      }
+    }
     const payload = extractPayload(body);
     if (!payload) {
       return NextResponse.json({ success: false, error: "Missing payload" }, { status: 400 });

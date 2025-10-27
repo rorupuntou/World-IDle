@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MiniKit } from "@worldcoin/minikit-js";
 
 type SafeResult = {
   ok: boolean;
@@ -8,12 +7,23 @@ type SafeResult = {
   raw?: unknown;
 };
 
+function getHostMiniKit(): any {
+  if (typeof window === "undefined") return undefined;
+  try {
+    return (globalThis as any).MiniKit;
+  } catch {
+    return undefined;
+  }
+}
+
 export function isAvailable(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    const mk = MiniKit as unknown as { isInstalled?: () => boolean; commandsAsync?: Record<string, unknown> };
-    if (!mk || typeof mk.isInstalled !== "function") return false;
-    return !!mk.isInstalled();
+    const mk = getHostMiniKit();
+    if (!mk) return false;
+    if (typeof mk.isInstalled === "function") return !!mk.isInstalled();
+    if (typeof mk.commandsAsync !== "undefined") return true;
+    return false;
   } catch {
     return false;
   }
@@ -22,12 +32,12 @@ export function isAvailable(): boolean {
 export async function safeCall(command: string, params?: unknown): Promise<SafeResult> {
   if (typeof window === "undefined") return { ok: false, error: "SSR: window not available" };
   try {
-    const mk = MiniKit as unknown as { commandsAsync?: Record<string, (...args: unknown[]) => Promise<unknown>> };
+    const mk = getHostMiniKit();
     if (!mk || typeof mk.commandsAsync === "undefined") {
       return { ok: false, error: "MiniKit.commandsAsync is not available", raw: mk };
     }
 
-    const fn = (mk.commandsAsync as unknown as Record<string, unknown>)[command] as ((p?: unknown) => Promise<unknown>) | undefined;
+    const fn = (mk.commandsAsync as Record<string, any>)[command] as ((p?: unknown) => Promise<unknown>) | undefined;
     if (typeof fn !== "function") {
       return { ok: false, error: `MiniKit command not available: ${command}` };
     }

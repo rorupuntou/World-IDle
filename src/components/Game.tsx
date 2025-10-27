@@ -1196,7 +1196,16 @@ export default function Game() {
   if (!walletAddress) {
     return (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
-        <LanguageSelector />
+        <div className="flex items-center justify-between mb-4">
+          <LanguageSelector />
+          <button
+            onClick={() => setDebugOpen((v) => !v)}
+            className="ml-2 text-xs px-2 py-1 rounded bg-yellow-500/80 hover:bg-yellow-500 text-black"
+            title="Toggle MiniKit debug info"
+          >
+            Debug
+          </button>
+        </div>
         <h1 className="text-4xl font-bold mb-4">{t("welcome_message")}</h1>
         <p className="mb-8 text-slate-400">{t("connect_wallet_prompt")}</p>
         <button

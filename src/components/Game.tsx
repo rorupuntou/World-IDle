@@ -682,20 +682,40 @@ export default function Game() {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
+      // Get a server-side nonce and set a server cookie for verification
+  const nonceRes = await fetch("/api/siwe/nonce", { credentials: "same-origin" });
+      if (!nonceRes.ok) throw new Error("Failed to get nonce from server");
+      const { nonce } = await nonceRes.json();
+
       const result = await safeMiniKit.safeCall("walletAuth", {
-        nonce: String(Math.random()),
+        nonce: String(nonce),
       });
       if (!result.ok || !result.finalPayload) {
         throw new Error(t("auth_failed"));
       }
-      const address = (result.finalPayload as { message?: string }).message?.match(
-        /0x[a-fA-F0-9]{40}/
-      )?.[0] as `0x${string}` | undefined;
-      if (address) {
+
+      // Send the walletAuth final payload to the backend for verification
+      const verifyRes = await fetch("/api/siwe/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: result.finalPayload }),
+      });
+
+      if (!verifyRes.ok) {
+        const text = await verifyRes.text();
+        throw new Error(
+          text || t("auth_failed")
+        );
+      }
+
+      const verifyJson = await verifyRes.json();
+      if (verifyJson.success && verifyJson.address) {
+        const address = verifyJson.address as `0x${string}`;
         setWalletAddress(address);
         loadGameFromBackend(address);
       } else {
-        throw new Error(t("no_address"));
+        throw new Error(verifyJson.error || t("auth_failed"));
       }
     } catch (error) {
       console.error("Error al conectar la billetera:", error);

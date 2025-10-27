@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hashMessage, recoverAddress } from "viem";
+import { hashMessage, recoverAddress, createPublicClient, http, defineChain, getContract } from "viem";
 
 type SiwePayload =
   | { message?: string; signature?: string; siweMessage?: string; siweSignature?: string; signedMessage?: string }
@@ -108,12 +108,99 @@ export async function POST(req: NextRequest) {
     try {
       const hashed = hashMessage(message);
       const sigHex = (signature as string).startsWith("0x") ? (signature as string) : `0x${signature}`;
-      const recovered = await recoverAddress({ hash: hashed, signature: sigHex as `0x${string}` });
+
+      // Try recovering with original signature first
+      let recovered = await recoverAddress({ hash: hashed, signature: sigHex as `0x${string}` });
+
+      // If mismatch, try normalizing v value: some hosts return v as 0/1 instead of 27/28
       const recoveredLower = recovered?.toLowerCase?.();
       const extractedLower = extractedAddress?.toLowerCase?.();
       if (!recovered || !extractedAddress || recoveredLower !== extractedLower) {
+        // Attempt to normalize v if signature is 65 bytes and last byte is 0x00 or 0x01
+        try {
+          const raw = sigHex.startsWith("0x") ? sigHex.slice(2) : sigHex;
+          if (raw.length === 130) {
+            const vHex = raw.slice(128, 130);
+            const v = parseInt(vHex, 16);
+            if (v === 0 || v === 1) {
+              const newV = (v + 27).toString(16).padStart(2, "0");
+              const normalized = `0x${raw.slice(0, 128)}${newV}`;
+              // eslint-disable-next-line no-console
+              console.error("siwe/verify: attempting normalized signature v (0/1 -> 27/28)", { original: sigHex, normalized });
+              const recovered2 = await recoverAddress({ hash: hashed, signature: normalized as `0x${string}` });
+              const recovered2Lower = recovered2?.toLowerCase?.();
+              if (recovered2 && recovered2Lower === extractedLower) {
+                recovered = recovered2;
+              }
+            }
+          }
+        } catch (normErr) {
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify: normalization attempt failed", normErr);
+        }
+      }
+
+      const finalRecoveredLower = recovered?.toLowerCase?.();
+      const finalExtractedLower = extractedAddress?.toLowerCase?.();
+      if (!recovered || !extractedAddress || finalRecoveredLower !== finalExtractedLower) {
         // eslint-disable-next-line no-console
         console.error("siwe/verify: signature recovery mismatch", { recovered, extractedAddress });
+
+        // If an RPC URL is provided, attempt EIP-1271 (contract wallet) verification using the RPC
+        const rpcUrl = process.env.SIWE_RPC_URL || process.env.NEXT_PUBLIC_SIWE_RPC_URL || process.env.WORLD_CHAIN_RPC_URL;
+        if (rpcUrl && extractedAddress) {
+          try {
+            // Define a minimal world chain for the public client
+            const worldChain = defineChain({
+              id: 480,
+              name: "World Chain",
+              nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+              rpcUrls: { default: { http: [rpcUrl] } },
+              blockExplorers: { default: { name: "Worldscan", url: "https://worldscan.org" } },
+            });
+
+            const publicClient = createPublicClient({ chain: worldChain, transport: http(rpcUrl) });
+
+            // EIP-1271 ABI (isValidSignature(bytes32,bytes) => bytes4)
+            const EIP1271_ABI = [
+              {
+                inputs: [
+                  { internalType: "bytes32", name: "_hash", type: "bytes32" },
+                  { internalType: "bytes", name: "_signature", type: "bytes" },
+                ],
+                name: "isValidSignature",
+                outputs: [{ internalType: "bytes4", name: "", type: "bytes4" }],
+                stateMutability: "view",
+                type: "function",
+              },
+            ];
+
+            // According to SIWE the signed payload is prefixed using ERC-191. Build the same message prefix used when hashing.
+            const ERC_191_PREFIX = "\x19Ethereum Signed Message:\n";
+            const signedMessage = `${ERC_191_PREFIX}${(message as string).length}${message}`;
+            const hashedForContract = hashMessage(signedMessage);
+
+            const contract = getContract({ address: extractedAddress as `0x${string}`, abi: EIP1271_ABI, client: publicClient });
+            // Call isValidSignature(hash, signature)
+            // Some implementations expect the raw signature bytes (not hex-string param packing); viem will handle encoding.
+            // eslint-disable-next-line no-console
+            console.error("siwe/verify: attempting EIP-1271 verification via RPC", { rpcUrl, address: extractedAddress });
+            const res = await contract.read.isValidSignature([hashedForContract, sigHex]);
+            // EIP-1271 magic value
+            const EIP1271_MAGIC = "0x1626ba7e";
+            if (res === EIP1271_MAGIC) {
+              // Verified via contract wallet
+              const resp = NextResponse.json({ success: true, address: extractedAddress });
+              resp.cookies.set("siwe_nonce", "", { maxAge: 0, path: "/" });
+              resp.cookies.set("siwe_session", extractedAddress, { httpOnly: true, path: "/", maxAge: 60 * 60 * 24 });
+              return resp;
+            }
+          } catch (rpcErr) {
+            // eslint-disable-next-line no-console
+            console.warn("siwe/verify: EIP-1271 RPC verification attempt failed", rpcErr);
+          }
+        }
+
         return NextResponse.json({ success: false, error: "Signature verification failed" }, { status: 401 });
       }
 

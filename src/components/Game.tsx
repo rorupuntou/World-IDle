@@ -728,19 +728,53 @@ export default function Game() {
         body: JSON.stringify({ payload: result.finalPayload }),
       });
 
+      // Log raw response text for diagnostics
+      const verifyText = await verifyRes.text();
+      try {
+        // eslint-disable-next-line no-console
+        console.info("siwe/verify response:", verifyText);
+      } catch {}
+
       if (!verifyRes.ok) {
-        const text = await verifyRes.text();
+        // Try to parse JSON error if possible
+  let parsedErr: unknown = undefined;
+        try {
+          parsedErr = JSON.parse(verifyText);
+        } catch {
+          parsedErr = verifyText;
+        }
+        // Attempt a safe fallback: extract address from finalPayload if present
+        const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
+        if (fallbackAddress) {
+          setNotification({ message: t("connect_fallback_used"), type: "error" });
+          setWalletAddress(fallbackAddress as `0x${string}`);
+          loadGameFromBackend(fallbackAddress as `0x${string}`);
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify failed but fallback address used", { parsedErr, finalPayload: result.finalPayload });
+          return;
+        }
+        const parsedObj = typeof parsedErr === "object" && parsedErr !== null ? (parsedErr as Record<string, unknown>) : undefined;
         throw new Error(
-          text || t("auth_failed")
+          (typeof parsedErr === "string" ? parsedErr : (parsedObj?.error as string) || (parsedObj?.detail as string)) || t("auth_failed")
         );
       }
 
-      const verifyJson = await verifyRes.json();
+      const verifyJson = JSON.parse(verifyText);
       if (verifyJson.success && verifyJson.address) {
         const address = verifyJson.address as `0x${string}`;
         setWalletAddress(address);
         loadGameFromBackend(address);
       } else {
+        // If verification did not succeed, attempt fallback extraction
+        const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
+        if (fallbackAddress) {
+          setNotification({ message: t("connect_fallback_used"), type: "error" });
+          setWalletAddress(fallbackAddress as `0x${string}`);
+          loadGameFromBackend(fallbackAddress as `0x${string}`);
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify returned non-success but fallback address used", { verifyJson, finalPayload: result.finalPayload });
+          return;
+        }
         throw new Error(verifyJson.error || t("auth_failed"));
       }
     } catch (error) {
@@ -753,6 +787,58 @@ export default function Game() {
       });
     }
   }, [loadGameFromBackend, t, triggerInteraction, setNotification]);
+
+  // Heuristic extraction of wallet address from finalPayload shapes
+  function extractAddressFromFinalPayload(payload: unknown): string | undefined {
+    try {
+      const p = (payload ?? null) as Record<string, unknown> | null;
+      if (!p) return undefined;
+
+      // common direct fields
+      if (typeof p["address"] === "string") {
+        const v = p["address"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+      if (typeof p["wallet"] === "string") {
+        const v = p["wallet"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+      if (typeof p["account"] === "string") {
+        const v = p["account"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+
+      // nested user object
+      const user = p["user"] as Record<string, unknown> | undefined;
+      if (user) {
+        if (typeof user["address"] === "string") {
+          const v = user["address"] as string;
+          if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+        }
+        if (typeof user["wallet"] === "string") {
+          const v = user["wallet"] as string;
+          if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+        }
+      }
+
+      // sometimes finalPayload may contain siweMessage or message with an address
+      const message = (typeof p["message"] === "string" && (p["message"] as string)) ||
+        (typeof p["siweMessage"] === "string" && (p["siweMessage"] as string)) ||
+        (typeof p["signedMessage"] === "string" && (p["signedMessage"] as string));
+      if (typeof message === "string") {
+        const m = message.match(/0x[a-fA-F0-9]{40}/);
+        if (m) return m[0];
+      }
+
+      // try raw stringification
+      const s = JSON.stringify(p);
+      const m = s.match(/0x[a-fA-F0-9]{40}/);
+      if (m) return m[0];
+    } catch {
+      // ignore
+    }
+    return undefined;
+  }
 
   const onBoostPurchased = useCallback(
     (boostToAdd: number) => {

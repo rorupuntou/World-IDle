@@ -207,11 +207,23 @@ export default function Game() {
       // Attempt to install/init MiniKit if available in the host
       // Some hosts expose MiniKit synchronously; this is best-effort.
       const host = globalThis as unknown as { MiniKit?: { install?: () => void } };
+      const appId = process.env.NEXT_PUBLIC_WLD_APP_ID;
       if (host.MiniKit && typeof host.MiniKit.install === "function") {
         try {
-          host.MiniKit.install?.();
-        } catch {
-          // ignore installation errors
+          // Pass app_id to the host installer when available so the host can register the mini app correctly.
+          // Some host implementations log "App ID not provided during install" if no app_id is supplied.
+          // eslint-disable-next-line no-console
+          console.info("MiniKit.install() call, appId=", appId ?? "(none)");
+          if (appId) {
+            // @ts-expect-error - host-specific signature
+            host.MiniKit.install?.({ app_id: appId });
+          } else {
+            host.MiniKit.install?.();
+          }
+        } catch (err) {
+          // ignore installation errors but log for diagnostics
+          // eslint-disable-next-line no-console
+          console.warn("MiniKit.install() attempt failed", err);
         }
       }
     } catch (err) {

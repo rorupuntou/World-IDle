@@ -707,6 +707,19 @@ export default function Game() {
         throw new Error(t("auth_failed"));
       }
 
+      // Expose a small preview of the finalPayload to help debug verification mismatches.
+      try {
+        // eslint-disable-next-line no-console
+        console.info("[miniKitFinalPayload]", result.finalPayload);
+        setMiniKitDebug((prev) => ({
+          ...(prev || {}),
+          finalPayloadPreview: JSON.stringify(result.finalPayload).slice(0, 200),
+          finalPayloadFull: result.finalPayload,
+        }));
+      } catch {
+        // ignore debug logging errors
+      }
+
       // Send the walletAuth final payload to the backend for verification
       const verifyRes = await fetch("/api/siwe/verify", {
         method: "POST",
@@ -1227,7 +1240,38 @@ export default function Game() {
         <div className="fixed top-16 right-2 z-60 w-80 max-h-[60vh] overflow-auto p-3 bg-black/80 text-white text-xs rounded-md border border-slate-700">
           <div className="flex justify-between items-center mb-2">
             <strong>MiniKit diagnostics</strong>
-            <button onClick={() => setDebugOpen(false)} className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10">Close</button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = (miniKitDebug as Record<string, unknown> | null)?.finalPayloadFull ?? miniKitDebug;
+                    const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      await navigator.clipboard.writeText(text);
+                    } else {
+                      // fallback copy
+                      const ta = document.createElement("textarea");
+                      ta.value = text;
+                      ta.setAttribute("readonly", "");
+                      ta.style.position = "absolute";
+                      ta.style.left = "-9999px";
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                    }
+                    setNotification({ message: t("copied_payload") || "Copied finalPayload to clipboard", type: "success" });
+                  } catch (err) {
+                    console.error("Copy failed", err);
+                    setNotification({ message: t("copy_failed") || "Failed to copy payload", type: "error" });
+                  }
+                }}
+                className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10"
+              >
+                Copy
+              </button>
+              <button onClick={() => setDebugOpen(false)} className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10">Close</button>
+            </div>
           </div>
           <pre className="whitespace-pre-wrap break-words">{JSON.stringify(miniKitDebug, null, 2)}</pre>
         </div>

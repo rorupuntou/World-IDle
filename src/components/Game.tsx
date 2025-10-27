@@ -149,6 +149,10 @@ export default function Game() {
   const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
   const [wIdleServerReward, setWIdleServerReward] = useState(0);
 
+  // Debug UI toggles and diagnostics for MiniKit / env
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [miniKitDebug, setMiniKitDebug] = useState<Record<string, unknown> | null>(null);
+
   const handleFetchWIdleReward = useCallback(async () => {
     if (!walletAddress) return;
     try {
@@ -206,6 +210,44 @@ export default function Game() {
       // The UI already checks MiniKit.isInstalled() before calling commands.
       // eslint-disable-next-line no-console
       console.warn('MiniKit.install() failed or is not available in this environment', err);
+    }
+  }, []);
+
+  // MiniKit / env diagnostics (client-only)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const mk = MiniKit as unknown as {
+        isInstalled?: () => boolean;
+        commandsAsync?: Record<string, unknown>;
+      };
+      const isInstalled = typeof mk.isInstalled === 'function' ? mk.isInstalled() : null;
+      const hasCommandsAsync = typeof mk.commandsAsync !== 'undefined';
+      const verifyAvailable = hasCommandsAsync && typeof mk.commandsAsync!.verify === 'function';
+      const payAvailable = hasCommandsAsync && typeof mk.commandsAsync!.pay === 'function';
+      const sendTransactionAvailable = hasCommandsAsync && typeof mk.commandsAsync!.sendTransaction === 'function';
+      const walletAuthAvailable = hasCommandsAsync && typeof mk.commandsAsync!.walletAuth === 'function';
+
+      const info = {
+        appId: process.env.NEXT_PUBLIC_WLD_APP_ID || null,
+        isInstalled,
+        hasCommandsAsync,
+        verifyAvailable,
+        payAvailable,
+        sendTransactionAvailable,
+        walletAuthAvailable,
+        userAgent: navigator.userAgent,
+        href: window.location.href,
+      };
+      // Log to console for remote debugging
+      // eslint-disable-next-line no-console
+      console.info('[miniKitDebug]', info);
+      setMiniKitDebug(info);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('miniKit diagnostic failed', err);
+      setMiniKitDebug({ error: String(err) });
     }
   }, []);
 
@@ -1158,7 +1200,24 @@ export default function Game() {
         >
           {isMuted ? <SoundOff /> : <SoundHigh />}
         </button>
+        <button
+          onClick={() => setDebugOpen((v) => !v)}
+          className="p-2 ml-1 bg-yellow-500/80 hover:bg-yellow-500 text-black rounded-md text-xs"
+          title="Toggle MiniKit debug info"
+        >
+          Debug
+        </button>
       </div>
+
+      {debugOpen && (
+        <div className="fixed top-16 right-2 z-60 w-80 max-h-[60vh] overflow-auto p-3 bg-black/80 text-white text-xs rounded-md border border-slate-700">
+          <div className="flex justify-between items-center mb-2">
+            <strong>MiniKit diagnostics</strong>
+            <button onClick={() => setDebugOpen(false)} className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10">Close</button>
+          </div>
+          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(miniKitDebug, null, 2)}</pre>
+        </div>
+      )}
       <TelegramButton />
       <NewsTicker />
       <AnimatePresence>

@@ -32,14 +32,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.className} bg-stone-950 text-slate-50 pt-safe-top pb-safe-bottom`}
+        className={`${inter.className} pt-safe-top pb-safe-bottom`}
         style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, #3f3f46 1px, transparent 0)',
-          backgroundSize: '2rem 2rem'
+          backgroundColor: '#16a34a',
+          color: '#ffffff',
         }}
       >
         <LanguageProvider>
-          <Providers>{children}</Providers>
+          <Providers>
+            {children}
+            {/* Small build stamp for verifying deployed preview builds. Set NEXT_PUBLIC_BUILD_ID in Vercel Preview env to show a custom value. */}
+            <div className="fixed bottom-2 left-2 z-50 text-[10px] text-slate-400 bg-black/40 px-2 py-1 rounded">
+              build: {process.env.NEXT_PUBLIC_BUILD_ID ?? "(unset)"}
+            </div>
+          </Providers>
         </LanguageProvider>
       </body>
     </html>

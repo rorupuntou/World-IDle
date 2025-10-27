@@ -78,19 +78,66 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });
         }
 
+        // Use seconds-based nonce to avoid millisecond/second mismatch with on-chain comparisons
         const amountInWei = parseEther(wIdleReward.toString());
-        const nonce = BigInt(Date.now());
 
+        // Prefer a persistent server-managed nonce stored in the game_state table under `next_widle_nonce`.
+        // If the column is absent, fall back to seconds-based timestamp.
+        let nonceBigInt: bigint;
+        try {
+            // Try to read next_widle_nonce if present
+            const nextNonce = (existingData as Record<string, unknown>)['next_widle_nonce'];
+            if (typeof nextNonce === 'number' || typeof nextNonce === 'bigint' || typeof nextNonce === 'string') {
+                const current = BigInt(String(nextNonce));
+                nonceBigInt = current;
+
+                // Attempt to increment it in DB for next time (best-effort; not fully atomic without SQL function)
+                try {
+                    const { data: updated, error: updateErr } = await supabase
+                        .from('game_state')
+                        .update({ next_widle_nonce: (Number(current) + 1) })
+                        .eq('wallet_address', walletAddress)
+                        .select('next_widle_nonce')
+                        .single();
+                    if (updateErr) {
+                        console.warn('Could not increment next_widle_nonce atomically:', updateErr.message || updateErr);
+                    } else {
+                        // eslint-disable-next-line no-console
+                        console.info('Incremented next_widle_nonce for', walletAddress, '->', updated?.next_widle_nonce);
+                    }
+                } catch (uErr) {
+                    // eslint-disable-next-line no-console
+                    console.warn('Error updating next_widle_nonce:', uErr);
+                }
+            } else {
+                // fallback to timestamp (seconds)
+                nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
+            }
+        } catch {
+            nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
+        }
+
+        // Build the message exactly as the contract does: keccak256(abi.encodePacked(msg.sender, amount, nonce))
         const messageHash = keccak256(encodePacked(
             ['address', 'uint256', 'uint256'],
-            [walletAddress as `0x${string}`, amountInWei, nonce]
+            [walletAddress as `0x${string}`, amountInWei, nonceBigInt]
         ));
-        
+
+        // The contract prefixes the message with the Ethereum Signed Message prefix and then keccak256s again.
+        const ethPrefixed = keccak256(encodePacked(['string', 'bytes32'], ["\x19Ethereum Signed Message:\n32", messageHash]));
+
+        // Log hashes to help debug mismatches (hex)
+        // eslint-disable-next-line no-console
+        console.info('claim-widle: messageHash', messageHash);
+        // eslint-disable-next-line no-console
+        console.info('claim-widle: ethPrefixed', ethPrefixed);
+
         const signature = await client.signMessage({
-            message: { raw: toBytes(messageHash) },
+            // sign the 32-byte prefixed hash as raw bytes (avoid double-prefixing)
+            message: { raw: toBytes(ethPrefixed) },
         });
 
-        return NextResponse.json({ success: true, amount: amountInWei.toString(), nonce: nonce.toString(), signature });
+        return NextResponse.json({ success: true, amount: amountInWei.toString(), nonce: nonceBigInt.toString(), signature });
 
     } catch (error) {
         console.error('Error during wIDle claim process:', error);

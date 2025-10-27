@@ -157,15 +157,24 @@ export default function Game() {
   const handleFetchWIdleReward = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      const res = await fetch(
-        `/api/get-widle-reward?walletAddress=${walletAddress}`
-      );
+      // Add a timeout to avoid hanging requests in poor network conditions
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`, { signal: controller.signal });
+      clearTimeout(timeout);
       const data = await res.json();
-      if (data.success) {
-        setWIdleServerReward(data.reward);
+      if (data && data.success) {
+        // support both old and new property names
+        const reward = typeof data.reward === 'number' ? data.reward : (typeof data.wIdleReward === 'number' ? data.wIdleReward : 0);
+        setWIdleServerReward(reward);
       }
     } catch (error) {
-      console.error("Failed to fetch wIDle reward:", error);
+      const err = error as Error & { name?: string };
+      if (err?.name === 'AbortError') {
+        console.warn('get-widle-reward request aborted due to timeout');
+      } else {
+        console.error("Failed to fetch wIDle reward:", error);
+      }
     }
   }, [walletAddress]);
 

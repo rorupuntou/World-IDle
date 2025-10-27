@@ -21,15 +21,33 @@ export async function GET(req: NextRequest) {
         }
 
         if (!existingData) {
-            return NextResponse.json({ success: true, wIdleReward: 0 });
+            return NextResponse.json({ success: true, reward: 0, wIdleReward: 0 });
         }
 
-        const gameData = existingData.game_data as { stats: { totalTokensEarned: number } };
-        const totalTokensEarned = gameData.stats.totalTokensEarned || 0;
+        // game_data might be stored as JSON or stringified JSON; handle both
+    const row = existingData as Record<string, unknown> | null;
+    let gameDataObj: unknown = row?.game_data;
+        if (typeof gameDataObj === 'string') {
+            try {
+                gameDataObj = JSON.parse(gameDataObj) as unknown;
+            } catch {
+                gameDataObj = undefined;
+            }
+        }
+
+        const totalTokensEarned = (() => {
+            if (typeof gameDataObj !== 'object' || gameDataObj === null) return 0;
+            const gd = gameDataObj as Record<string, unknown>;
+            const stats = gd['stats'] as Record<string, unknown> | undefined;
+            if (!stats) return 0;
+            const val = stats['totalTokensEarned'];
+            return typeof val === 'number' ? val : 0;
+        })();
 
         const wIdleReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
 
-        return NextResponse.json({ success: true, wIdleReward });
+        // return both names for backward compatibility (reward and wIdleReward)
+        return NextResponse.json({ success: true, reward: wIdleReward, wIdleReward });
 
     } catch (error) {
         console.error('Error fetching wIDle reward:', error);

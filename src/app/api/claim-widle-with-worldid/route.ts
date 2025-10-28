@@ -81,39 +81,47 @@ export async function POST(req: NextRequest) {
         // Use seconds-based nonce to avoid millisecond/second mismatch with on-chain comparisons
         const amountInWei = parseEther(wIdleReward.toString());
 
-        // Prefer a persistent server-managed nonce stored in the game_state table under `next_widle_nonce`.
-        // If the column is absent, fall back to seconds-based timestamp.
+        // Prefer calling an atomic DB function `increment_next_widle_nonce` via RPC.
+        // If the RPC call or function is not available, fall back to timestamp-based nonce.
         let nonceBigInt: bigint;
         try {
-            // Try to read next_widle_nonce if present
-            const nextNonce = (existingData as Record<string, unknown>)['next_widle_nonce'];
-            if (typeof nextNonce === 'number' || typeof nextNonce === 'bigint' || typeof nextNonce === 'string') {
-                const current = BigInt(String(nextNonce));
-                nonceBigInt = current;
+            // Try to call the PL/pgSQL function we created earlier for atomic increment.
+            // This returns a bigint (the new nonce) when the DB function exists.
+            const { data: rpcData, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: walletAddress as string });
 
-                // Attempt to increment it in DB for next time (best-effort; not fully atomic without SQL function)
-                try {
-                    const { data: updated, error: updateErr } = await supabase
-                        .from('game_state')
-                        .update({ next_widle_nonce: (Number(current) + 1) })
-                        .eq('wallet_address', walletAddress)
-                        .select('next_widle_nonce')
-                        .single();
-                    if (updateErr) {
-                        console.warn('Could not increment next_widle_nonce atomically:', updateErr.message || updateErr);
+            if (!rpcError && rpcData != null) {
+                // rpcData may be a scalar, an object, or an array depending on supabase/pg config.
+                // Normalize the possible shapes to extract the numeric value.
+                let val: unknown = rpcData;
+                if (Array.isArray(rpcData) && rpcData.length > 0) val = rpcData[0];
+
+                // If the function returns a named column, try to read it. Otherwise coerce the scalar.
+                if (typeof val === 'object' && val !== null) {
+                    // e.g. { increment_next_widle_nonce: '2' }
+                    const anyVal = val as Record<string, unknown>;
+                    const keys = Object.keys(anyVal);
+                    if (keys.length > 0) {
+                        nonceBigInt = BigInt(String(anyVal[keys[0]]));
                     } else {
-                        // eslint-disable-next-line no-console
-                        console.info('Incremented next_widle_nonce for', walletAddress, '->', updated?.next_widle_nonce);
+                        nonceBigInt = BigInt(String(val));
                     }
-                } catch (uErr) {
-                    // eslint-disable-next-line no-console
-                    console.warn('Error updating next_widle_nonce:', uErr);
+                } else {
+                    nonceBigInt = BigInt(String(val));
                 }
+
+                // Log success
+                // eslint-disable-next-line no-console
+                console.info('claim-widle: obtained nonce via rpc increment_next_widle_nonce ->', nonceBigInt.toString());
             } else {
-                // fallback to timestamp (seconds)
+                // RPC failed or function doesn't exist: fallback to seconds timestamp
+                // eslint-disable-next-line no-console
+                console.warn('claim-widle: rpc increment_next_widle_nonce not available or failed:', rpcError || 'no data');
                 nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
             }
-        } catch {
+        } catch (rpcErr) {
+            // Unexpected RPC error; fallback to timestamp
+            // eslint-disable-next-line no-console
+            console.warn('claim-widle: error calling rpc increment_next_widle_nonce:', rpcErr);
             nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
         }
 

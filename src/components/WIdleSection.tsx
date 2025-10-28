@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Star, Refresh, Trash } from 'iconoir-react';
+import { Star, Refresh } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { VerificationLevel } from '@worldcoin/minikit-js';
 import safeMiniKit from '@/lib/safeMiniKit';
@@ -12,7 +12,6 @@ interface WIdleSectionProps {
     setIsLoading: (isLoading: boolean) => void;
     walletAddress: string;
     setPendingWIdleTxId: (txId: string) => void;
-    resetGame: () => void;
     wIdleReward: number;
     canClaimWIdle: boolean;
     handleFetchWIdleReward: () => void;
@@ -25,7 +24,6 @@ export default function WIdleSection({
     setIsLoading,
     walletAddress,
     setPendingWIdleTxId,
-    resetGame,
     wIdleReward,
     canClaimWIdle,
     handleFetchWIdleReward,
@@ -123,12 +121,6 @@ export default function WIdleSection({
         }
     };
 
-    const handleResetGame = () => {
-        if (window.confirm(t('confirm_reset'))) {
-            resetGame();
-        }
-    };
-
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2"><Star className="w-6 h-6 text-yellow-400" />{t('widle')}</h3>
@@ -161,10 +153,6 @@ export default function WIdleSection({
                     </>
                 ) : t('widle_button')}
             </motion.button>
-            <button onClick={handleResetGame} className="w-full mt-2 text-sm text-red-500 hover:underline flex items-center justify-center gap-1">
-                <Trash className="w-4 h-4" />
-                {t('reset_game')}
-            </button>
         </div>
     );
 }

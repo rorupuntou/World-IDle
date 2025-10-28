@@ -77,33 +77,6 @@ export function useGameSave(serverState: FullGameState | null, walletAddress: st
 
     
 
-    const resetGame = useCallback(async () => {
-        if (!walletAddress) return;
-
-        const permanentBoost = gameState.permanentBoostBonus || 0;
-        const permanentReferralBoost = gameState.permanent_referral_boost || 0;
-        const wldTimeWarps = gameState.wldTimeWarpsPurchased || 0;
-        const isVerified = stats.isVerified;
-
-        const newGameState = { ...initialState, permanentBoostBonus: permanentBoost, permanent_referral_boost: permanentReferralBoost, wldTimeWarpsPurchased: wldTimeWarps };
-        const newStats = { ...initialStats, isVerified: isVerified };
-        const newAutoclickers = initialAutoclickers.map(a => ({ ...a, purchased: 0 }));
-        const newUpgrades = initialUpgrades.map(u => ({ ...u, purchased: false }));
-        const newAchievements = initialAchievements.map(a => ({ ...a, unlocked: false }));
-
-        const resetState: FullGameState = {
-            gameState: { ...newGameState, lastSaved: Date.now() },
-            stats: newStats,
-            autoclickers: newAutoclickers,
-            upgrades: newUpgrades,
-            achievements: newAchievements,
-        };
-
-        setFullState(resetState);
-        await saveGame(resetState);
-
-    }, [walletAddress, gameState, stats.isVerified, saveGame, setFullState]);
-
     return { 
         gameState, setGameState, 
         stats, setStats, 
@@ -111,7 +84,6 @@ export function useGameSave(serverState: FullGameState | null, walletAddress: st
         upgrades, setUpgrades, 
         achievements, setAchievements, 
         saveGame: (state: FullGameState) => saveGame(state), // Keep an explicit save for critical moments if needed
-        resetGame,
         setFullState,
         isLoaded
     };

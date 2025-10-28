@@ -204,43 +204,11 @@ export default function Game() {
     achievements,
     setAchievements,
     saveGame,
-    resetGame,
     setFullState,
     isLoaded,
   } = useGameSave(serverState, walletAddress);
 
-  // Ensure MiniKit is initialized when this client component mounts.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      // Attempt to install/init MiniKit if available in the host
-      // Some hosts expose MiniKit synchronously; this is best-effort.
-      const host = globalThis as unknown as { MiniKit?: { install?: () => void } };
-      const appId = process.env.NEXT_PUBLIC_WLD_APP_ID;
-      if (host.MiniKit && typeof host.MiniKit.install === "function") {
-        try {
-          // Pass app_id to the host installer when available so the host can register the mini app correctly.
-          // Some host implementations log "App ID not provided during install" if no app_id is supplied.
-          // eslint-disable-next-line no-console
-          console.info("MiniKit.install() call, appId=", appId ?? "(none)");
-          if (appId) {
-            // @ts-expect-error - host-specific signature
-            // Pass both keys (snake_case and camelCase) because different host implementations expect different names
-            host.MiniKit.install?.({ app_id: appId, appId });
-          } else {
-            host.MiniKit.install?.();
-          }
-        } catch (err) {
-          // ignore installation errors but log for diagnostics
-          // eslint-disable-next-line no-console
-          console.warn("MiniKit.install() attempt failed", err);
-        }
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("MiniKit.install() attempt failed", err);
-    }
-  }, []);
+
 
   // MiniKit / env diagnostics (client-only)
   useEffect(() => {
@@ -1479,7 +1447,6 @@ export default function Game() {
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
                 setPendingWIdleTxId={setPendingWIdleTxId}
-                resetGame={resetGame}
                 wIdleReward={wIdleServerReward}
                 canClaimWIdle={canClaimWIdle}
                 handleFetchWIdleReward={handleFetchWIdleReward}

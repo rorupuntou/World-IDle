@@ -49,26 +49,26 @@ export const useBlockchain = (
   const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } =
     useWaitForTransactionReceipt({
       client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+      appConfig: { app_id: 'app_fe80f47dce293e5f434ea9553098015d' },
       transactionId: pendingPurchaseTx?.txId ?? "",
     });
 
   const { isLoading: isConfirmingWIdle, isSuccess: isWIdleSuccess } =
     useWaitForTransactionReceipt({
       client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+      appConfig: { app_id: 'app_fe80f47dce293e5f434ea9553098015d' },
       transactionId: pendingWIdleTxId ?? "",
     });
 
   const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
     client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+    appConfig: { app_id: 'app_fe80f47dce293e5f434ea9553098015d' },
     transactionId: pendingTimeWarpTx?.txId ?? "",
   });
 
   const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
     client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
+    appConfig: { app_id: 'app_fe80f47dce293e5f434ea9553098015d' },
     transactionId: pendingSwapTxId ?? "",
   });
 

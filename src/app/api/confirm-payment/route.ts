@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     // and verify it matches `payload.reference`. This is a critical security step.
 
     // For now, we proceed with the verification against Worldcoin's API
-    const verifyUrl = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=${process.env.NEXT_PUBLIC_WLD_APP_ID}`;
+    const verifyUrl = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=app_fe80f47dce293e5f434ea9553098015d`;
     
     try {
         const verifyRes = await fetch(verifyUrl, {

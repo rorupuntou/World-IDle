@@ -7,7 +7,7 @@ export default function MiniKitWrapper({ children }: { children: React.ReactNode
   useEffect(() => {
     try {
       const host = globalThis as unknown as { MiniKit?: { install?: (opts?: Record<string, unknown>) => void } };
-      const appId = process.env.NEXT_PUBLIC_WLD_APP_ID;
+      const appId = 'app_fe80f47dce293e5f434ea9553098015d';
       if (host?.MiniKit && typeof host.MiniKit.install === "function") {
         try {
           // Pass both snake_case and camelCase keys to support different host implementations

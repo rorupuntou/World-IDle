@@ -11,7 +11,7 @@ interface IRequestPayload {
 export async function POST(req: NextRequest) {
     const { proof, signal, action } = (await req.json()) as IRequestPayload;
 
-    const app_id = (process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_fe80f47dce293e5f434ea9553098015d') as `app_${string}`;
+    const app_id = 'app_fe80f47dce293e5f434ea9553098015d' as `app_${string}`;
 
     try {
         const verifyRes = await verifyCloudProof(proof, app_id, action, signal);

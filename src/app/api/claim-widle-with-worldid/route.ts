@@ -23,7 +23,7 @@ const worldChain = defineChain({
   },
 });
 
-const APP_ID = (process.env.NEXT_PUBLIC_WLD_APP_ID || 'app_fe80f47dce293e5f434ea9553098015d') as `app_${string}`;
+const APP_ID = 'app_fe80f47dce293e5f434ea9553098015d' as `app_${string}`;
 
 interface IRequestPayload {
     payload: ISuccessResult;

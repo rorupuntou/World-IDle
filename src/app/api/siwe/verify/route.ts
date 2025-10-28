@@ -175,17 +175,13 @@ export async function POST(req: NextRequest) {
               },
             ];
 
-            // According to SIWE the signed payload is prefixed using ERC-191. Build the same message prefix used when hashing.
-            const ERC_191_PREFIX = "\x19Ethereum Signed Message:\n";
-            const signedMessage = `${ERC_191_PREFIX}${(message as string).length}${message}`;
-            const hashedForContract = hashMessage(signedMessage);
-
             const contract = getContract({ address: extractedAddress as `0x${string}`, abi: EIP1271_ABI, client: publicClient });
             // Call isValidSignature(hash, signature)
-            // Some implementations expect the raw signature bytes (not hex-string param packing); viem will handle encoding.
+            // The hash must be the EIP-191 prefixed hash, which `viem.hashMessage` already produces.
+            // We reuse the `hashed` variable calculated earlier for the `recoverAddress` attempt.
             // eslint-disable-next-line no-console
             console.error("siwe/verify: attempting EIP-1271 verification via RPC", { rpcUrl, address: extractedAddress });
-            const res = await contract.read.isValidSignature([hashedForContract, sigHex]);
+            const res = await contract.read.isValidSignature([hashed, sigHex as `0x${string}`]);
             // EIP-1271 magic value
             const EIP1271_MAGIC = "0x1626ba7e";
             if (res === EIP1271_MAGIC) {

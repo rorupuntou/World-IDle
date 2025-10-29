@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -154,17 +155,29 @@ export default function Game() {
   const [debugOpen, setDebugOpen] = useState(false);
   const [miniKitDebug, setMiniKitDebug] = useState<Record<string, unknown> | null>(null);
 
+  // Password protection state
+  const [password, setPassword] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "u.u") {
+      setIsAuthenticated(true);
+    } else {
+      alert("Incorrect password");
+      setPassword("");
+    }
+  };
+
   const handleFetchWIdleReward = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      // Add a timeout to avoid hanging requests in poor network conditions
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       const res = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await res.json();
       if (data && data.success) {
-        // support both old and new property names
         const reward = typeof data.reward === 'number' ? data.reward : (typeof data.wIdleReward === 'number' ? data.wIdleReward : 0);
         setWIdleServerReward(reward);
       }
@@ -208,13 +221,9 @@ export default function Game() {
     isLoaded,
   } = useGameSave(serverState);
 
-
-
-  // MiniKit / env diagnostics (client-only)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      // Prefer reading the global MiniKit injected by the host (if any)
       const mkHost = globalThis as unknown as {
         MiniKit?: {
           isInstalled?: () => boolean;
@@ -223,11 +232,11 @@ export default function Game() {
       };
       const mk = mkHost.MiniKit;
       const isInstalled = typeof mk?.isInstalled === 'function' ? mk.isInstalled() : null;
-  const hasCommandsAsync = !!mk && typeof mk.commandsAsync !== 'undefined';
-  const verifyAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.verify === 'function';
-  const payAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.pay === 'function';
-  const sendTransactionAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.sendTransaction === 'function';
-  const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
+      const hasCommandsAsync = !!mk && typeof mk.commandsAsync !== 'undefined';
+      const verifyAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.verify === 'function';
+      const payAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.pay === 'function';
+      const sendTransactionAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.sendTransaction === 'function';
+      const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
 
       const info = {
         appId: 'app_fe80f47dce293e5f434ea9553098015d',
@@ -240,18 +249,14 @@ export default function Game() {
         userAgent: navigator.userAgent,
         href: window.location.href,
       };
-      // Log to console for remote debugging
-      // eslint-disable-next-line no-console
       console.info('[miniKitDebug]', info);
       setMiniKitDebug(info);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.warn('miniKit diagnostic failed', err);
       setMiniKitDebug({ error: String(err) });
     }
   }, []);
 
-  // Keep a ref to the latest saveGame to avoid forcing it into callback deps
   const saveGameRef = useRef(saveGame);
   useEffect(() => {
     saveGameRef.current = saveGame;
@@ -334,8 +339,6 @@ export default function Game() {
       });
 
       if (!verifyResp.ok) {
-        // Provide a friendly notification while logging details
-        // eslint-disable-next-line no-console
         console.error("MiniKit verify failed:", verifyResp);
         return setNotification({ message: t("verification_failed"), type: "error" });
       }
@@ -539,20 +542,17 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [gameState.lastWIdleTimeWarp, setGameState]);
 
-  // Capture referral code from URL on initial load
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const referralCode = searchParams.get("code");
     if (referralCode) {
       localStorage.setItem("pending_referral_code", referralCode);
-      // Clean URL
       const url = new URL(window.location.href);
       url.searchParams.delete("code");
       window.history.replaceState({}, "", url.toString());
     }
   }, []);
 
-  // Process referral code once wallet is connected
   useEffect(() => {
     const processReferral = async () => {
       const referralCode = localStorage.getItem("pending_referral_code");
@@ -560,7 +560,7 @@ export default function Game() {
 
       if (referralCode === walletAddress) {
         localStorage.removeItem("pending_referral_code");
-        return; // Don't process self-referral
+        return; 
       }
 
       try {
@@ -576,7 +576,6 @@ export default function Game() {
         const data = await response.json();
 
         if (!response.ok) {
-          // If the referral has already been processed, remove the code from local storage
           if (data.error && data.error.includes("already been processed")) {
             localStorage.removeItem("pending_referral_code");
           }
@@ -589,12 +588,10 @@ export default function Game() {
             type: "success",
           });
           localStorage.removeItem("pending_referral_code");
-          // Reload game data to reflect the referral bonus
           await loadGameFromBackend(walletAddress);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        // Don't bother user with errors about already processed or self-referrals
         if (
           message &&
           !message.includes("already been processed") &&
@@ -665,8 +662,7 @@ export default function Game() {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      // Get a server-side nonce and set a server cookie for verification
-  const nonceRes = await fetch("/api/siwe/nonce", { credentials: "same-origin" });
+      const nonceRes = await fetch("/api/siwe/nonce", { credentials: "same-origin" });
       if (!nonceRes.ok) throw new Error("Failed to get nonce from server");
       const { nonce } = await nonceRes.json();
 
@@ -677,9 +673,7 @@ export default function Game() {
         throw new Error(t("auth_failed"));
       }
 
-      // Expose a small preview of the finalPayload to help debug verification mismatches.
       try {
-        // eslint-disable-next-line no-console
         console.info("[miniKitFinalPayload]", result.finalPayload);
         setMiniKitDebug((prev) => ({
           ...(prev || {}),
@@ -690,7 +684,6 @@ export default function Game() {
         // ignore debug logging errors
       }
 
-      // Send the walletAuth final payload to the backend for verification
       const verifyRes = await fetch("/api/siwe/verify", {
         method: "POST",
         credentials: "same-origin",
@@ -698,28 +691,23 @@ export default function Game() {
         body: JSON.stringify({ payload: result.finalPayload }),
       });
 
-      // Log raw response text for diagnostics
       const verifyText = await verifyRes.text();
       try {
-        // eslint-disable-next-line no-console
         console.info("siwe/verify response:", verifyText);
       } catch {}
 
       if (!verifyRes.ok) {
-        // Try to parse JSON error if possible
-  let parsedErr: unknown = undefined;
+        let parsedErr: unknown = undefined;
         try {
           parsedErr = JSON.parse(verifyText);
         } catch {
           parsedErr = verifyText;
         }
-        // Attempt a safe fallback: extract address from finalPayload if present
         const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
         if (fallbackAddress) {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
           setWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
-          // eslint-disable-next-line no-console
           console.warn("siwe/verify failed but fallback address used", { parsedErr, finalPayload: result.finalPayload });
           return;
         }
@@ -735,13 +723,11 @@ export default function Game() {
         setWalletAddress(address);
         loadGameFromBackend(address);
       } else {
-        // If verification did not succeed, attempt fallback extraction
         const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
         if (fallbackAddress) {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
           setWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
-          // eslint-disable-next-line no-console
           console.warn("siwe/verify returned non-success but fallback address used", { verifyJson, finalPayload: result.finalPayload });
           return;
         }
@@ -758,13 +744,11 @@ export default function Game() {
     }
   }, [loadGameFromBackend, t, triggerInteraction, setNotification]);
 
-  // Heuristic extraction of wallet address from finalPayload shapes
   function extractAddressFromFinalPayload(payload: unknown): string | undefined {
     try {
       const p = (payload ?? null) as Record<string, unknown> | null;
       if (!p) return undefined;
 
-      // common direct fields
       if (typeof p["address"] === "string") {
         const v = p["address"] as string;
         if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
@@ -778,7 +762,6 @@ export default function Game() {
         if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
       }
 
-      // nested user object
       const user = p["user"] as Record<string, unknown> | undefined;
       if (user) {
         if (typeof user["address"] === "string") {
@@ -791,7 +774,6 @@ export default function Game() {
         }
       }
 
-      // sometimes finalPayload may contain siweMessage or message with an address
       const message = (typeof p["message"] === "string" && (p["message"] as string)) ||
         (typeof p["siweMessage"] === "string" && (p["siweMessage"] as string)) ||
         (typeof p["signedMessage"] === "string" && (p["signedMessage"] as string));
@@ -800,7 +782,6 @@ export default function Game() {
         if (m) return m[0];
       }
 
-      // try raw stringification
       const s = JSON.stringify(p);
       const m = s.match(/0x[a-fA-F0-9]{40}/);
       if (m) return m[0];
@@ -1249,6 +1230,29 @@ export default function Game() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
+        <h1 className="text-2xl font-bold mb-4">Access Required</h1>
+        <form onSubmit={handlePasswordSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 rounded-md px-3 py-2 text-white mb-4"
+            placeholder="Enter password"
+          />
+          <button
+            type="submit"
+            className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg"
+          >
+            Enter
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   if (!walletAddress) {
     return (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
@@ -1314,7 +1318,6 @@ export default function Game() {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                       await navigator.clipboard.writeText(text);
                     } else {
-                      // fallback copy
                       const ta = document.createElement("textarea");
                       ta.value = text;
                       ta.setAttribute("readonly", "");

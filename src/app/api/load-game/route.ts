@@ -12,10 +12,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "walletAddress is required." }, { status: 400 });
   }
 
+  const lowercasedAddress = walletAddress.toLowerCase();
+
   const { data, error } = await supabase
     .from('game_state')
     .select('game_data, permanent_referral_boost')
-    .eq('wallet_address', walletAddress)
+    .eq('wallet_address', lowercasedAddress)
     .single();
 
   if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found

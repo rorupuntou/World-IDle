@@ -14,14 +14,14 @@ interface AutoclickersSectionProps {
     checkRequirements: (req: Requirement | undefined) => boolean;
     showRequirements: (item: { name: string, desc?: string, req?: Requirement, effect?: Effect[] }, itemType: 'autoclicker') => void;
     calculateBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
-    calculatePrestigeBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
+    calculateWIdleBulkCost: (autoclicker: Autoclicker, amount: BuyAmount) => number;
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
     autoclickerCPSValues: Map<number, number>;
     devModeActive: boolean;
     isConfirmingPurchase: boolean;
     pendingPurchaseTx: { txId: string; itemId: number } | null;
-    prestigeBalance: number;
+    wIdleBalance: number;
 }
 
 export default function AutoclickersSection({
@@ -32,14 +32,14 @@ export default function AutoclickersSection({
     checkRequirements,
     showRequirements,
     calculateBulkCost,
-    calculatePrestigeBulkCost,
+    calculateWIdleBulkCost,
     purchaseAutoclicker,
     formatNumber,
     autoclickerCPSValues,
     devModeActive,
     isConfirmingPurchase,
     pendingPurchaseTx,
-    prestigeBalance
+    wIdleBalance
 }: AutoclickersSectionProps) {
     const { t } = useLanguage();
 
@@ -80,11 +80,11 @@ export default function AutoclickersSection({
                 if (!checkRequirements(auto.req)) return null;
                 const isThisItemPending = pendingPurchaseTx?.itemId === auto.id;
                 const totalTokenCost = calculateBulkCost(auto, buyAmount);
-                const totalPrestigeCost = auto.prestigeCost ? calculatePrestigeBulkCost(auto, buyAmount) : 0;
+                const totalWIdleCost = auto.prestigeCost ? calculateWIdleBulkCost(auto, buyAmount) : 0;
                 const translatedName = t(auto.name);
                 const translatedDesc = t(auto.desc);
 
-                const canAfford = gameState.tokens >= totalTokenCost && prestigeBalance >= totalPrestigeCost;
+                const canAfford = gameState.tokens >= totalTokenCost && wIdleBalance >= totalWIdleCost;
                 const isDisabled = !canAfford || isConfirmingPurchase || isThisItemPending;
 
                 return (
@@ -111,10 +111,10 @@ export default function AutoclickersSection({
                             </div>
                             <div className="text-right font-mono">
                                 <p className={clsx("text-lg", canAfford ? "text-yellow-400" : "text-red-500/70")}>{formatNumber(totalTokenCost)}</p>
-                                {totalPrestigeCost > 0 && (
+                                {totalWIdleCost > 0 && (
                                     <p className="text-sm flex items-center justify-end gap-1">
-                                        <Image src="/prestige-token-icon.svg" alt="Prestige Token" width={16} height={16} />
-                                        {formatNumber(totalPrestigeCost)}
+                                        <Image src="/file.svg" alt="wIDle Token" width={16} height={16} />
+                                        {formatNumber(totalWIdleCost)}
                                     </p>
                                 )}
                             </div>

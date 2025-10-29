@@ -1,7 +1,9 @@
 # foundry.toml
 
 [profile.default]
+solc_version = "0.8.28"
 src = "contracts/src"
+test = "contracts/test"
 out = "contracts/out"
 libs = ["contracts/lib"]
 remappings = [

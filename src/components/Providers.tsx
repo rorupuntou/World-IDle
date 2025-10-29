@@ -1,6 +1,6 @@
 "use client";
 
-import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
+import MiniKitWrapper from "./MiniKitWrapper";
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
 import { injected } from 'wagmi/connectors';
@@ -34,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <MiniKitProvider>{children}</MiniKitProvider>
+  <MiniKitWrapper>{children}</MiniKitWrapper>
       </QueryClientProvider>
     </WagmiProvider>
   );

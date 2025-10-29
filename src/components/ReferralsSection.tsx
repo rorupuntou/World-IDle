@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MiniKit } from '@worldcoin/minikit-js';
+import safeMiniKit from '@/lib/safeMiniKit';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { GameState, Referral } from './types';
 
@@ -11,7 +11,7 @@ interface ReferralsSectionProps {
 }
 
 // TODO: Replace with your real App ID from the Worldcoin Developer Portal
-const YOUR_APP_ID = 'app_3b83f308b9f7ef9a01e4042f1f48721d';
+const YOUR_APP_ID = 'app_fe80f47dce293e5f434ea9553098015d';
 
 interface RawReferral {
   referee_id: string;
@@ -62,11 +62,14 @@ export default function ReferralsSection({ walletAddress, gameState }: Referrals
     const inviteLink = `https://world.org/mini-app?app_id=${YOUR_APP_ID}&path=${path}`;
 
     try {
-      await MiniKit.commandsAsync.share({
+      const resp = await safeMiniKit.safeCall('share', {
         title: t('referral_share_title'),
         text: t('referral_share_text'),
         url: inviteLink,
       });
+      if (!resp.ok) {
+        console.error('Share failed:', resp);
+      }
     } catch (error) {
       console.error("Share failed:", error);
     }

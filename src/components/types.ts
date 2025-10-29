@@ -72,7 +72,7 @@ export type GameState = {
   permanent_referral_boost: number; // For referral system boosts
   lastSaved?: number;
   wldTimeWarpsPurchased?: number;
-  lastPrestigeTimeWarp?: number;
+  lastWIdleTimeWarp?: number;
   referrals?: Referral[];
 };
 

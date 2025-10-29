@@ -1,5 +1,5 @@
-import GameManagerABI from './GameManager.json';
-import PrestigeTokenABI from './PrestigeToken.json';
+import GameManagerV2ABI from './GameManagerV2.json';
+import wIDleABI from './wIDle.json';
 
 // Minimal ABI for the Uniswap Universal Router
 const universalRouterAbi = [
@@ -17,10 +17,11 @@ const universalRouterAbi = [
 
 export const contractConfig = {
   // Core Game Contracts
-  gameManagerAddress: "0xd9c2284f69B7A49d69F7de0226E6BB1EDb469b68" as `0x${string}`,
-  prestigeTokenAddress: "0x6671c7c52B5Ee08174d432408086E1357ED07246" as `0x${string}`,
-  gameManagerAbi: GameManagerABI.abi,
-  prestigeTokenAbi: PrestigeTokenABI.abi,
+  gameManagerV2Address: "0x29D8547f2e5a5629BC94390768db6b0D6faf2CeD" as `0x${string}`,
+  wIdleTokenAddress: "0x82446D9E037639a95d61aAd2e716e95BbD0C903e" as `0x${string}`,
+  gameManagerV2Abi: GameManagerV2ABI.abi,
+  wIdleTokenAbi: wIDleABI.abi,
+
 
   // Uniswap Contracts on World Chain
   universalRouterAddress: "0x8ac7bee993bb44dab564ea4bc9ea67bf9eb5e743" as `0x${string}`,

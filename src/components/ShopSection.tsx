@@ -2,7 +2,8 @@
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import React from 'react';
-import { MiniKit, PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
+import { PayCommandInput, Tokens, tokenToDecimals, MiniAppPaymentErrorPayload } from '@worldcoin/minikit-js';
+import safeMiniKit from '@/lib/safeMiniKit';
 import clsx from "clsx";
 import { Clock } from "iconoir-react";
 
@@ -11,10 +12,10 @@ interface ShopSectionProps {
   onBoostPurchased: (newBonus: number) => void;
   setNotification: (notification: { message: string; type: 'success' | 'error' } | null) => void;
   totalCPS: number;
-  prestigeBalance: number;
-  handleTimeWarpPurchase: (type: 'prestige' | 'wld') => void;
+  wIdleBalance: number;
+  handleTimeWarpPurchase: (type: 'widle' | 'wld') => void;
   formatNumber: (num: number) => string;
-  timeWarpPrestigeCost: number;
+  timeWarpWIdleCost: number;
   timeWarpWldCost: number;
   timeWarpCooldown: string;
 }
@@ -32,10 +33,10 @@ const ShopSection: React.FC<ShopSectionProps> = ({
     onBoostPurchased, 
     setNotification, 
     totalCPS, 
-    prestigeBalance, 
+    wIdleBalance, 
     handleTimeWarpPurchase, 
     formatNumber, 
-    timeWarpPrestigeCost, 
+    timeWarpWIdleCost, 
     timeWarpWldCost, 
     timeWarpCooldown 
 }) => {
@@ -48,7 +49,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({
       setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
-    if (!MiniKit.isInstalled()) {
+    if (!safeMiniKit.isAvailable()) {
       setNotification({ message: t("wallet_prompt"), type: 'error' });
       return;
     }
@@ -80,7 +81,13 @@ const ShopSection: React.FC<ShopSectionProps> = ({
         description: `Purchase of ${t(selectedBoost.name)}`,
       };
 
-      const { finalPayload } = await MiniKit.commandsAsync.pay(payload);
+      const payResp = await safeMiniKit.safeCall('pay', payload);
+
+      if (!payResp.ok || !payResp.finalPayload) {
+        throw new Error(t('payment_cancelled'));
+      }
+
+      const finalPayload = payResp.finalPayload as { status?: string; message?: string };
 
       if (finalPayload.status === 'success') {
         setNotification({ message: t("payment_sent_verifying"), type: 'success' });
@@ -111,7 +118,7 @@ const ShopSection: React.FC<ShopSectionProps> = ({
     }
   };
 
-  const canAffordPrestigeWarp = prestigeBalance >= timeWarpPrestigeCost;
+  const canAffordWIdleWarp = wIdleBalance >= timeWarpWIdleCost;
 
   return (
     <div className="flex flex-col gap-6">
@@ -171,17 +178,17 @@ const ShopSection: React.FC<ShopSectionProps> = ({
               </div>
             ) : (
               <button
-                onClick={() => handleTimeWarpPurchase('prestige')}
+                onClick={() => handleTimeWarpPurchase('widle')}
                 className={clsx(
                   "w-full text-white font-bold py-2 px-4 rounded-lg transition-colors",
                   {
-                    "bg-pink-600 hover:bg-pink-700": canAffordPrestigeWarp,
-                    "bg-slate-600 opacity-70 cursor-not-allowed": !canAffordPrestigeWarp,
+                    "bg-pink-600 hover:bg-pink-700": canAffordWIdleWarp,
+                    "bg-slate-600 opacity-70 cursor-not-allowed": !canAffordWIdleWarp,
                   }
                 )}
-                disabled={!canAffordPrestigeWarp}
+                disabled={!canAffordWIdleWarp}
               >
-                {t('buy_with_prestige', { price: timeWarpPrestigeCost })}
+                {t('buy_with_widle', { price: timeWarpWIdleCost })}
               </button>
             )}
             <button

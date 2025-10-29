@@ -1,43 +1,32 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
   Home,
   Shop as ShopIcon,
   Gift,
-  Bookmark,
   Settings,
   Check,
   Xmark,
   SoundHigh,
   SoundOff,
 } from "iconoir-react";
-import { MiniKit, Tokens } from "@worldcoin/minikit-js";
-import { useReadContract } from "wagmi";
-import { useWaitForTransactionReceipt } from "@worldcoin/minikit-react";
-import {
-  formatUnits,
-  createPublicClient,
-  http,
-  defineChain,
-  parseUnits,
-} from "viem";
+import { Tokens, VerificationLevel } from "@worldcoin/minikit-js";
+import safeMiniKit from "@/lib/safeMiniKit";
+import { parseUnits } from "viem";
 
 import {
   Autoclicker,
-  BuyAmount,
-  Requirement,
-  FullGameState,
-  Effect,
+  BuyAmount, FullGameState
 } from "./types";
-import { initialState, newsFeed } from "@/app/data";
+import { newsFeed } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";
 import HeaderStats from "./HeaderStats";
 import UpgradesSection from "./UpgradesSection";
 import AchievementsSection from "./AchievementsSection";
-import PrestigeSection from "./PrestigeSection";
+import WIdleSection from "./WIdleSection";
 import AutoclickersSection from "./AutoclickersSection";
 import ShopSection from "./ShopSection";
 import ReferralsSection from "./ReferralsSection";
@@ -49,24 +38,17 @@ import LanguageSelector from "./LanguageSelector";
 import TelegramButton from "./TelegramButton";
 import { useGameSave } from "./useGameSave";
 
+// Import new hooks
+import { useAudio } from "@/hooks/useAudio";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useGameCalculations } from "@/hooks/useGameCalculations";
+import { useBlockchain } from "@/hooks/useBlockchain";
+import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
+import { useItemDetails } from "@/hooks/useItemDetails";
+import { useDevMode } from "@/hooks/useDevMode";
+import { useOfflineGains } from "@/hooks/useOfflineGains";
+
 const PRICE_INCREASE_RATE = 1.15;
-
-const worldChain = defineChain({
-  id: contractConfig.worldChainId,
-  name: "World Chain",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://worldchain-mainnet.g.alchemy.com/public"] },
-  },
-  blockExplorers: {
-    default: { name: "Worldscan", url: "https://worldscan.org" },
-  },
-});
-
-const client = createPublicClient({
-  chain: worldChain,
-  transport: http(),
-});
 
 function choose<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -91,7 +73,9 @@ const Toast = ({
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${isSuccess ? "bg-lime-400/70" : "bg-red-500/70"}`}
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-4 text-stone-900 font-bold px-4 py-2 rounded-lg shadow-xl z-50 ${
+        isSuccess ? "bg-lime-400/70" : "bg-red-500/70"
+      }`}
     >
       {isSuccess ? (
         <Check className="w-6 h-6" />
@@ -147,14 +131,7 @@ export default function Game() {
   const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(
     null
   );
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
-  const [floatingNumbers, setFloatingNumbers] = useState<
-    { id: number; value: string; x: number; y: number }[]
-  >([]);
   const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{
     txId: string;
     itemId: number;
@@ -162,33 +139,59 @@ export default function Game() {
   const [pendingTimeWarpTx, setPendingTimeWarpTx] = useState<{
     txId: string;
     reward: number;
-    type: "prestige" | "wld";
+    type: "widle" | "wld";
   } | null>(null);
   const [pendingSwapTxId, setPendingSwapTxId] = useState<string | undefined>();
-  const [pendingPrestigeTxId, setPendingPrestigeTxId] = useState<
+  const [pendingWIdleTxId, setPendingWIdleTxId] = useState<
     string | undefined
   >();
-  const [selectedItem, setSelectedItem] = useState<
-    | ({
-        name: string;
-        desc?: string;
-        req?: Requirement;
-        effect?: Effect[];
-        id?: number;
-        cost?: number;
-      } & { itemType?: "upgrade" | "achievement" | "autoclicker" })
-    | null
-  >(null);
-  const [devModeActive, setDevModeActive] = useState(false);
-  const [timeWarpCooldown, setTimeWarpCooldown] = useState<string>("");
-  const [isMuted, setIsMuted] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [prestigeBalance, setPrestigeBalance] = useState(0);
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [offlineGains, setOfflineGains] = useState(0);
+  const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
+  const [wIdleServerReward, setWIdleServerReward] = useState(0);
 
+  // Debug UI toggles and diagnostics for MiniKit / env
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [miniKitDebug, setMiniKitDebug] = useState<Record<string, unknown> | null>(null);
+
+  const handleFetchWIdleReward = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      // Add a timeout to avoid hanging requests in poor network conditions
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`, { signal: controller.signal });
+      clearTimeout(timeout);
+      const data = await res.json();
+      if (data && data.success) {
+        // support both old and new property names
+        const reward = typeof data.reward === 'number' ? data.reward : (typeof data.wIdleReward === 'number' ? data.wIdleReward : 0);
+        setWIdleServerReward(reward);
+      }
+    } catch (error) {
+      const err = error as Error & { name?: string };
+      if (err?.name === 'AbortError') {
+        console.warn('get-widle-reward request aborted due to timeout');
+      } else {
+        console.error("Failed to fetch wIDle reward:", error);
+      }
+    }
+  }, [walletAddress]);
+
+  useEffect(() => {
+    handleFetchWIdleReward();
+    const interval = setInterval(handleFetchWIdleReward, 30000);
+    return () => clearInterval(interval);
+  }, [handleFetchWIdleReward]);
+
+  
+  const { isMuted, toggleMute, triggerInteraction } = useAudio(
+    "/music/background-music.mp3"
+  );
+  const { notification, setNotification } = useNotifications();
+  const { floatingNumbers, addFloatingNumber } = useFloatingNumbers();
+  const { selectedItem, showItemDetails, closeItemDetails } = useItemDetails();
+  const { devModeActive, handleDevMode } = useDevMode(setNotification, t);
   const {
     gameState,
     setGameState,
@@ -205,23 +208,109 @@ export default function Game() {
     isLoaded,
   } = useGameSave(serverState);
 
-  const showItemDetails = (
-    item: {
-      name: string;
-      desc?: string;
-      req?: Requirement;
-      effect?: Effect[];
-      id?: number;
-      cost?: number;
-    },
-    itemType: "upgrade" | "achievement" | "autoclicker"
-  ) => {
-    setSelectedItem({ ...item, itemType });
-  };
 
-  const closeItemDetails = () => {
-    setSelectedItem(null);
-  };
+
+  // MiniKit / env diagnostics (client-only)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      // Prefer reading the global MiniKit injected by the host (if any)
+      const mkHost = globalThis as unknown as {
+        MiniKit?: {
+          isInstalled?: () => boolean;
+          commandsAsync?: Record<string, unknown>;
+        };
+      };
+      const mk = mkHost.MiniKit;
+      const isInstalled = typeof mk?.isInstalled === 'function' ? mk.isInstalled() : null;
+  const hasCommandsAsync = !!mk && typeof mk.commandsAsync !== 'undefined';
+  const verifyAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.verify === 'function';
+  const payAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.pay === 'function';
+  const sendTransactionAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.sendTransaction === 'function';
+  const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
+
+      const info = {
+        appId: 'app_fe80f47dce293e5f434ea9553098015d',
+        isInstalled,
+        hasCommandsAsync,
+        verifyAvailable,
+        payAvailable,
+        sendTransactionAvailable,
+        walletAuthAvailable,
+        userAgent: navigator.userAgent,
+        href: window.location.href,
+      };
+      // Log to console for remote debugging
+      // eslint-disable-next-line no-console
+      console.info('[miniKitDebug]', info);
+      setMiniKitDebug(info);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('miniKit diagnostic failed', err);
+      setMiniKitDebug({ error: String(err) });
+    }
+  }, []);
+
+  // Keep a ref to the latest saveGame to avoid forcing it into callback deps
+  const saveGameRef = useRef(saveGame);
+  useEffect(() => {
+    saveGameRef.current = saveGame;
+  }, [saveGame]);
+  
+  const {
+    wIdleBalance,
+    tokenDecimalsData,
+    isConfirmingPurchase,
+    isPurchaseSuccess,
+    isConfirmingWIdle,
+    isWIdleSuccess,
+    isTimeWarpSuccess,
+    isSwapSuccess,
+    refetchBalances,
+  } = useBlockchain(
+    walletAddress,
+    pendingPurchaseTx,
+    pendingWIdleTxId,
+    pendingTimeWarpTx,
+    pendingSwapTxId
+    );
+    
+    const {
+        wIdleBoost,
+        totalCPS,
+        clickValue,
+        autoclickerCPSValues,
+        checkRequirements,
+        availableUpgradesCount,
+        sortedUpgrades,
+        timeWarpWIdleCost,
+        timeWarpWldCost,
+        canClaimWIdle,
+    } = useGameCalculations(
+        upgrades,
+        autoclickers,
+        wIdleBalance,
+        gameState,
+        stats
+        );
+        
+  const { offlineGains, handleClaimOfflineGains: originalHandleClaim } = useOfflineGains(
+    isLoaded,
+    totalCPS,
+    gameState.lastSaved,
+    setGameState,
+    setStats
+  );
+
+  const saveCurrentGame = useCallback(() => {
+    if (!walletAddress) return;
+    saveGameRef.current?.(walletAddress);
+  }, [walletAddress]);
+
+  const handleClaimOfflineGains = useCallback(() => {
+      originalHandleClaim();
+      saveCurrentGame();
+  }, [originalHandleClaim, saveCurrentGame]);
 
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
@@ -232,247 +321,26 @@ export default function Game() {
     return `${(num / 1e12).toFixed(2)}T`;
   }, []);
 
-  const { data: prestigeTokenBalanceData, refetch: refetchPrestigeBalance } =
-    useReadContract({
-      address: contractConfig.prestigeTokenAddress,
-      abi: contractConfig.prestigeTokenAbi,
-      functionName: "balanceOf",
-      args: [walletAddress!],
-      query: { enabled: !!walletAddress },
-    });
-
-  const { data: tokenDecimalsData } = useReadContract({
-    address: contractConfig.prestigeTokenAddress,
-    abi: contractConfig.prestigeTokenAbi,
-    functionName: "decimals",
-    query: { enabled: !!walletAddress },
-  });
-
-  const { isLoading: isConfirmingPurchase, isSuccess: isPurchaseSuccess } =
-    useWaitForTransactionReceipt({
-      client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-      transactionId: pendingPurchaseTx?.txId ?? "",
-    });
-
-  const { isLoading: isConfirmingPrestige, isSuccess: isPrestigeSuccess } =
-    useWaitForTransactionReceipt({
-      client,
-      appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-      transactionId: pendingPrestigeTxId ?? "",
-    });
-
-  const { isSuccess: isTimeWarpSuccess } = useWaitForTransactionReceipt({
-    client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-    transactionId: pendingTimeWarpTx?.txId ?? "",
-  });
-
-  const { isSuccess: isSwapSuccess } = useWaitForTransactionReceipt({
-    client,
-    appConfig: { app_id: process.env.NEXT_PUBLIC_WLD_APP_ID! },
-    transactionId: pendingSwapTxId ?? "",
-  });
-
-  useEffect(() => {
-    const audio = new Audio("/music/background-music.mp3");
-    audio.loop = true;
-    audio.volume = 0.25;
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.src = "";
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.muted = isMuted;
-      if (hasInteracted && !isMuted) {
-        audioRef.current
-          .play()
-          .catch((error) => console.error("Audio play failed:", error));
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isMuted, hasInteracted]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!audioRef.current) return;
-      if (document.hidden) {
-        audioRef.current.pause();
-      } else {
-        if (hasInteracted && !isMuted) {
-          audioRef.current
-            .play()
-            .catch((error) =>
-              console.error("Audio play failed on visibility change:", error)
-            );
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [hasInteracted, isMuted]);
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (!hasInteracted) {
-      setHasInteracted(true);
-    }
-  };
-
-  const prestigeBoost = useMemo(
-    () => 15 * Math.log10(prestigeBalance + 1),
-    [prestigeBalance]
-  );
-
-  const timeWarpPrestigeCost = useMemo(() => {
-    const baseCost = 25;
-    const balanceFactor = Math.floor(prestigeBalance / 100);
-    return baseCost + balanceFactor;
-  }, [prestigeBalance]);
-
-  const timeWarpWldCost = useMemo(() => {
-    const baseCost = 0.1;
-    const purchasedCount = gameState.wldTimeWarpsPurchased || 0;
-    return baseCost * Math.pow(1.25, purchasedCount);
-  }, [gameState.wldTimeWarpsPurchased]);
-
-  const { totalCPS, clickValue, autoclickerCPSValues } = useMemo(() => {
-    const purchasedUpgrades = upgrades.filter((u) => u.purchased);
-    let clickMultiplier = 1;
-    let clickAddition = 0;
-    let globalMultiplier = 1;
-    let cpsToClickPercent = 0;
-
-    const autoclickerMultipliers = new Map<number, number>();
-    autoclickers.forEach((a) => autoclickerMultipliers.set(a.id, 1));
-
-    const autoclickerAdditions = new Map<number, number>();
-    autoclickers.forEach((a) => autoclickerAdditions.set(a.id, 0));
-
-    purchasedUpgrades.forEach((upg) => {
-      upg.effect.forEach((eff) => {
-        switch (eff.type) {
-          case "multiplyClick":
-            clickMultiplier *= eff.value;
-            break;
-          case "addClick":
-            clickAddition += eff.value;
-            break;
-          case "multiplyGlobal":
-            globalMultiplier *= eff.value;
-            break;
-          case "multiplyAutoclicker":
-            autoclickerMultipliers.set(
-              eff.targetId,
-              (autoclickerMultipliers.get(eff.targetId) || 1) * eff.value
-            );
-            break;
-          case "addCpSToClick":
-            cpsToClickPercent += eff.percent;
-            break;
-          case "multiplyAutoclickerByOtherCount": {
-            const sourceAutoclicker = autoclickers.find(
-              (a) => a.id === eff.sourceId
-            );
-            const sourceCount = sourceAutoclicker
-              ? sourceAutoclicker.purchased
-              : 0;
-            const multiplier = 1 + sourceCount * eff.value;
-            autoclickerMultipliers.set(
-              eff.targetId,
-              (autoclickerMultipliers.get(eff.targetId) || 1) * multiplier
-            );
-            break;
-          }
-          case "addCpSToAutoclickerFromOthers": {
-            const otherAutoclickersCount = autoclickers.reduce(
-              (sum, a) => (a.id === eff.targetId ? sum : sum + a.purchased),
-              0
-            );
-            autoclickerAdditions.set(
-              eff.targetId,
-              (autoclickerAdditions.get(eff.targetId) || 0) +
-                otherAutoclickersCount * eff.value
-            );
-            break;
-          }
-        }
-      });
-    });
-
-    const finalGlobalMultiplier =
-      globalMultiplier *
-      (1 + prestigeBoost / 100) *
-      (1 +
-        (gameState.permanentBoostBonus || 0) +
-        (gameState.permanent_referral_boost || 0));
-
-    const autoclickerCPSValues = new Map<number, number>();
-    let totalAutoclickerCPS = 0;
-
-    autoclickers.forEach((auto) => {
-      const baseCPS = auto.purchased * auto.tps;
-      const multipliedCPS =
-        baseCPS * (autoclickerMultipliers.get(auto.id) || 1);
-      const addedCPS = autoclickerAdditions.get(auto.id) || 0;
-      const finalIndividualCPS =
-        (multipliedCPS + addedCPS) * finalGlobalMultiplier;
-      autoclickerCPSValues.set(auto.id, finalIndividualCPS);
-      totalAutoclickerCPS += finalIndividualCPS;
-    });
-
-    const baseClickValue =
-      initialState.tokensPerClick * clickMultiplier + clickAddition;
-    const finalClickValue =
-      baseClickValue + totalAutoclickerCPS * cpsToClickPercent;
-
-    return {
-      totalCPS: totalAutoclickerCPS,
-      clickValue: finalClickValue,
-      autoclickerCPSValues,
-    };
-  }, [
-    upgrades,
-    autoclickers,
-    prestigeBoost,
-    gameState.permanentBoostBonus,
-    gameState.permanent_referral_boost,
-  ]);
-
   const handleVerifyWithMiniKit = async () => {
     if (!walletAddress) return;
-    if (!MiniKit.isInstalled()) {
+    if (!safeMiniKit.isAvailable()) {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      const { finalPayload } = await MiniKit.commandsAsync.verify({
-        action: "world-idle-login",
+      const verifyResp = await safeMiniKit.safeCall("verify", {
+        action: "verify-humanity",
         signal: walletAddress,
+        verification_level: VerificationLevel.Orb,
       });
 
-      if (finalPayload.status === "error") {
-        const errorPayload = finalPayload as {
-          message?: string;
-          debug_url?: string;
-        };
-        console.error(
-          "DEBUG (MiniKit Error): " + JSON.stringify(errorPayload, null, 2)
-        );
-        return setNotification({
-          message: errorPayload.message || "Verification failed in World App.",
-          type: "error",
-        });
+      if (!verifyResp.ok) {
+        // Provide a friendly notification while logging details
+        // eslint-disable-next-line no-console
+        console.error("MiniKit verify failed:", verifyResp);
+        return setNotification({ message: t("verification_failed"), type: "error" });
       }
+
+      const finalPayload = verifyResp.finalPayload;
 
       const res = await fetch("/api/verify-worldid", {
         method: "POST",
@@ -480,7 +348,7 @@ export default function Game() {
         body: JSON.stringify({
           proof: finalPayload,
           signal: walletAddress,
-          action: "world-idle-login",
+          action: "verify-humanity",
         }),
       });
 
@@ -530,66 +398,6 @@ export default function Game() {
     }
   };
 
-  const checkRequirements = useCallback(
-    (req: Requirement | undefined): boolean => {
-      if (!req) return true;
-      if (
-        req.totalTokensEarned !== undefined &&
-        stats.totalTokensEarned < req.totalTokensEarned
-      )
-        return false;
-      if (req.totalClicks !== undefined && stats.totalClicks < req.totalClicks)
-        return false;
-      if (req.tps !== undefined && totalCPS < req.tps) return false;
-      if (req.verified !== undefined && req.verified && !stats.isVerified)
-        return false;
-      if (req.autoclickers !== undefined) {
-        const autoclickerReqs = Array.isArray(req.autoclickers)
-          ? req.autoclickers
-          : [req.autoclickers];
-        for (const autoReq of autoclickerReqs) {
-          const auto = autoclickers.find((a) => a.id === autoReq.id);
-          if (!auto || auto.purchased < autoReq.amount) return false;
-        }
-      }
-      if (req.eachAutoclickerAmount !== undefined) {
-        for (const auto of autoclickers) {
-          if (auto.purchased < req.eachAutoclickerAmount) {
-            return false;
-          }
-        }
-      }
-      return true;
-    },
-    [stats, totalCPS, autoclickers]
-  );
-
-  const availableUpgradesCount = useMemo(() => {
-    return upgrades.filter(
-      (u) =>
-        !u.purchased && checkRequirements(u.req) && gameState.tokens >= u.cost
-    ).length;
-  }, [upgrades, gameState.tokens, checkRequirements]);
-
-  const sortedUpgrades = useMemo(() => {
-    return [...upgrades].sort((a, b) => {
-      const aAvailable = checkRequirements(a.req) && gameState.tokens >= a.cost;
-      const bAvailable = checkRequirements(b.req) && gameState.tokens >= b.cost;
-      if (aAvailable && !bAvailable) return -1;
-      if (!aAvailable && bAvailable) return 1;
-      return a.cost - b.cost;
-    });
-  }, [upgrades, gameState.tokens, checkRequirements]);
-
-  const prestigeReward = useMemo(() => {
-    if (stats.totalTokensEarned <= 0) return 0;
-    return Math.floor(Math.sqrt(stats.totalTokensEarned / 4000)) * 1000;
-  }, [stats.totalTokensEarned]);
-
-  const canPrestige = useMemo(() => {
-    return prestigeReward >= 1;
-  }, [prestigeReward]);
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -597,17 +405,6 @@ export default function Game() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeTab]);
-
-  useEffect(() => {
-    const decimals =
-      typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
-    if (typeof prestigeTokenBalanceData === "bigint") {
-      const balance = parseFloat(
-        formatUnits(prestigeTokenBalanceData, decimals)
-      );
-      setPrestigeBalance(balance);
-    }
-  }, [prestigeTokenBalanceData, tokenDecimalsData]);
 
   const loadGameFromBackend = useCallback(
     async (address: string) => {
@@ -630,54 +427,55 @@ export default function Game() {
         setIsLoading(false);
       }
     },
-    [t]
+    [t, setNotification]
   );
 
   useEffect(() => {
-    const handlePrestige = async () => {
+    const handleWIdleClaim = async () => {
       if (!walletAddress) return;
       try {
-        const res = await fetch("/api/prestige", {
+        const res = await fetch("/api/claim-widle", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ walletAddress }),
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || "Failed to prestige from server.");
+          throw new Error(data.error || "Failed to claim wIDle from server.");
         }
-        setNotification({ message: t("prestige_success"), type: "success" });
+        setNotification({ message: t("widle_claim_success"), type: "success" });
         setFullState(data.gameData);
-        refetchPrestigeBalance();
+        refetchBalances();
       } catch (error) {
-        console.error("Prestige failed:", error);
+        console.error("wIDle claim failed:", error);
         setNotification({
           message: error instanceof Error ? error.message : String(error),
           type: "error",
         });
       } finally {
-        setPendingPrestigeTxId(undefined);
+        setPendingWIdleTxId(undefined);
       }
     };
-    if (isPrestigeSuccess) {
-      handlePrestige();
+    if (isWIdleSuccess) {
+      handleWIdleClaim();
     }
   }, [
-    isPrestigeSuccess,
+    isWIdleSuccess,
     walletAddress,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
     setFullState,
+    setNotification,
   ]);
 
   useEffect(() => {
     if (isTimeWarpSuccess && pendingTimeWarpTx) {
       setNotification({ message: t("time_warp_success"), type: "success" });
-      if (pendingTimeWarpTx.type === "prestige") {
+      if (pendingTimeWarpTx.type === "widle") {
         setGameState((prev) => ({
           ...prev,
           tokens: prev.tokens + pendingTimeWarpTx.reward,
-          lastPrestigeTimeWarp: Date.now(),
+          lastWIdleTimeWarp: Date.now(),
         }));
       } else {
         setGameState((prev) => ({
@@ -689,44 +487,49 @@ export default function Game() {
         ...prev,
         totalTokensEarned: prev.totalTokensEarned + pendingTimeWarpTx.reward,
       }));
-      refetchPrestigeBalance();
+      refetchBalances();
       setPendingTimeWarpTx(null);
+      saveCurrentGame();
     }
   }, [
     isTimeWarpSuccess,
     pendingTimeWarpTx,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
     setGameState,
     setStats,
+    setNotification,
+    saveCurrentGame
   ]);
 
   useEffect(() => {
     if (isSwapSuccess) {
       setNotification({ message: t("swap_success"), type: "success" });
-      refetchPrestigeBalance();
+      refetchBalances();
       setPendingSwapTxId(undefined);
     }
-  }, [isSwapSuccess, refetchPrestigeBalance, t]);
+  }, [isSwapSuccess, refetchBalances, t, setNotification]);
 
   useEffect(() => {
     const updateCooldown = () => {
-      if (gameState.lastPrestigeTimeWarp) {
+      if (gameState.lastWIdleTimeWarp) {
         const twentyFourHours = 24 * 60 * 60 * 1000;
-        const timePassed = Date.now() - gameState.lastPrestigeTimeWarp;
+        const timePassed = Date.now() - gameState.lastWIdleTimeWarp;
         const timeLeft = twentyFourHours - timePassed;
         if (timeLeft > 0) {
           const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
           const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
           const seconds = Math.floor((timeLeft / 1000) % 60);
           setTimeWarpCooldown(
-            `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+            `${hours.toString().padStart(2, "0")}:${minutes
+              .toString()
+              .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
           );
         } else {
           setTimeWarpCooldown("");
           setGameState((prev) => ({
             ...prev,
-            lastPrestigeTimeWarp: undefined,
+            lastWIdleTimeWarp: undefined,
           }));
         }
       }
@@ -734,48 +537,29 @@ export default function Game() {
     updateCooldown();
     const interval = setInterval(updateCooldown, 1000);
     return () => clearInterval(interval);
-  }, [gameState.lastPrestigeTimeWarp, setGameState]);
-
-  const offlineGainsProcessed = useRef(false);
-
-  useEffect(() => {
-    if (isLoaded && !offlineGainsProcessed.current) {
-      const lastSaved = gameState.lastSaved || Date.now();
-      const elapsedSeconds = (Date.now() - lastSaved) / 1000;
-      if (elapsedSeconds > 60) {
-        const maxOfflineSeconds = 86400; // 24 hours
-        const secondsToReward = Math.min(elapsedSeconds, maxOfflineSeconds);
-        const calculatedGains = secondsToReward * totalCPS;
-
-        if (calculatedGains > 1) {
-          setOfflineGains(calculatedGains);
-        }
-      }
-      offlineGainsProcessed.current = true;
-    }
-  }, [isLoaded, totalCPS, gameState.lastSaved]);
+  }, [gameState.lastWIdleTimeWarp, setGameState]);
 
   // Capture referral code from URL on initial load
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    const referralCode = searchParams.get('code');
+    const referralCode = searchParams.get("code");
     if (referralCode) {
-      localStorage.setItem('pending_referral_code', referralCode);
+      localStorage.setItem("pending_referral_code", referralCode);
       // Clean URL
       const url = new URL(window.location.href);
-      url.searchParams.delete('code');
-      window.history.replaceState({}, '', url.toString());
+      url.searchParams.delete("code");
+      window.history.replaceState({}, "", url.toString());
     }
   }, []);
 
   // Process referral code once wallet is connected
   useEffect(() => {
     const processReferral = async () => {
-      const referralCode = localStorage.getItem('pending_referral_code');
+      const referralCode = localStorage.getItem("pending_referral_code");
       if (!walletAddress || !referralCode) return;
 
       if (referralCode === walletAddress) {
-        localStorage.removeItem('pending_referral_code');
+        localStorage.removeItem("pending_referral_code");
         return; // Don't process self-referral
       }
 
@@ -793,24 +577,34 @@ export default function Game() {
 
         if (!response.ok) {
           // If the referral has already been processed, remove the code from local storage
-          if (data.error && data.error.includes('already been processed')) {
-            localStorage.removeItem('pending_referral_code');
+          if (data.error && data.error.includes("already been processed")) {
+            localStorage.removeItem("pending_referral_code");
           }
-          throw new Error(data.error || 'Failed to process referral');
+          throw new Error(data.error || "Failed to process referral");
         }
 
         if (data.success) {
-          setNotification({ message: t('referral_success'), type: 'success' });
-          localStorage.removeItem('pending_referral_code');
+          setNotification({
+            message: t("referral_success"),
+            type: "success",
+          });
+          localStorage.removeItem("pending_referral_code");
           // Reload game data to reflect the referral bonus
           await loadGameFromBackend(walletAddress);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         // Don't bother user with errors about already processed or self-referrals
-        if (message && !message.includes('already been processed') && !message.includes('cannot be the same')) {
+        if (
+          message &&
+          !message.includes("already been processed") &&
+          !message.includes("cannot be the same")
+        ) {
           console.error("Error processing referral:", error);
-          setNotification({ message: message || t('referral_error'), type: 'error' });
+          setNotification({
+            message: message || t("referral_error"),
+            type: "error",
+          });
         }
       }
     };
@@ -831,11 +625,7 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [totalCPS, isLoaded, setGameState, setStats]);
 
-  useEffect(() => {
-    if (!isLoaded || !walletAddress) return;
-    const saveInterval = setInterval(() => saveGame(walletAddress), 15000);
-    return () => clearInterval(saveInterval);
-  }, [saveGame, walletAddress, isLoaded]);
+  
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -870,25 +660,92 @@ export default function Game() {
   ]);
 
   const handleConnect = useCallback(async () => {
-    if (!hasInteracted) setHasInteracted(true);
-    if (!MiniKit.isInstalled()) {
+    triggerInteraction();
+    if (!safeMiniKit.isAvailable()) {
       return setNotification({ message: t("wallet_prompt"), type: "error" });
     }
     try {
-      const result = await MiniKit.commandsAsync.walletAuth({
-        nonce: String(Math.random()),
+      // Get a server-side nonce and set a server cookie for verification
+  const nonceRes = await fetch("/api/siwe/nonce", { credentials: "same-origin" });
+      if (!nonceRes.ok) throw new Error("Failed to get nonce from server");
+      const { nonce } = await nonceRes.json();
+
+      const result = await safeMiniKit.safeCall("walletAuth", {
+        nonce: String(nonce),
       });
-      if (result.finalPayload.status === "error") {
+      if (!result.ok || !result.finalPayload) {
         throw new Error(t("auth_failed"));
       }
-      const address = result.finalPayload.message.match(
-        /0x[a-fA-F0-9]{40}/
-      )?.[0] as `0x${string}` | undefined;
-      if (address) {
+
+      // Expose a small preview of the finalPayload to help debug verification mismatches.
+      try {
+        // eslint-disable-next-line no-console
+        console.info("[miniKitFinalPayload]", result.finalPayload);
+        setMiniKitDebug((prev) => ({
+          ...(prev || {}),
+          finalPayloadPreview: JSON.stringify(result.finalPayload).slice(0, 200),
+          finalPayloadFull: result.finalPayload,
+        }));
+      } catch {
+        // ignore debug logging errors
+      }
+
+      // Send the walletAuth final payload to the backend for verification
+      const verifyRes = await fetch("/api/siwe/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: result.finalPayload }),
+      });
+
+      // Log raw response text for diagnostics
+      const verifyText = await verifyRes.text();
+      try {
+        // eslint-disable-next-line no-console
+        console.info("siwe/verify response:", verifyText);
+      } catch {}
+
+      if (!verifyRes.ok) {
+        // Try to parse JSON error if possible
+  let parsedErr: unknown = undefined;
+        try {
+          parsedErr = JSON.parse(verifyText);
+        } catch {
+          parsedErr = verifyText;
+        }
+        // Attempt a safe fallback: extract address from finalPayload if present
+        const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
+        if (fallbackAddress) {
+          setNotification({ message: t("connect_fallback_used"), type: "error" });
+          setWalletAddress(fallbackAddress as `0x${string}`);
+          loadGameFromBackend(fallbackAddress as `0x${string}`);
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify failed but fallback address used", { parsedErr, finalPayload: result.finalPayload });
+          return;
+        }
+        const parsedObj = typeof parsedErr === "object" && parsedErr !== null ? (parsedErr as Record<string, unknown>) : undefined;
+        throw new Error(
+          (typeof parsedErr === "string" ? parsedErr : (parsedObj?.error as string) || (parsedObj?.detail as string)) || t("auth_failed")
+        );
+      }
+
+      const verifyJson = JSON.parse(verifyText);
+      if (verifyJson.success && verifyJson.address) {
+        const address = verifyJson.address as `0x${string}`;
         setWalletAddress(address);
         loadGameFromBackend(address);
       } else {
-        throw new Error(t("no_address"));
+        // If verification did not succeed, attempt fallback extraction
+        const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
+        if (fallbackAddress) {
+          setNotification({ message: t("connect_fallback_used"), type: "error" });
+          setWalletAddress(fallbackAddress as `0x${string}`);
+          loadGameFromBackend(fallbackAddress as `0x${string}`);
+          // eslint-disable-next-line no-console
+          console.warn("siwe/verify returned non-success but fallback address used", { verifyJson, finalPayload: result.finalPayload });
+          return;
+        }
+        throw new Error(verifyJson.error || t("auth_failed"));
       }
     } catch (error) {
       console.error("Error al conectar la billetera:", error);
@@ -899,14 +756,59 @@ export default function Game() {
         type: "error",
       });
     }
-  }, [
-    loadGameFromBackend,
-    t,
-    hasInteracted,
-    setHasInteracted,
-    setNotification,
-    setWalletAddress,
-  ]);
+  }, [loadGameFromBackend, t, triggerInteraction, setNotification]);
+
+  // Heuristic extraction of wallet address from finalPayload shapes
+  function extractAddressFromFinalPayload(payload: unknown): string | undefined {
+    try {
+      const p = (payload ?? null) as Record<string, unknown> | null;
+      if (!p) return undefined;
+
+      // common direct fields
+      if (typeof p["address"] === "string") {
+        const v = p["address"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+      if (typeof p["wallet"] === "string") {
+        const v = p["wallet"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+      if (typeof p["account"] === "string") {
+        const v = p["account"] as string;
+        if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+      }
+
+      // nested user object
+      const user = p["user"] as Record<string, unknown> | undefined;
+      if (user) {
+        if (typeof user["address"] === "string") {
+          const v = user["address"] as string;
+          if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+        }
+        if (typeof user["wallet"] === "string") {
+          const v = user["wallet"] as string;
+          if (/0x[a-fA-F0-9]{40}/.test(v)) return v;
+        }
+      }
+
+      // sometimes finalPayload may contain siweMessage or message with an address
+      const message = (typeof p["message"] === "string" && (p["message"] as string)) ||
+        (typeof p["siweMessage"] === "string" && (p["siweMessage"] as string)) ||
+        (typeof p["signedMessage"] === "string" && (p["signedMessage"] as string));
+      if (typeof message === "string") {
+        const m = message.match(/0x[a-fA-F0-9]{40}/);
+        if (m) return m[0];
+      }
+
+      // try raw stringification
+      const s = JSON.stringify(p);
+      const m = s.match(/0x[a-fA-F0-9]{40}/);
+      if (m) return m[0];
+    } catch {
+      // ignore
+    }
+    return undefined;
+  }
 
   const onBoostPurchased = useCallback(
     (boostToAdd: number) => {
@@ -914,29 +816,27 @@ export default function Game() {
         ...prev,
         permanentBoostBonus: (prev.permanentBoostBonus || 0) + boostToAdd,
       }));
-      if (walletAddress) {
-        saveGame(walletAddress, true);
-      }
+      saveCurrentGame();
     },
-    [walletAddress, setGameState, saveGame]
+    [setGameState, saveCurrentGame]
   );
 
   const handleTimeWarpPurchase = useCallback(
-    async (type: "prestige" | "wld") => {
+    async (type: "widle" | "wld") => {
       const reward = totalCPS * 86400;
-      if (type === "prestige") {
-        if (gameState.lastPrestigeTimeWarp) {
+      if (type === "widle") {
+        if (gameState.lastWIdleTimeWarp) {
           const twentyFourHours = 24 * 60 * 60 * 1000;
-          if (Date.now() - gameState.lastPrestigeTimeWarp < twentyFourHours) {
+          if (Date.now() - gameState.lastWIdleTimeWarp < twentyFourHours) {
             return setNotification({
               message: t("time_warp_cooldown"),
               type: "error",
             });
           }
         }
-        if (prestigeBalance < timeWarpPrestigeCost) {
+        if (wIdleBalance < timeWarpWIdleCost) {
           return setNotification({
-            message: t("not_enough_prestige_tokens"),
+            message: t("not_enough_widle_tokens"),
             type: "error",
           });
         }
@@ -944,15 +844,15 @@ export default function Game() {
           const decimals =
             typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
           const amountToBurnInWei = parseUnits(
-            timeWarpPrestigeCost.toString(),
+            timeWarpWIdleCost.toString(),
             decimals
           );
 
-          const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+          const sendResp = await safeMiniKit.safeCall("sendTransaction", {
             transaction: [
               {
-                address: contractConfig.prestigeTokenAddress,
-                abi: contractConfig.prestigeTokenAbi,
+                address: contractConfig.wIdleTokenAddress,
+                abi: contractConfig.wIdleTokenAbi,
                 functionName: "transfer",
                 args: [
                   "0x000000000000000000000000000000000000dEaD",
@@ -962,24 +862,23 @@ export default function Game() {
               },
             ],
           });
+          if (!sendResp.ok || !sendResp.finalPayload) {
+            throw new Error("Error sending transaction: no response from MiniKit");
+          }
+
+          const finalPayload = sendResp.finalPayload as { status?: string; message?: string; transaction_id?: string };
 
           if (finalPayload.status === "error") {
-            throw new Error(
-              (finalPayload as { message?: string }).message ||
-                "Error sending transaction"
-            );
+            throw new Error(finalPayload.message || "Error sending transaction");
           }
 
           if (finalPayload.transaction_id) {
             setPendingTimeWarpTx({
               txId: finalPayload.transaction_id,
               reward,
-              type: "prestige",
+              type: "widle",
             });
-            setNotification({
-              message: t("transaction_sent"),
-              type: "success",
-            });
+            setNotification({ message: t("transaction_sent"), type: "success" });
           } else {
             throw new Error(t("transaction_error"));
           }
@@ -1001,7 +900,7 @@ export default function Game() {
           if (!initRes.ok) throw new Error(t("payment_failed_init"));
           const { reference } = await initRes.json();
 
-          const { finalPayload } = await MiniKit.commandsAsync.pay({
+          const payResp = await safeMiniKit.safeCall("pay", {
             reference,
             to: "0x536bB672A282df8c89DDA57E79423cC505750E52",
             tokens: [
@@ -1015,11 +914,13 @@ export default function Game() {
             ],
             description: t("time_warp_purchase_desc"),
           });
+          if (!payResp.ok || !payResp.finalPayload) {
+            throw new Error(t("payment_cancelled"));
+          }
 
-          if (
-            finalPayload.status === "success" &&
-            finalPayload.transaction_id
-          ) {
+          const finalPayload = payResp.finalPayload as { status?: string; transaction_id?: string; message?: string };
+
+          if (finalPayload.status === "success" && finalPayload.transaction_id) {
             setNotification({
               message: t("payment_sent_verifying"),
               type: "success",
@@ -1043,11 +944,8 @@ export default function Game() {
                 ...prev,
                 totalTokensEarned: prev.totalTokensEarned + data.rewardAmount,
               }));
-              setNotification({
-                message: t("time_warp_success"),
-                type: "success",
-              });
-              if (walletAddress) saveGame(walletAddress);
+              setNotification({ message: t("time_warp_success"), type: "success" });
+              saveCurrentGame();
             } else {
               throw new Error(data.error || t("confirmation_failed"));
             }
@@ -1069,54 +967,47 @@ export default function Game() {
     },
     [
       totalCPS,
-      prestigeBalance,
+      wIdleBalance,
       tokenDecimalsData,
       t,
       walletAddress,
-      timeWarpPrestigeCost,
+      timeWarpWIdleCost,
       timeWarpWldCost,
-      gameState.lastPrestigeTimeWarp,
-      saveGame,
+      gameState.lastWIdleTimeWarp,
       setGameState,
       setStats,
       setNotification,
       setPendingTimeWarpTx,
+      saveCurrentGame,
     ]
   );
 
   const handleManualClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!hasInteracted) setHasInteracted(true);
+      triggerInteraction();
       const value = clickValue;
-      setFloatingNumbers((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          value: `+${formatNumber(value)}`,
-          x: e.clientX,
-          y: e.clientY,
-        },
-      ]);
-      setTimeout(() => {
-        setFloatingNumbers((current) =>
-          current.filter((n) => n.id !== e.timeStamp)
-        );
-      }, 2000);
+      addFloatingNumber(`+${formatNumber(value)}`, e.clientX, e.clientY);
       setGameState((prev) => ({ ...prev, tokens: prev.tokens + value }));
-      setStats((prev) => ({
-        ...prev,
-        totalTokensEarned: prev.totalTokensEarned + value,
-        totalClicks: prev.totalClicks + 1,
-      }));
+      setStats((prev) => {
+        const newTotalClicks = prev.totalClicks + 1;
+        if (newTotalClicks % 100 === 0) {
+          saveCurrentGame();
+        }
+        return {
+          ...prev,
+          totalTokensEarned: prev.totalTokensEarned + value,
+          totalClicks: newTotalClicks,
+        };
+      });
     },
     [
       clickValue,
       formatNumber,
-      hasInteracted,
+      triggerInteraction,
       setGameState,
       setStats,
-      setHasInteracted,
-      setFloatingNumbers,
+      addFloatingNumber,
+      saveCurrentGame,
     ]
   );
 
@@ -1132,7 +1023,7 @@ export default function Game() {
     []
   );
 
-  const calculatePrestigeBulkCost = useCallback(
+  const calculateWIdleBulkCost = useCallback(
     (item: Autoclicker, amount: BuyAmount) => {
       if (!item.prestigeCost) return 0;
       let totalCost = 0;
@@ -1180,8 +1071,8 @@ export default function Game() {
           type: "success",
         });
         purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
-        refetchPrestigeBalance();
-        if (walletAddress) saveGame(walletAddress);
+        refetchBalances();
+        saveCurrentGame();
       }
       setPendingPurchaseTx(null);
     }
@@ -1190,27 +1081,25 @@ export default function Game() {
     pendingPurchaseTx,
     autoclickers,
     purchaseAutoclickerWithTokens,
-    refetchPrestigeBalance,
+    refetchBalances,
     t,
-    saveGame,
-    walletAddress,
+    saveCurrentGame,
     setNotification,
-    setPendingPurchaseTx,
   ]);
 
-  const handlePrestigePurchase = useCallback(
-    async (item: Autoclicker, totalPrestigeCost: number) => {
-      if (!totalPrestigeCost) return;
+  const handleWIdlePurchase = useCallback(
+    async (item: Autoclicker, totalWIdleCost: number) => {
+      if (!totalWIdleCost) return;
       try {
         const decimals =
           typeof tokenDecimalsData === "number" ? tokenDecimalsData : 18;
         const amountToBurnInWei =
-          BigInt(totalPrestigeCost) * BigInt(10 ** decimals);
-        const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+          BigInt(totalWIdleCost) * BigInt(10 ** decimals);
+        const sendResp = await safeMiniKit.safeCall("sendTransaction", {
           transaction: [
             {
-              address: contractConfig.prestigeTokenAddress,
-              abi: contractConfig.prestigeTokenAbi,
+              address: contractConfig.wIdleTokenAddress,
+              abi: contractConfig.wIdleTokenAbi,
               functionName: "transfer",
               args: [
                 "0x000000000000000000000000000000000000dEaD",
@@ -1220,16 +1109,15 @@ export default function Game() {
             },
           ],
         });
+        if (!sendResp.ok || !sendResp.finalPayload) {
+          throw new Error("Error sending transaction: no response from MiniKit");
+        }
+
+        const finalPayload = sendResp.finalPayload as { status?: string; message?: string; debug_url?: string; transaction_id?: string };
 
         if (finalPayload.status === "error") {
-          const errorPayload = finalPayload as {
-            message?: string;
-            debug_url?: string;
-          };
-          console.error("DEBUG: " + JSON.stringify(errorPayload, null, 2));
-          throw new Error(
-            errorPayload.message || "Error sending transaction with MiniKit."
-          );
+          console.error("DEBUG: " + JSON.stringify(finalPayload, null, 2));
+          throw new Error(finalPayload.message || "Error sending transaction with MiniKit.");
         }
 
         if (finalPayload.transaction_id) {
@@ -1258,12 +1146,12 @@ export default function Game() {
       const tokenCost = calculateBulkCost(autoclicker, buyAmount);
       if (gameState.tokens < tokenCost) return;
       if (autoclicker.prestigeCost && autoclicker.prestigeCost > 0) {
-        const prestigeCost = calculatePrestigeBulkCost(autoclicker, buyAmount);
-        if (prestigeBalance >= prestigeCost) {
-          handlePrestigePurchase(autoclicker, prestigeCost);
+        const wIdleCost = calculateWIdleBulkCost(autoclicker, buyAmount);
+        if (wIdleBalance >= wIdleCost) {
+          handleWIdlePurchase(autoclicker, wIdleCost);
         } else {
           setNotification({
-            message: t("not_enough_prestige_tokens"),
+            message: t("not_enough_widle_tokens"),
             type: "error",
           });
         }
@@ -1276,11 +1164,11 @@ export default function Game() {
       gameState.tokens,
       calculateBulkCost,
       buyAmount,
-      prestigeBalance,
-      handlePrestigePurchase,
+      wIdleBalance,
+      handleWIdlePurchase,
       purchaseAutoclickerWithTokens,
       t,
-      calculatePrestigeBulkCost,
+      calculateWIdleBulkCost,
       setNotification,
     ]
   );
@@ -1298,15 +1186,14 @@ export default function Game() {
         setUpgrades((prev) =>
           prev.map((u) => (u.id === id ? { ...u, purchased: true } : u))
         );
-        if (walletAddress) saveGame(walletAddress);
+        saveCurrentGame();
       }
     },
     [
       upgrades,
       gameState.tokens,
       checkRequirements,
-      saveGame,
-      walletAddress,
+      saveCurrentGame,
       setGameState,
       setUpgrades,
     ]
@@ -1336,44 +1223,23 @@ export default function Game() {
         )
       );
       setNotification({
-        message: t("bulk_purchase_success", { count: upgradesToPurchase.size }),
+        message: t("bulk_purchase_success", {
+          count: upgradesToPurchase.size,
+        }),
         type: "success",
       });
-      if (walletAddress) saveGame(walletAddress);
+      saveCurrentGame();
     }
   }, [
     upgrades,
     gameState.tokens,
     checkRequirements,
     t,
-    saveGame,
-    walletAddress,
+    saveCurrentGame,
     setGameState,
     setUpgrades,
     setNotification,
   ]);
-
-  const handleDevMode = () => {
-    const code = prompt(t("dev_mode_prompt"));
-    if (code === "1312") {
-      setDevModeActive(true);
-      setNotification({ message: t("dev_mode_activated"), type: "success" });
-    }
-  };
-
-  const handleClaimOfflineGains = useCallback(() => {
-    if (offlineGains > 0) {
-      setGameState((prev) => ({
-        ...prev,
-        tokens: prev.tokens + offlineGains,
-      }));
-      setStats((prev) => ({
-        ...prev,
-        totalTokensEarned: prev.totalTokensEarned + offlineGains,
-      }));
-      setOfflineGains(0);
-    }
-  }, [offlineGains, setGameState, setStats]);
 
   if (!isClient) {
     return (
@@ -1386,7 +1252,16 @@ export default function Game() {
   if (!walletAddress) {
     return (
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
-        <LanguageSelector />
+        <div className="flex items-center justify-between mb-4">
+          <LanguageSelector />
+          <button
+            onClick={() => setDebugOpen((v) => !v)}
+            className="ml-2 text-xs px-2 py-1 rounded bg-yellow-500/80 hover:bg-yellow-500 text-black"
+            title="Toggle MiniKit debug info"
+          >
+            Debug
+          </button>
+        </div>
         <h1 className="text-4xl font-bold mb-4">{t("welcome_message")}</h1>
         <p className="mb-8 text-slate-400">{t("connect_wallet_prompt")}</p>
         <button
@@ -1417,7 +1292,55 @@ export default function Game() {
         >
           {isMuted ? <SoundOff /> : <SoundHigh />}
         </button>
+        <button
+          onClick={() => setDebugOpen((v) => !v)}
+          className="p-2 ml-1 bg-yellow-500/80 hover:bg-yellow-500 text-black rounded-md text-xs"
+          title="Toggle MiniKit debug info"
+        >
+          Debug
+        </button>
       </div>
+
+      {debugOpen && (
+        <div className="fixed top-16 right-2 z-60 w-80 max-h-[60vh] overflow-auto p-3 bg-black/80 text-white text-xs rounded-md border border-slate-700">
+          <div className="flex justify-between items-center mb-2">
+            <strong>MiniKit diagnostics</strong>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = (miniKitDebug as Record<string, unknown> | null)?.finalPayloadFull ?? miniKitDebug;
+                    const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      await navigator.clipboard.writeText(text);
+                    } else {
+                      // fallback copy
+                      const ta = document.createElement("textarea");
+                      ta.value = text;
+                      ta.setAttribute("readonly", "");
+                      ta.style.position = "absolute";
+                      ta.style.left = "-9999px";
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                    }
+                    setNotification({ message: t("copied_payload") || "Copied finalPayload to clipboard", type: "success" });
+                  } catch (err) {
+                    console.error("Copy failed", err);
+                    setNotification({ message: t("copy_failed") || "Failed to copy payload", type: "error" });
+                  }
+                }}
+                className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10"
+              >
+                Copy
+              </button>
+              <button onClick={() => setDebugOpen(false)} className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10">Close</button>
+            </div>
+          </div>
+          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(miniKitDebug, null, 2)}</pre>
+        </div>
+      )}
       <TelegramButton />
       <NewsTicker />
       <AnimatePresence>
@@ -1501,24 +1424,25 @@ export default function Game() {
                 checkRequirements={checkRequirements}
                 showRequirements={showItemDetails}
                 calculateBulkCost={calculateBulkCost}
-                calculatePrestigeBulkCost={calculatePrestigeBulkCost}
+                calculateWIdleBulkCost={calculateWIdleBulkCost}
                 purchaseAutoclicker={purchaseAutoclicker}
                 formatNumber={formatNumber}
                 autoclickerCPSValues={autoclickerCPSValues}
                 devModeActive={devModeActive}
                 isConfirmingPurchase={isConfirmingPurchase}
                 pendingPurchaseTx={pendingPurchaseTx}
-                prestigeBalance={prestigeBalance}
+                wIdleBalance={wIdleBalance}
               />
-              <PrestigeSection
-                prestigeBoost={prestigeBoost}
-                prestigeBalance={prestigeBalance}
-                prestigeReward={prestigeReward}
-                isPrestigeReady={canPrestige}
-                isLoading={isLoading || isConfirmingPrestige}
+              <WIdleSection
+                wIdleBoost={wIdleBoost}
+                wIdleBalance={wIdleBalance}
+                isLoading={isLoading || isConfirmingWIdle}
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
-                setPendingPrestigeTxId={setPendingPrestigeTxId}
+                setPendingWIdleTxId={setPendingWIdleTxId}
+                wIdleReward={wIdleServerReward}
+                canClaimWIdle={canClaimWIdle}
+                handleFetchWIdleReward={handleFetchWIdleReward}
               />
               {!stats.isVerified && (
                 <div className="mt-4">
@@ -1551,10 +1475,10 @@ export default function Game() {
                 onBoostPurchased={onBoostPurchased}
                 setNotification={setNotification}
                 totalCPS={totalCPS}
-                prestigeBalance={prestigeBalance}
+                wIdleBalance={wIdleBalance}
                 handleTimeWarpPurchase={handleTimeWarpPurchase}
                 formatNumber={formatNumber}
-                timeWarpPrestigeCost={timeWarpPrestigeCost}
+                timeWarpWIdleCost={timeWarpWIdleCost}
                 timeWarpWldCost={timeWarpWldCost}
                 timeWarpCooldown={timeWarpCooldown}
               />
@@ -1605,15 +1529,6 @@ export default function Game() {
           >
             <ShopIcon className="w-7 h-7" />
             <span className="text-xs font-medium">{t("shop_tab")}</span>
-          </button>
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={() => walletAddress && saveGame(walletAddress, true)}
-            className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700/80 text-slate-300 font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            <Bookmark className="w-5 h-5" />
-            {t("save_game")}
           </button>
         </div>
       </div>

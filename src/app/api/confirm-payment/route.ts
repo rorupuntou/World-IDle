@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     const lowercasedAddress = walletAddress.toLowerCase();
 
-    const verifyUrl = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=app_fe80f47dce293e5f434ea9553098015d`;
+    const verifyUrl = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=app_3b83f308b9f7ef9a01e4042f1f48721d`;
     
     try {
         const verifyRes = await fetch(verifyUrl, {

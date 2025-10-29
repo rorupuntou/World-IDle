@@ -23,7 +23,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
 export default function InvitePage({ code }: { code: string | null }) {
 	useEffect(() => {
         if (code) {
-            const appId = 'app_fe80f47dce293e5f434ea9553098015d' // Your specific App ID
+            const appId = 'app_3b83f308b9f7ef9a01e4042f1f48721d' // Your specific App ID
             const path = `/?code=${code}` // Redirect to the root of the app with the referral code
             const redirectUrl = `https://world.org/mini-app?app_id=${appId}&path=${encodeURIComponent(path)}`
 

@@ -239,7 +239,7 @@ export default function Game() {
       const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
 
       const info = {
-        appId: 'app_fe80f47dce293e5f434ea9553098015d',
+        appId: 'app_3b83f308b9f7ef9a01e4042f1f48721d',
         isInstalled,
         hasCommandsAsync,
         verifyAvailable,

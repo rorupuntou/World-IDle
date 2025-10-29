@@ -22,9 +22,6 @@ export const contractConfig = {
   gameManagerV2Abi: GameManagerV2ABI.abi,
   wIdleTokenAbi: wIDleABI.abi,
 
-  // Old Contracts for reference
-  gameManagerAddress: "0xd9c2284f69B7A49d69F7de0226E6BB1EDb469b68" as `0x${string}`,
-  prestigeTokenAddress: "0x6671c7c52B5Ee08174d432408086E1357ED07246" as `0x${string}`,
 
   // Uniswap Contracts on World Chain
   universalRouterAddress: "0x8ac7bee993bb44dab564ea4bc9ea67bf9eb5e743" as `0x${string}`,

@@ -9,7 +9,7 @@ const worldChain = defineChain({
   name: "World Chain",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://worldchain-mainnet.g.alchemy.com/public"] },
+    default: { http: ["https://worldchain-mainnet.g.alchemy.com/v2/kodVkLaxHvuF3CErQP3aK"] },
   },
   blockExplorers: {
     default: { name: "Worldscan", url: "https://worldscan.org" },

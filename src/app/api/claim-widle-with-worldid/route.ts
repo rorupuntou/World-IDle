@@ -15,11 +15,11 @@ const worldChain = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ['https://worldchain-mainnet.g.alchemy.com/public'],
+      http: ['https://worldchain-mainnet.g.alchemy.com/v2/kodVkLaxHvuF3CErQP3aK'],
     },
   },
   blockExplorers: {
-    default: { name: 'World Chain Explorer', url: 'https://explorer.worldcoin.org' },
+    default: { name: 'World Chain Explorer', url: 'https://worldscan.org' },
   },
 });
 

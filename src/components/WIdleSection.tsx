@@ -85,7 +85,7 @@ export default function WIdleSection({
                         {
                             address: contractConfig.gameManagerV2Address,
                             abi: contractConfig.gameManagerV2Abi,
-                            functionName: 'claimWIdle',
+                            functionName: 'prestige',
                             args: [amount, nonce, signature],
                             value: '0x0',
                         },

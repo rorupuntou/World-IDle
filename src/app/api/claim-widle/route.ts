@@ -10,14 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "walletAddress is required." }, { status: 400 });
   }
 
-  const lowercasedAddress = walletAddress.toLowerCase();
-
   try {
     // 1. Fetch the current game_data to find the permanent boost
     const { data: user_data, error: fetchError } = await supabase
       .from('game_state')
       .select('game_data') // CORRECT: select the whole game_data object
-      .eq('wallet_address', lowercasedAddress)
+      .eq('wallet_address', walletAddress)
       .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
@@ -48,7 +46,7 @@ export async function POST(req: NextRequest) {
     const { data: updateData, error: updateError } = await supabase
       .from('game_state')
       .update({ game_data: resetData })
-      .eq('wallet_address', lowercasedAddress)
+      .eq('wallet_address', walletAddress)
       .select('game_data') 
       .single();
 
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
             const { data: createData, error: createError } = await supabase
                 .from('game_state')
                 // CORRECT: Do not try to insert into a non-existent column
-                .insert({ wallet_address: lowercasedAddress, game_data: resetData })
+                .insert({ wallet_address: walletAddress, game_data: resetData })
                 .select('game_data')
                 .single();
             
@@ -76,7 +74,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, gameData: updateData.game_data }, { status: 200 });
 
   } catch (error: unknown) {
-        console.error('wIDle claim failed:', error);
+    console.error("Prestige process failed:", error);
     let errorMessage = "An unexpected error occurred during prestige.";
     if (error instanceof Error) {
         errorMessage = error.message;

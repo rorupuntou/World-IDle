@@ -9,7 +9,7 @@ contract DeployV2 is Script {
     function run() external returns (GameManagerV2) {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address wIDleTokenAddress = 0x2B258e86Baa288e872414dEe4fe65629526f3cEC;
-        address signerAddress = vm.addr(deployerPrivateKey);
+        address signerAddress = vm.envAddress("NEW_SIGNER_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 

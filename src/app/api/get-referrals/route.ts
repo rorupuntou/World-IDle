@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -10,6 +9,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing walletAddress parameter' }, { status: 400 });
   }
 
+  const lowercasedAddress = walletAddress.toLowerCase();
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     const { data, error } = await supabase
       .from('referrals')
       .select('referee_id, created_at')
-      .eq('referrer_id', walletAddress)
+      .eq('referrer_id', lowercasedAddress)
       .order('created_at', { ascending: false });
 
     if (error) {

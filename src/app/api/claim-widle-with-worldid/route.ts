@@ -46,8 +46,9 @@ export async function POST(req: NextRequest) {
     });
 
     const { payload, action, signal: walletAddress } = (await req.json()) as IRequestPayload;
+    const lowercasedAddress = walletAddress.toLowerCase();
 
-    const verifyRes = (await verifyCloudProof(payload, APP_ID, action, walletAddress)) as IVerifyResponse;
+    const verifyRes = (await verifyCloudProof(payload, APP_ID, action, lowercasedAddress)) as IVerifyResponse;
 
     if (!verifyRes.success) {
         console.warn('World ID verification failed:', verifyRes);
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
         const { data: existingData, error: fetchError } = await supabase
             .from('game_state')
             .select('game_data')
-            .eq('wallet_address', walletAddress)
+            .eq('wallet_address', lowercasedAddress)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: row not found
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
         try {
             // Try to call the PL/pgSQL function we created earlier for atomic increment.
             // This returns a bigint (the new nonce) when the DB function exists.
-            const { data: rpcData, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: walletAddress as string });
+            const { data: rpcData, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: lowercasedAddress as string });
 
             if (!rpcError && rpcData != null) {
                 // rpcData may be a scalar, an object, or an array depending on supabase/pg config.
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
         // Build the message exactly as the contract does: keccak256(abi.encodePacked(msg.sender, amount, nonce))
         const messageHash = keccak256(encodePacked(
             ['address', 'uint256', 'uint256'],
-            [walletAddress as `0x${string}`, amountInWei, nonceBigInt]
+            [lowercasedAddress as `0x${string}`, amountInWei, nonceBigInt]
         ));
 
         // The contract prefixes the message with the Ethereum Signed Message prefix and then keccak256s again.

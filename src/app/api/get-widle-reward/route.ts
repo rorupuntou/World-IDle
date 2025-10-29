@@ -9,11 +9,13 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'walletAddress is required' }, { status: 400 });
     }
 
+    const lowercasedAddress = walletAddress.toLowerCase();
+
     try {
         const { data: existingData, error: fetchError } = await supabase
             .from('game_state')
             .select('game_data')
-            .eq('wallet_address', walletAddress)
+            .eq('wallet_address', lowercasedAddress)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: row not found

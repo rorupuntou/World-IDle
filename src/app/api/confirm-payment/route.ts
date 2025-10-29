@@ -1,4 +1,3 @@
-
 import { type NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { MiniAppPaymentSuccessPayload } from '@worldcoin/minikit-js';
@@ -21,10 +20,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Invalid request body.' }, { status: 400 });
     }
 
-    // TODO: Here we should fetch the reference from our DB that we created in /initiate-payment
-    // and verify it matches `payload.reference`. This is a critical security step.
+    const lowercasedAddress = walletAddress.toLowerCase();
 
-    // For now, we proceed with the verification against Worldcoin's API
     const verifyUrl = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transaction_id}?app_id=app_fe80f47dce293e5f434ea9553098015d`;
     
     try {
@@ -42,16 +39,14 @@ export async function POST(req: NextRequest) {
 
         const transaction = await verifyRes.json();
 
-        // Optimistically confirm if not failed. For production, you might want to poll until `mined`.
         if (transaction.status === 'failed' || transaction.reference !== payload.reference) {
             return NextResponse.json({ success: false, error: 'Transaction invalid or failed.' }, { status: 400 });
         }
 
-        // Transaction is valid, now update the user's game data
         const { data: existingData, error: fetchError } = await supabase
             .from('game_state')
             .select('game_data')
-            .eq('wallet_address', walletAddress)
+            .eq('wallet_address', lowercasedAddress)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
@@ -60,9 +55,7 @@ export async function POST(req: NextRequest) {
 
         const gameData = existingData ? existingData.game_data : {};
         
-        // Calculate new multiplier
         const purchasedBoost = boosts[boostId];
-        // This logic assumes we store the full multiplier, not the bonus. Let's adjust to the bonus logic.
         const currentBonus = gameData.permanentBoostBonus || 0;
         const newBonus = currentBonus + purchasedBoost.bonus;
 
@@ -71,7 +64,7 @@ export async function POST(req: NextRequest) {
         const { error: updateError } = await supabase
             .from('game_state')
             .upsert({
-                wallet_address: walletAddress,
+                wallet_address: lowercasedAddress,
                 game_data: gameData,
             }, { onConflict: 'wallet_address' });
 

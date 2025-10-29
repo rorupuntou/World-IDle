@@ -8,11 +8,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "walletAddress and gameData are required." }, { status: 400 });
   }
 
+  const lowercasedAddress = walletAddress.toLowerCase();
+
   // Use upsert with the primary key column specified
   const { error } = await supabase
     .from('game_state')
     .upsert({ 
-        wallet_address: walletAddress, 
+        wallet_address: lowercasedAddress, 
         game_data: gameData 
     }, { onConflict: 'wallet_address' });
 

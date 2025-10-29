@@ -32,12 +32,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const lowercasedAddress = address.toLowerCase();
+
     // If verification is successful, return the address
-    const res = NextResponse.json({ success: true, address });
+    const res = NextResponse.json({ success: true, address: lowercasedAddress });
 
     // Clear the nonce cookie and set a session cookie for the user
     res.cookies.set("siwe_nonce", "", { maxAge: 0, path: "/" });
-    res.cookies.set("siwe_session", address, {
+    res.cookies.set("siwe_session", lowercasedAddress, {
       httpOnly: true,
       path: "/",
       maxAge: 60 * 60 * 24, // 1 day

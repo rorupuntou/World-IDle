@@ -10,18 +10,19 @@ interface IRequestPayload {
 
 export async function POST(req: NextRequest) {
     const { proof, signal, action } = (await req.json()) as IRequestPayload;
+    const lowercasedSignal = signal.toLowerCase();
 
     const app_id = 'app_fe80f47dce293e5f434ea9553098015d' as `app_${string}`;
 
     try {
-        const verifyRes = await verifyCloudProof(proof, app_id, action, signal);
+        const verifyRes = await verifyCloudProof(proof, app_id, action, lowercasedSignal);
 
         if (verifyRes.success) {
             // If verification is successful, also fetch the user's game data.
             const { data: existingData, error: fetchError } = await supabase
                 .from('game_state')
                 .select('game_data')
-                .eq('wallet_address', signal) // signal is the wallet address
+                .eq('wallet_address', lowercasedSignal) // signal is the wallet address
                 .single();
 
             if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: row not found

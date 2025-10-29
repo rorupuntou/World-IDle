@@ -206,7 +206,7 @@ export default function Game() {
     saveGame,
     setFullState,
     isLoaded,
-  } = useGameSave(serverState, walletAddress);
+  } = useGameSave(serverState);
 
 
 
@@ -304,15 +304,8 @@ export default function Game() {
 
   const saveCurrentGame = useCallback(() => {
     if (!walletAddress) return;
-    const currentState: FullGameState = { 
-        gameState, 
-        stats, 
-        autoclickers, 
-        upgrades, 
-        achievements 
-    };
-  saveGameRef.current?.(currentState);
-}, [walletAddress, gameState, stats, autoclickers, upgrades, achievements]);
+    saveGameRef.current?.(walletAddress);
+  }, [walletAddress]);
 
   const handleClaimOfflineGains = useCallback(() => {
       originalHandleClaim();

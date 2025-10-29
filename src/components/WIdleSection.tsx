@@ -47,7 +47,7 @@ export default function WIdleSection({
 
         try {
             const verifyResp = await safeMiniKit.safeCall('verify', {
-                action: 'prestige-game',
+                action: 'claim-widle',
                 signal: walletAddress,
                 verification_level: VerificationLevel.Orb,
             });
@@ -63,7 +63,7 @@ export default function WIdleSection({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     payload: finalPayload,
-                    action: 'prestige-game',
+                    action: 'claim-widle',
                     signal: walletAddress,
                 }),
             });
@@ -85,7 +85,7 @@ export default function WIdleSection({
                         {
                             address: contractConfig.gameManagerV2Address,
                             abi: contractConfig.gameManagerV2Abi,
-                            functionName: 'prestige',
+                            functionName: 'claimWIdle',
                             args: [amount, nonce, signature],
                             value: '0x0',
                         },

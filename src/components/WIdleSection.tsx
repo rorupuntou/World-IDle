@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { VerificationLevel } from '@worldcoin/minikit-js';
 import safeMiniKit from '@/lib/safeMiniKit';
 import { contractConfig } from '@/app/contracts/config';
+import { useState, useEffect } from 'react';
 
 interface WIdleSectionProps {
     wIdleBoost: number;
@@ -15,6 +16,8 @@ interface WIdleSectionProps {
     wIdleReward: number;
     canClaimWIdle: boolean;
     handleFetchWIdleReward: () => void;
+    lastWidleClaimAt?: string;
+    onClaimSuccess: () => void;
 }
 
 export default function WIdleSection({
@@ -27,12 +30,45 @@ export default function WIdleSection({
     wIdleReward,
     canClaimWIdle,
     handleFetchWIdleReward,
+    lastWidleClaimAt,
+    onClaimSuccess,
 }: WIdleSectionProps) {
     const { t } = useLanguage();
+    const [cooldownTime, setCooldownTime] = useState("");
+
+    useEffect(() => {
+        if (!lastWidleClaimAt) {
+            setCooldownTime("");
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const lastClaimDate = new Date(lastWidleClaimAt);
+            const cooldownEndDate = new Date(lastClaimDate.getTime() + 8 * 60 * 60 * 1000);
+            const now = new Date();
+            const timeLeft = cooldownEndDate.getTime() - now.getTime();
+
+            if (timeLeft > 0) {
+                const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+                const seconds = Math.floor((timeLeft / 1000) % 60);
+                setCooldownTime(
+                    `${hours.toString().padStart(2, "0")}:${minutes
+                        .toString()
+                        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+                );
+            } else {
+                setCooldownTime("");
+                clearInterval(interval);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lastWidleClaimAt]);
     
 
     const handleClaimWIdle = async () => {
-        if (!canClaimWIdle) {
+        if (!canClaimWIdle || cooldownTime) { // Check cooldownTime
             alert(t('error.no_widle_reward'));
             return;
         }
@@ -109,6 +145,7 @@ export default function WIdleSection({
 
                 if (txFinalPayload.transaction_id) {
                     setPendingWIdleTxId(txFinalPayload.transaction_id);
+                    onClaimSuccess(); // Call on success
                 } else {
                     throw new Error(t('error.transaction_id_missing'));
                 }
@@ -120,6 +157,8 @@ export default function WIdleSection({
             setIsLoading(false);
         }
     };
+
+    const isButtonDisabled = !canClaimWIdle || isLoading || !!cooldownTime;
 
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">
@@ -139,8 +178,8 @@ export default function WIdleSection({
 
             <motion.button
                 onClick={handleClaimWIdle}
-                disabled={!canClaimWIdle || isLoading}
-                whileHover={{ scale: 1.05 }}
+                disabled={isButtonDisabled}
+                whileHover={{ scale: isButtonDisabled ? 1 : 1.05 }}
                 className="w-full mt-4 bg-yellow-500/80 hover:bg-yellow-500/100 text-stone-900 font-bold py-3 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/80 flex items-center justify-center"
             >
                 {isLoading ? (
@@ -151,7 +190,11 @@ export default function WIdleSection({
                         </svg>
                         {t('processing')}
                     </>
-                ) : t('widle_button')}
+                ) : cooldownTime ? (
+                    <span>{cooldownTime}</span>
+                ) : (
+                    t('widle_button')
+                )}
             </motion.button>
         </div>
     );

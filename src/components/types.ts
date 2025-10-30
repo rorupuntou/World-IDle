@@ -73,6 +73,7 @@ export type GameState = {
   lastSaved?: number;
   wldTimeWarpsPurchased?: number;
   lastWIdleTimeWarp?: number;
+  lastWidleClaimAt?: string;
   referrals?: Referral[];
 };
 

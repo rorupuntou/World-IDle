@@ -312,6 +312,25 @@ export default function Game() {
     saveGameRef.current?.(walletAddress);
   }, [walletAddress]);
 
+  const updateLastClaimTime = useCallback(async () => {
+    if (!walletAddress) return;
+    const now = new Date().toISOString();
+    
+    // Optimistically update local state
+    setGameState(prev => ({ ...prev, lastWidleClaimAt: now }));
+
+    // Save to server
+    try {
+      await fetch('/api/save-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, lastWidleClaimAt: now }),
+      });
+    } catch (error) {
+      console.error("Failed to save last claim time:", error);
+    }
+  }, [walletAddress, setGameState]);
+
   const handleClaimOfflineGains = useCallback(() => {
       originalHandleClaim();
       saveCurrentGame();
@@ -449,6 +468,7 @@ export default function Game() {
         setNotification({ message: t("widle_claim_success"), type: "success" });
         setFullState(data.gameData);
         refetchBalances();
+        updateLastClaimTime();
       } catch (error) {
         console.error("wIDle claim failed:", error);
         setNotification({
@@ -469,6 +489,7 @@ export default function Game() {
     t,
     setFullState,
     setNotification,
+    updateLastClaimTime,
   ]);
 
   useEffect(() => {
@@ -1446,6 +1467,8 @@ export default function Game() {
                 wIdleReward={wIdleServerReward}
                 canClaimWIdle={canClaimWIdle}
                 handleFetchWIdleReward={handleFetchWIdleReward}
+                lastWidleClaimAt={gameState.lastWidleClaimAt}
+                onClaimSuccess={updateLastClaimTime}
               />
               {!stats.isVerified && (
                 <div className="mt-4">

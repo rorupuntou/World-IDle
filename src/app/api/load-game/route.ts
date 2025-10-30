@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('game_state')
-    .select('game_data, permanent_referral_boost')
+    .select('game_data, permanent_referral_boost, last_widle_claim_at')
     .eq('wallet_address', lowercasedAddress)
     .single();
 
@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       gameData.gameState = {};
     }
     gameData.gameState.permanent_referral_boost = data.permanent_referral_boost || 0;
+    gameData.gameState.lastWidleClaimAt = data.last_widle_claim_at;
 
     console.log(`[LOAD-GAME] Preparing to send gameData for ${walletAddress}:`, JSON.stringify(gameData, null, 2));
     return NextResponse.json({ success: true, gameData: gameData }, { status: 200 });

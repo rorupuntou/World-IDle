@@ -17,7 +17,7 @@ const universalRouterAbi = [
 
 export const contractConfig = {
   // Core Game Contracts
-  gameManagerV2Address: "0x86aDa3Dc96c53CDA30f281DD0752728f7e62a5B8" as `0x${string}`,
+  gameManagerV2Address: "0x8fB10BfA3E9a868A1BdD6Feb54C092A83C236200" as `0x${string}`,
   wIdleTokenAddress: "0x82446D9E037639a95d61aAd2e716e95BbD0C903e" as `0x${string}`,
   gameManagerV2Abi: GameManagerV2ABI.abi,
   wIdleTokenAbi: wIDleABI.abi,

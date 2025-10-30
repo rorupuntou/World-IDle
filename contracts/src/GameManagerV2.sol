@@ -73,7 +73,18 @@ contract GameManagerV2 is Ownable, Pausable {
     function _verifySignature(uint256 amount, uint256 nonce, bytes memory signature) private view returns (address) {
         bytes32 messageHash = keccak256(abi.encodePacked(msg.sender, amount, nonce));
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
-        (bytes32 r, bytes32 s, uint8 v) = abi.decode(signature, (bytes32, bytes32, uint8));
+
+        require(signature.length == 65, "GameManagerV2: Invalid signature length");
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            v := byte(0, mload(add(signature, 0x60)))
+        }
+
         return ecrecover(ethSignedMessageHash, v, r, s);
     }
 

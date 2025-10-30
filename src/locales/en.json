@@ -423,5 +423,7 @@
   "no_referrals_yet": "You haven't referred anyone yet.",
   "loading_referrals": "Loading referrals...",
   "referral_success": "Referral processed successfully! Welcome bonus applied.",
-  "referral_error": "Failed to process referral."
+  "referral_error": "Failed to process referral.",
+  "token_supply_title": "Token Supply",
+  "minted": "Minted"
 }

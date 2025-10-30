@@ -47,7 +47,8 @@ import { useBlockchain } from "@/hooks/useBlockchain";
 import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
 import { useItemDetails } from "@/hooks/useItemDetails";
 import { useDevMode } from "@/hooks/useDevMode";
-import { useOfflineGains } from "@/hooks/useOfflineGains";
+import { useOfflineGains } from '@/hooks/useOfflineGains';
+import SupplyStats from './SupplyStats';
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -150,6 +151,7 @@ export default function Game() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
   const [wIdleServerReward, setWIdleServerReward] = useState(0);
+  const [supplyInfo, setSupplyInfo] = useState<{ totalSupply: string; cap: string } | null>(null);
 
   // Debug UI toggles and diagnostics for MiniKit / env
   const [debugOpen, setDebugOpen] = useState(false);
@@ -196,6 +198,25 @@ export default function Game() {
     const interval = setInterval(handleFetchWIdleReward, 30000);
     return () => clearInterval(interval);
   }, [handleFetchWIdleReward]);
+
+  useEffect(() => {
+    const fetchSupplyInfo = async () => {
+      try {
+        const res = await fetch('/api/supply-info');
+        const data = await res.json();
+        if (data.success) {
+          setSupplyInfo({ totalSupply: data.totalSupply, cap: data.cap });
+        }
+      } catch (error) {
+        console.error("Failed to fetch supply info:", error);
+      }
+    };
+
+    fetchSupplyInfo(); // Fetch on mount
+    const interval = setInterval(fetchSupplyInfo, 60000); // Fetch every 60 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
 
   
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
@@ -1429,6 +1450,15 @@ export default function Game() {
           permanentBoostBonus={gameState.permanentBoostBonus || 0}
           permanent_referral_boost={gameState.permanent_referral_boost || 0}
         />
+
+        {supplyInfo && (
+          <div className="my-4">
+            <SupplyStats
+              totalSupply={supplyInfo.totalSupply}
+              cap={supplyInfo.cap}
+            />
+          </div>
+        )}
 
         <div className="flex flex-col gap-6">
           {activeTab === "main" && (

@@ -424,5 +424,7 @@
   "no_referrals_yet": "Aún no has referido a nadie.",
   "loading_referrals": "Cargando referidos...",
   "referral_success": "¡Referido procesado con éxito! Bono de bienvenida aplicado.",
-  "referral_error": "Error al procesar el referido."
+  "referral_error": "Error al procesar el referido.",
+  "token_supply_title": "Suministro de Tokens",
+  "minted": "Minteado"
 }

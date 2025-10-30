@@ -55,16 +55,17 @@ export async function GET() {
             functionName: 'cap',
         });
 
-        const [totalSupplyBigInt, capBigInt] = await Promise.all([totalSupplyPromise, capPromise]);
+        const [totalSupplyResult, capResult] = await Promise.all([totalSupplyPromise, capPromise]);
 
-        if (totalSupplyBigInt === undefined || capBigInt === undefined) {
-            throw new Error('Failed to fetch supply data from contract.');
+        // Type guard to ensure we have bigints
+        if (typeof totalSupplyResult !== 'bigint' || typeof capResult !== 'bigint') {
+            throw new Error('Failed to fetch valid BigInt supply data from contract.');
         }
 
         const decimals = 18;
         const data = {
-            totalSupply: formatUnits(totalSupplyBigInt, decimals),
-            cap: formatUnits(capBigInt, decimals),
+            totalSupply: formatUnits(totalSupplyResult, decimals),
+            cap: formatUnits(capResult, decimals),
         };
 
         cache = {

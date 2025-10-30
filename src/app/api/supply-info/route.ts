@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http, defineChain, formatUnits } from 'viem';
 import { contractConfig } from '@/app/contracts/config';
 
-// Define World Chain for Viem, reusing from other parts of the app
+// Define World Chain for Viem
 const worldChain = defineChain({
   id: contractConfig.worldChainId,
   name: 'World Chain',
@@ -26,7 +26,7 @@ const publicClient = createPublicClient({
   transport: http(),
 });
 
-// Simple in-memory cache to prevent spamming the RPC
+// Simple in-memory cache
 let cache = {
     data: null as { totalSupply: string; cap: string } | null,
     timestamp: 0,
@@ -37,43 +37,36 @@ const CACHE_DURATION = 60 * 1000; // 1 minute
 export async function GET() {
     const now = Date.now();
 
-    // 1. Check cache
     if (cache.data && (now - cache.timestamp < CACHE_DURATION)) {
         return NextResponse.json({ success: true, ...cache.data });
     }
 
     try {
-        // 2. Fetch data from contract using multicall for efficiency
-        const multicallResult = await publicClient.multicall({
-            contracts: [
-                {
-                    address: contractConfig.wIdleTokenAddress,
-                    abi: contractConfig.wIdleTokenAbi,
-                    functionName: 'totalSupply',
-                },
-                {
-                    address: contractConfig.wIdleTokenAddress,
-                    abi: contractConfig.wIdleTokenAbi,
-                    functionName: 'cap',
-                },
-            ],
+        // Fetch data using two separate calls as multicall is not supported
+        const totalSupplyPromise = publicClient.readContract({
+            address: contractConfig.wIdleTokenAddress,
+            abi: contractConfig.wIdleTokenAbi,
+            functionName: 'totalSupply',
         });
 
-        const totalSupplyBigInt = multicallResult[0].result as bigint | undefined;
-        const capBigInt = multicallResult[1].result as bigint | undefined;
+        const capPromise = publicClient.readContract({
+            address: contractConfig.wIdleTokenAddress,
+            abi: contractConfig.wIdleTokenAbi,
+            functionName: 'cap',
+        });
+
+        const [totalSupplyBigInt, capBigInt] = await Promise.all([totalSupplyPromise, capPromise]);
 
         if (totalSupplyBigInt === undefined || capBigInt === undefined) {
             throw new Error('Failed to fetch supply data from contract.');
         }
 
-        // The contract has 18 decimals
         const decimals = 18;
         const data = {
             totalSupply: formatUnits(totalSupplyBigInt, decimals),
             cap: formatUnits(capBigInt, decimals),
         };
 
-        // 3. Update cache
         cache = {
             data,
             timestamp: now,

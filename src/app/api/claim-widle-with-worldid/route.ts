@@ -132,18 +132,14 @@ export async function POST(req: NextRequest) {
             [lowercasedAddress as `0x${string}`, amountInWei, nonceBigInt]
         ));
 
-        // The contract prefixes the message with the Ethereum Signed Message prefix and then keccak256s again.
-        const ethPrefixed = keccak256(encodePacked(['string', 'bytes32'], ["\x19Ethereum Signed Message:\n32", messageHash]));
-
-        // Log hashes to help debug mismatches (hex)
+        // Log the hash to help debug mismatches. This is the hash that will be prefixed and hashed again by the wallet before signing.
         // eslint-disable-next-line no-console
-        console.info('claim-widle: messageHash', messageHash);
-        // eslint-disable-next-line no-console
-        console.info('claim-widle: ethPrefixed', ethPrefixed);
+        console.info('claim-widle: messageHash to be signed', messageHash);
 
+        // According to EIP-191, the wallet will sign keccak256("\x19Ethereum Signed Message:\n32" + messageHash).
+        // viem's signMessage handles this automatically when given a raw message hash.
         const signature = await client.signMessage({
-            // sign the 32-byte prefixed hash as raw bytes (avoid double-prefixing)
-            message: { raw: toBytes(ethPrefixed) },
+            message: { raw: messageHash },
         });
 
         return NextResponse.json({ success: true, amount: amountInWei.toString(), nonce: nonceBigInt.toString(), signature });

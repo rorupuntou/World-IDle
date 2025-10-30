@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/minikit-js';
 import { supabase } from '@/lib/supabaseClient';
 import { privateKeyToAccount } from 'viem/accounts';
-import { createWalletClient, http, keccak256, encodePacked, parseEther, toBytes, defineChain } from 'viem';
+import { createWalletClient, http, keccak256, encodePacked, parseEther, defineChain } from 'viem';
 
 // Define World Chain for Viem
 const worldChain = defineChain({
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         const gameData = existingData.game_data as { stats: { totalTokensEarned: number } };
         const totalTokensEarned = gameData.stats.totalTokensEarned || 0;
 
-        const wIdleReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
+        const wIdleReward = Math.floor(300 * Math.log(0.0001 * totalTokensEarned + 1));
 
         if (wIdleReward < 1) {
             return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });

@@ -110,6 +110,11 @@ export async function POST(req: NextRequest) {
                     nonceBigInt = BigInt(String(val));
                 }
 
+                // WORKAROUND: The RPC function `increment_next_widle_nonce` appears to be non-atomic and returns the nonce *before* incrementing it.
+                // This causes a "Nonce already used" error on the first claim attempt after a successful one.
+                // To fix this, we optimistically increment the nonce here. The root cause in the database function should be fixed eventually.
+                nonceBigInt += BigInt(1);
+
                 // Log success
                 // eslint-disable-next-line no-console
                 console.info('claim-widle: obtained nonce via rpc increment_next_widle_nonce ->', nonceBigInt.toString());

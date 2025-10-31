@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
             return typeof val === 'number' ? val : 0;
         })();
 
-        const wIdleReward = Math.floor(Math.sqrt(totalTokensEarned / 4000)) * 1000;
+        const wIdleReward = Math.floor(300 * Math.log(0.0001 * totalTokensEarned + 1));
 
         // return both names for backward compatibility (reward and wIdleReward)
         return NextResponse.json({ success: true, reward: wIdleReward, wIdleReward });

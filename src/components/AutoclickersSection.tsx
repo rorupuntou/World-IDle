@@ -18,7 +18,7 @@ interface AutoclickersSectionProps {
     purchaseAutoclicker: (id: number) => void;
     formatNumber: (num: number) => string;
     autoclickerCPSValues: Map<number, number>;
-    devModeActive: boolean;
+
     isConfirmingPurchase: boolean;
     pendingPurchaseTx: { txId: string; itemId: number } | null;
     wIdleBalance: number;
@@ -36,7 +36,6 @@ export default function AutoclickersSection({
     purchaseAutoclicker,
     formatNumber,
     autoclickerCPSValues,
-    devModeActive,
     isConfirmingPurchase,
     pendingPurchaseTx,
     wIdleBalance
@@ -44,15 +43,8 @@ export default function AutoclickersSection({
     const { t } = useLanguage();
 
     const visibleAutoclickers = useMemo(() => {
-        const regularAutoclickers = autoclickers.filter(a => !a.devOnly);
-        if (devModeActive) {
-            const devAutoclicker = autoclickers.find(a => a.devOnly);
-            if (devAutoclicker) {
-                return [devAutoclicker, ...regularAutoclickers];
-            }
-        }
-        return regularAutoclickers;
-    }, [autoclickers, devModeActive]);
+        return autoclickers.filter(a => !a.devOnly);
+    }, [autoclickers]);
 
     return (
         <div className="space-y-3">

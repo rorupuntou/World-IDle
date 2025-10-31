@@ -8,7 +8,6 @@ import {
   Home,
   Shop as ShopIcon,
   Gift,
-  Settings,
   Check,
   Xmark,
   SoundHigh,
@@ -46,7 +45,7 @@ import { useGameCalculations } from "@/hooks/useGameCalculations";
 import { useBlockchain } from "@/hooks/useBlockchain";
 import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
 import { useItemDetails } from "@/hooks/useItemDetails";
-import { useDevMode } from "@/hooks/useDevMode";
+
 import { useOfflineGains } from '@/hooks/useOfflineGains';
 import SupplyStats from './SupplyStats';
 
@@ -153,9 +152,7 @@ export default function Game() {
   const [wIdleServerReward, setWIdleServerReward] = useState(0);
   const [supplyInfo, setSupplyInfo] = useState<{ totalSupply: string; cap: string } | null>(null);
 
-  // Debug UI toggles and diagnostics for MiniKit / env
-  const [debugOpen, setDebugOpen] = useState(false);
-  const [miniKitDebug, setMiniKitDebug] = useState<Record<string, unknown> | null>(null);
+
 
   // Password protection state
   const [password, setPassword] = useState("");
@@ -225,7 +222,7 @@ export default function Game() {
   const { notification, setNotification } = useNotifications();
   const { floatingNumbers, addFloatingNumber } = useFloatingNumbers();
   const { selectedItem, showItemDetails, closeItemDetails } = useItemDetails();
-  const { devModeActive, handleDevMode } = useDevMode(setNotification, t);
+
   const {
     gameState,
     setGameState,
@@ -242,41 +239,7 @@ export default function Game() {
     isLoaded,
   } = useGameSave(serverState);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const mkHost = globalThis as unknown as {
-        MiniKit?: {
-          isInstalled?: () => boolean;
-          commandsAsync?: Record<string, unknown>;
-        };
-      };
-      const mk = mkHost.MiniKit;
-      const isInstalled = typeof mk?.isInstalled === 'function' ? mk.isInstalled() : null;
-      const hasCommandsAsync = !!mk && typeof mk.commandsAsync !== 'undefined';
-      const verifyAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.verify === 'function';
-      const payAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.pay === 'function';
-      const sendTransactionAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.sendTransaction === 'function';
-      const walletAuthAvailable = hasCommandsAsync && typeof mk?.commandsAsync?.walletAuth === 'function';
 
-      const info = {
-        appId: 'app_3b83f308b9f7ef9a01e4042f1f48721d',
-        isInstalled,
-        hasCommandsAsync,
-        verifyAvailable,
-        payAvailable,
-        sendTransactionAvailable,
-        walletAuthAvailable,
-        userAgent: navigator.userAgent,
-        href: window.location.href,
-      };
-      console.info('[miniKitDebug]', info);
-      setMiniKitDebug(info);
-    } catch (err) {
-      console.warn('miniKit diagnostic failed', err);
-      setMiniKitDebug({ error: String(err) });
-    }
-  }, []);
 
   const saveGameRef = useRef(saveGame);
   useEffect(() => {
@@ -357,6 +320,13 @@ export default function Game() {
       saveCurrentGame();
   }, [originalHandleClaim, saveCurrentGame]);
 
+  useEffect(() => {
+    // When isVerified becomes true, save the game state to persist it.
+    if (stats.isVerified) {
+      saveCurrentGame();
+    }
+  }, [stats.isVerified, saveCurrentGame]);
+
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
       return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -422,9 +392,7 @@ export default function Game() {
       if (data.success) {
         setStats((prev) => ({ ...prev, isVerified: true }));
         setNotification({ message: "World ID Verified!", type: "success" });
-        if (data.gameData) {
-          setFullState(data.gameData);
-        }
+
       } else {
         const message =
           typeof data.detail === "string"
@@ -715,16 +683,7 @@ export default function Game() {
         throw new Error(t("auth_failed"));
       }
 
-      try {
-        console.info("[miniKitFinalPayload]", result.finalPayload);
-        setMiniKitDebug((prev) => ({
-          ...(prev || {}),
-          finalPayloadPreview: JSON.stringify(result.finalPayload).slice(0, 200),
-          finalPayloadFull: result.finalPayload,
-        }));
-      } catch {
-        // ignore debug logging errors
-      }
+
 
       const verifyRes = await fetch("/api/siwe/verify", {
         method: "POST",
@@ -734,9 +693,7 @@ export default function Game() {
       });
 
       const verifyText = await verifyRes.text();
-      try {
-        console.info("siwe/verify response:", verifyText);
-      } catch {}
+
 
       if (!verifyRes.ok) {
         let parsedErr: unknown = undefined;
@@ -750,7 +707,7 @@ export default function Game() {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
           setWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
-          console.warn("siwe/verify failed but fallback address used", { parsedErr, finalPayload: result.finalPayload });
+
           return;
         }
         const parsedObj = typeof parsedErr === "object" && parsedErr !== null ? (parsedErr as Record<string, unknown>) : undefined;
@@ -770,7 +727,7 @@ export default function Game() {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
           setWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
-          console.warn("siwe/verify returned non-success but fallback address used", { verifyJson, finalPayload: result.finalPayload });
+
           return;
         }
         throw new Error(verifyJson.error || t("auth_failed"));
@@ -1139,7 +1096,7 @@ export default function Game() {
         const finalPayload = sendResp.finalPayload as { status?: string; message?: string; debug_url?: string; transaction_id?: string };
 
         if (finalPayload.status === "error") {
-          console.error("DEBUG: " + JSON.stringify(finalPayload, null, 2));
+
           throw new Error(finalPayload.message || "Error sending transaction with MiniKit.");
         }
 
@@ -1300,13 +1257,7 @@ export default function Game() {
       <div className="w-full max-w-md text-center p-8 bg-slate-500/10 backdrop-blur-sm rounded-xl border border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <LanguageSelector />
-          <button
-            onClick={() => setDebugOpen((v) => !v)}
-            className="ml-2 text-xs px-2 py-1 rounded bg-yellow-500/80 hover:bg-yellow-500 text-black"
-            title="Toggle MiniKit debug info"
-          >
-            Debug
-          </button>
+
         </div>
         <h1 className="text-4xl font-bold mb-4">{t("welcome_message")}</h1>
         <p className="mb-8 text-slate-400">{t("connect_wallet_prompt")}</p>
@@ -1338,54 +1289,10 @@ export default function Game() {
         >
           {isMuted ? <SoundOff /> : <SoundHigh />}
         </button>
-        <button
-          onClick={() => setDebugOpen((v) => !v)}
-          className="p-2 ml-1 bg-yellow-500/80 hover:bg-yellow-500 text-black rounded-md text-xs"
-          title="Toggle MiniKit debug info"
-        >
-          Debug
-        </button>
+
       </div>
 
-      {debugOpen && (
-        <div className="fixed top-16 right-2 z-60 w-80 max-h-[60vh] overflow-auto p-3 bg-black/80 text-white text-xs rounded-md border border-slate-700">
-          <div className="flex justify-between items-center mb-2">
-            <strong>MiniKit diagnostics</strong>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={async () => {
-                  try {
-                    const payload = (miniKitDebug as Record<string, unknown> | null)?.finalPayloadFull ?? miniKitDebug;
-                    const text = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                      await navigator.clipboard.writeText(text);
-                    } else {
-                      const ta = document.createElement("textarea");
-                      ta.value = text;
-                      ta.setAttribute("readonly", "");
-                      ta.style.position = "absolute";
-                      ta.style.left = "-9999px";
-                      document.body.appendChild(ta);
-                      ta.select();
-                      document.execCommand("copy");
-                      document.body.removeChild(ta);
-                    }
-                    setNotification({ message: t("copied_payload") || "Copied finalPayload to clipboard", type: "success" });
-                  } catch (err) {
-                    console.error("Copy failed", err);
-                    setNotification({ message: t("copy_failed") || "Failed to copy payload", type: "error" });
-                  }
-                }}
-                className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10"
-              >
-                Copy
-              </button>
-              <button onClick={() => setDebugOpen(false)} className="ml-2 text-xs px-2 py-0.5 rounded bg-white/10">Close</button>
-            </div>
-          </div>
-          <pre className="whitespace-pre-wrap break-words">{JSON.stringify(miniKitDebug, null, 2)}</pre>
-        </div>
-      )}
+
       <TelegramButton />
       <NewsTicker />
       <AnimatePresence>
@@ -1482,7 +1389,7 @@ export default function Game() {
                 purchaseAutoclicker={purchaseAutoclicker}
                 formatNumber={formatNumber}
                 autoclickerCPSValues={autoclickerCPSValues}
-                devModeActive={devModeActive}
+
                 isConfirmingPurchase={isConfirmingPurchase}
                 pendingPurchaseTx={pendingPurchaseTx}
                 wIdleBalance={wIdleBalance}
@@ -1588,12 +1495,7 @@ export default function Game() {
           </button>
         </div>
       </div>
-      <button
-        onClick={handleDevMode}
-        className="fixed bottom-2 right-2 p-2 text-transparent hover:text-yellow-400"
-      >
-        <Settings className="w-5 h-5" />
-      </button>
+
     </>
   );
 }

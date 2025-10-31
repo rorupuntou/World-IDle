@@ -5,7 +5,7 @@ export const useDevMode = (setNotification: (notification: { message: string; ty
 
   const handleDevMode = useCallback(() => {
     const code = prompt(t("dev_mode_prompt"));
-    if (code === "1312") {
+    if (code === "13.12") {
       setDevModeActive(true);
       setNotification({ message: t("dev_mode_activated"), type: "success" });
     }

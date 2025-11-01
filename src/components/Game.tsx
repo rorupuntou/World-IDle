@@ -47,7 +47,10 @@ import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
 import { useItemDetails } from "@/hooks/useItemDetails";
 
 import { useOfflineGains } from '@/hooks/useOfflineGains';
+import useSWR from 'swr';
 import SupplyStats from './SupplyStats';
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const PRICE_INCREASE_RATE = 1.15;
 
@@ -150,9 +153,17 @@ export default function Game() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
   const [wIdleServerReward, setWIdleServerReward] = useState(0);
-  const [supplyInfo, setSupplyInfo] = useState<{ totalSupply: string; cap: string } | null>(null);
+  const { data: supplyInfo, error: supplyError } = useSWR<{
+    success: boolean;
+    totalSupply: string;
+    cap: string;
+  }>('/api/supply-info', fetcher, { refreshInterval: 30000 });
 
-
+  useEffect(() => {
+    if (supplyError) {
+      console.error("Failed to fetch supply info:", supplyError);
+    }
+  }, [supplyError]);
 
   // Password protection state
   const [password, setPassword] = useState("");
@@ -195,25 +206,6 @@ export default function Game() {
     const interval = setInterval(handleFetchWIdleReward, 30000);
     return () => clearInterval(interval);
   }, [handleFetchWIdleReward]);
-
-  useEffect(() => {
-    const fetchSupplyInfo = async () => {
-      try {
-        const res = await fetch('/api/supply-info');
-        const data = await res.json();
-        if (data.success) {
-          setSupplyInfo({ totalSupply: data.totalSupply, cap: data.cap });
-        }
-      } catch (error) {
-        console.error("Failed to fetch supply info:", error);
-      }
-    };
-
-    fetchSupplyInfo(); // Fetch on mount
-    const interval = setInterval(fetchSupplyInfo, 60000); // Fetch every 60 seconds
-
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, []);
 
   
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
@@ -1358,7 +1350,7 @@ export default function Game() {
           permanent_referral_boost={gameState.permanent_referral_boost || 0}
         />
 
-        {supplyInfo && (
+        {supplyInfo && supplyInfo.success && (
           <div className="my-4">
             <SupplyStats
               totalSupply={supplyInfo.totalSupply}

@@ -82,52 +82,28 @@ export async function POST(req: NextRequest) {
         // Use seconds-based nonce to avoid millisecond/second mismatch with on-chain comparisons
         const amountInWei = parseEther(wIdleReward.toString());
 
-        // Prefer calling an atomic DB function `increment_next_widle_nonce` via RPC.
-        // If the RPC call or function is not available, fall back to timestamp-based nonce.
         let nonceBigInt: bigint;
         try {
-            // Try to call the PL/pgSQL function we created earlier for atomic increment.
-            // This returns a bigint (the new nonce) when the DB function exists.
-            const { data: rpcData, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: lowercasedAddress as string });
+            // Atomically increment and get the new nonce using the DB function.
+            const { data: newNonce, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: lowercasedAddress as string });
 
-            if (!rpcError && rpcData != null) {
-                // rpcData may be a scalar, an object, or an array depending on supabase/pg config.
-                // Normalize the possible shapes to extract the numeric value.
-                let val: unknown = rpcData;
-                if (Array.isArray(rpcData) && rpcData.length > 0) val = rpcData[0];
-
-                // If the function returns a named column, try to read it. Otherwise coerce the scalar.
-                if (typeof val === 'object' && val !== null) {
-                    // e.g. { increment_next_widle_nonce: '2' }
-                    const anyVal = val as Record<string, unknown>;
-                    const keys = Object.keys(anyVal);
-                    if (keys.length > 0) {
-                        nonceBigInt = BigInt(String(anyVal[keys[0]]));
-                    } else {
-                        nonceBigInt = BigInt(String(val));
-                    }
-                } else {
-                    nonceBigInt = BigInt(String(val));
-                }
-
-                // WORKAROUND: The RPC function `increment_next_widle_nonce` appears to be non-atomic and returns the nonce *before* incrementing it.
-                // This causes a "Nonce already used" error on the first claim attempt after a successful one.
-                // To fix this, we optimistically increment the nonce here. The root cause in the database function should be fixed eventually.
-                nonceBigInt += BigInt(1);
-
-                // Log success
-                // eslint-disable-next-line no-console
-                console.info('claim-widle: obtained nonce via rpc increment_next_widle_nonce ->', nonceBigInt.toString());
-            } else {
-                // RPC failed or function doesn't exist: fallback to seconds timestamp
-                // eslint-disable-next-line no-console
-                console.warn('claim-widle: rpc increment_next_widle_nonce not available or failed:', rpcError || 'no data');
-                nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
+            if (rpcError) {
+                throw new Error(`Failed to get nonce from RPC: ${rpcError.message}`);
             }
-        } catch (rpcErr) {
-            // Unexpected RPC error; fallback to timestamp
+
+            if (newNonce == null) {
+                throw new Error('RPC returned null nonce. User may not exist.');
+            }
+
+            nonceBigInt = BigInt(newNonce);
             // eslint-disable-next-line no-console
-            console.warn('claim-widle: error calling rpc increment_next_widle_nonce:', rpcErr);
+            console.info('claim-widle: obtained nonce via rpc increment_next_widle_nonce ->', nonceBigInt.toString());
+
+        } catch (err) {
+            // If the RPC fails for any reason, fallback to a timestamp-based nonce as a last resort.
+            const error = err as Error;
+            // eslint-disable-next-line no-console
+            console.warn(`claim-widle: error calling rpc increment_next_widle_nonce: ${error.message}. Falling back to timestamp nonce.`);
             nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
         }
 

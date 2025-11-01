@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -45,6 +45,8 @@ import { useGameCalculations } from "@/hooks/useGameCalculations";
 import { useBlockchain } from "@/hooks/useBlockchain";
 import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
 import { useItemDetails } from "@/hooks/useItemDetails";
+import { useGameAutoSave } from "@/hooks/useGameAutoSave";
+
 
 import { useOfflineGains } from '@/hooks/useOfflineGains';
 import useSWR from 'swr';
@@ -231,13 +233,21 @@ export default function Game() {
     isLoaded,
   } = useGameSave(serverState);
 
+  const getGameState = useCallback((): FullGameState => ({
+    gameState,
+    stats,
+    autoclickers,
+    upgrades,
+    achievements,
+  }), [gameState, stats, autoclickers, upgrades, achievements]);
 
+  const { forceSave } = useGameAutoSave(
+    isLoaded,
+    walletAddress,
+    getGameState,
+    saveGame
+  );
 
-  const saveGameRef = useRef(saveGame);
-  useEffect(() => {
-    saveGameRef.current = saveGame;
-  }, [saveGame]);
-  
   const {
     wIdleBalance,
     tokenDecimalsData,
@@ -283,41 +293,24 @@ export default function Game() {
     setStats
   );
 
-  const saveCurrentGame = useCallback(() => {
-    if (!walletAddress) return;
-    saveGameRef.current?.(walletAddress);
-  }, [walletAddress]);
-
   const updateLastClaimTime = useCallback(async () => {
     if (!walletAddress) return;
     const now = new Date().toISOString();
-    
-    // Optimistically update local state
     setGameState(prev => ({ ...prev, lastWidleClaimAt: now }));
-
-    // Save to server
-    try {
-      await fetch('/api/save-game', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress, lastWidleClaimAt: now }),
-      });
-    } catch (error) {
-      console.error("Failed to save last claim time:", error);
-    }
-  }, [walletAddress, setGameState]);
+    forceSave();
+  }, [walletAddress, setGameState, forceSave]);
 
   const handleClaimOfflineGains = useCallback(() => {
       originalHandleClaim();
-      saveCurrentGame();
-  }, [originalHandleClaim, saveCurrentGame]);
+      forceSave();
+  }, [originalHandleClaim, forceSave]);
 
   useEffect(() => {
     // When isVerified becomes true, save the game state to persist it.
     if (stats.isVerified) {
-      saveCurrentGame();
+      forceSave();
     }
-  }, [stats.isVerified, saveCurrentGame]);
+  }, [stats.isVerified, forceSave]);
 
   const formatNumber = useCallback((num: number) => {
     if (num < 1e3)
@@ -494,7 +487,7 @@ export default function Game() {
       }));
       refetchBalances();
       setPendingTimeWarpTx(null);
-      saveCurrentGame();
+      forceSave();
     }
   }, [
     isTimeWarpSuccess,
@@ -504,7 +497,7 @@ export default function Game() {
     setGameState,
     setStats,
     setNotification,
-    saveCurrentGame
+    forceSave
   ]);
 
   useEffect(() => {
@@ -788,9 +781,9 @@ export default function Game() {
         ...prev,
         permanentBoostBonus: (prev.permanentBoostBonus || 0) + boostToAdd,
       }));
-      saveCurrentGame();
+      forceSave();
     },
-    [setGameState, saveCurrentGame]
+    [setGameState, forceSave]
   );
 
   const handleTimeWarpPurchase = useCallback(
@@ -917,7 +910,7 @@ export default function Game() {
                 totalTokensEarned: prev.totalTokensEarned + data.rewardAmount,
               }));
               setNotification({ message: t("time_warp_success"), type: "success" });
-              saveCurrentGame();
+              forceSave();
             } else {
               throw new Error(data.error || t("confirmation_failed"));
             }
@@ -950,7 +943,7 @@ export default function Game() {
       setStats,
       setNotification,
       setPendingTimeWarpTx,
-      saveCurrentGame,
+      forceSave,
     ]
   );
 
@@ -962,9 +955,6 @@ export default function Game() {
       setGameState((prev) => ({ ...prev, tokens: prev.tokens + value }));
       setStats((prev) => {
         const newTotalClicks = prev.totalClicks + 1;
-        if (newTotalClicks % 100 === 0) {
-          saveCurrentGame();
-        }
         return {
           ...prev,
           totalTokensEarned: prev.totalTokensEarned + value,
@@ -979,7 +969,6 @@ export default function Game() {
       setGameState,
       setStats,
       addFloatingNumber,
-      saveCurrentGame,
     ]
   );
 
@@ -1044,7 +1033,7 @@ export default function Game() {
         });
         purchaseAutoclickerWithTokens(pendingPurchaseTx.itemId);
         refetchBalances();
-        saveCurrentGame();
+        forceSave();
       }
       setPendingPurchaseTx(null);
     }
@@ -1055,7 +1044,7 @@ export default function Game() {
     purchaseAutoclickerWithTokens,
     refetchBalances,
     t,
-    saveCurrentGame,
+    forceSave,
     setNotification,
   ]);
 
@@ -1158,14 +1147,14 @@ export default function Game() {
         setUpgrades((prev) =>
           prev.map((u) => (u.id === id ? { ...u, purchased: true } : u))
         );
-        saveCurrentGame();
+        forceSave();
       }
     },
     [
       upgrades,
       gameState.tokens,
       checkRequirements,
-      saveCurrentGame,
+      forceSave,
       setGameState,
       setUpgrades,
     ]
@@ -1200,14 +1189,14 @@ export default function Game() {
         }),
         type: "success",
       });
-      saveCurrentGame();
+      forceSave();
     }
   }, [
     upgrades,
     gameState.tokens,
     checkRequirements,
     t,
-    saveCurrentGame,
+    forceSave,
     setGameState,
     setUpgrades,
     setNotification,

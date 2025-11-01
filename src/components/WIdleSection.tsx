@@ -14,7 +14,6 @@ interface WIdleSectionProps {
     walletAddress: string;
     setPendingWIdleTxId: (txId: string) => void;
     wIdleReward: number;
-    canClaimWIdle: boolean;
     handleFetchWIdleReward: () => void;
     lastWidleClaimAt?: string;
     onClaimSuccess: () => void;
@@ -28,7 +27,6 @@ export default function WIdleSection({
     walletAddress,
     setPendingWIdleTxId,
     wIdleReward,
-    canClaimWIdle,
     handleFetchWIdleReward,
     lastWidleClaimAt,
     onClaimSuccess,
@@ -68,7 +66,7 @@ export default function WIdleSection({
     
 
     const handleClaimWIdle = async () => {
-        if (!canClaimWIdle || cooldownTime) { // Check cooldownTime
+        if (cooldownTime) { // Check cooldownTime
             alert(t('error.no_widle_reward'));
             return;
         }
@@ -158,7 +156,7 @@ export default function WIdleSection({
         }
     };
 
-    const isButtonDisabled = !canClaimWIdle || isLoading || !!cooldownTime;
+    const isButtonDisabled = isLoading || !!cooldownTime;
 
     return (
         <div className="bg-slate-500/10 backdrop-blur-sm p-4 rounded-xl border border-slate-700">

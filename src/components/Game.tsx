@@ -205,7 +205,7 @@ export default function Game() {
 
   useEffect(() => {
     handleFetchWIdleReward();
-    const interval = setInterval(handleFetchWIdleReward, 30000);
+    const interval = setInterval(handleFetchWIdleReward, 5000);
     return () => clearInterval(interval);
   }, [handleFetchWIdleReward]);
 
@@ -276,7 +276,6 @@ export default function Game() {
         sortedUpgrades,
         timeWarpWIdleCost,
         timeWarpWldCost,
-        canClaimWIdle,
     } = useGameCalculations(
         upgrades,
         autoclickers,
@@ -1383,7 +1382,6 @@ export default function Game() {
                 walletAddress={walletAddress}
                 setPendingWIdleTxId={setPendingWIdleTxId}
                 wIdleReward={wIdleServerReward}
-                canClaimWIdle={canClaimWIdle}
                 handleFetchWIdleReward={handleFetchWIdleReward}
                 lastWidleClaimAt={gameState.lastWidleClaimAt}
                 onClaimSuccess={updateLastClaimTime}

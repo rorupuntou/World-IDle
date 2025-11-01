@@ -180,32 +180,19 @@ export const useGameCalculations = (
     return baseCost + balanceFactor;
   }, [wIdleBalance]);
 
-  const timeWarpWldCost = useMemo(() => {
-    const baseCost = 0.1;
-    const purchasedCount = gameState.wldTimeWarpsPurchased || 0;
-    return baseCost * Math.pow(1.25, purchasedCount);
-  }, [gameState.wldTimeWarpsPurchased]);
+    const timeWarpWldCost = useMemo(() => {
+        return 1 + (gameState.wldTimeWarpsPurchased || 0) * 0.5;
+    }, [gameState.wldTimeWarpsPurchased]);
 
-  const wIdleReward = useMemo(() => {
-    const reward = Math.floor(Math.sqrt(stats.totalTokensEarned / 1e9));
-    return reward > 0 ? reward : 0;
-  }, [stats.totalTokensEarned]);
-
-  const canClaimWIdle = useMemo(() => {
-    return wIdleReward > 0;
-  }, [wIdleReward]);
-
-  return {
-    wIdleBoost,
-    totalCPS,
-    clickValue,
-    autoclickerCPSValues,
-    checkRequirements,
-    availableUpgradesCount,
-    sortedUpgrades,
-    timeWarpWIdleCost,
-    timeWarpWldCost,
-    wIdleReward,
-    canClaimWIdle,
-  };
-};
+    return {
+        wIdleBoost,
+        totalCPS,
+        clickValue,
+        autoclickerCPSValues,
+        checkRequirements,
+        availableUpgradesCount,
+        sortedUpgrades,
+        timeWarpWIdleCost,
+        timeWarpWldCost,
+    };
+}

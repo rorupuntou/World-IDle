@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { supabase } from '@/lib/supabaseClient';
+import { FullGameState } from "@/components/types";
 
 export async function POST(req: NextRequest) {
-  const { walletAddress, gameData, lastWidleClaimAt } = await req.json();
+  const { walletAddress, gameData, lastWidleClaimAt }: { walletAddress: string, gameData: FullGameState, lastWidleClaimAt: string } = await req.json();
 
   if (!walletAddress) {
     return NextResponse.json({ error: "walletAddress is required." }, { status: 400 });
@@ -16,13 +17,20 @@ export async function POST(req: NextRequest) {
 
   const dataToUpsert: {
     wallet_address: string;
-    game_data?: unknown;
+    game_data?: FullGameState;
     last_widle_claim_at?: string;
+    permanent_referral_boost?: number;
   } = {
     wallet_address: lowercasedAddress,
   };
 
   if (gameData) {
+    // Extract referral boost and save it to the dedicated column
+    if (gameData.gameState && typeof gameData.gameState.permanent_referral_boost === 'number') {
+      dataToUpsert.permanent_referral_boost = gameData.gameState.permanent_referral_boost;
+      // Remove from gameData to avoid duplication
+      delete gameData.gameState.permanent_referral_boost;
+    }
     dataToUpsert.game_data = gameData;
   }
 

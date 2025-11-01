@@ -1,58 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import safeMiniKit from '@/lib/safeMiniKit';
 import { useLanguage } from '@/contexts/LanguageContext';
+import safeMiniKit from '@/lib/safeMiniKit';
 import { GameState, Referral } from './types';
 
 interface ReferralsSectionProps {
   walletAddress: `0x${string}` | null;
   gameState: GameState;
+  referrals: Referral[];
+  isLoading: boolean;
 }
 
 // TODO: Replace with your real App ID from the Worldcoin Developer Portal
 const YOUR_APP_ID = 'app_3b83f308b9f7ef9a01e4042f1f48721d';
 
-interface RawReferral {
-  referee_id: string;
-  created_at: string;
-}
-
-export default function ReferralsSection({ walletAddress, gameState }: ReferralsSectionProps) {
+export default function ReferralsSection({ walletAddress, gameState, referrals, isLoading }: ReferralsSectionProps) {
   const { t } = useLanguage();
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchReferrals = async () => {
-      if (!walletAddress) {
-        setIsLoading(false);
-        return;
-      }
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/get-referrals?walletAddress=${walletAddress}`);
-        const data = await response.json();
-        if (data.success) {
-          // The API returns referee_id, let's adapt it to the Referral type
-          const formattedReferrals = data.referrals.map((r: RawReferral, index: number) => ({
-            id: index, // The id is just for the key, so index is fine
-            wallet_address: r.referee_id,
-            created_at: r.created_at,
-          }));
-          setReferrals(formattedReferrals);
-        } else {
-          console.error("Failed to fetch referrals:", data.error);
-        }
-      } catch (error) {
-        console.error("Error fetching referrals:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchReferrals();
-  }, [walletAddress]);
 
   const handleShare = async () => {
     if (!walletAddress) return;

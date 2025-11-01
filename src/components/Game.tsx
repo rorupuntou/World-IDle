@@ -24,7 +24,7 @@ import clsx from "clsx";
 import {
   Autoclicker,
   BuyAmount, FullGameState,
-  Upgrade, Requirement, Effect, StatsState
+  Upgrade, Requirement, Effect, StatsState, Referral
 } from "./types";
 import { newsFeed } from "@/app/data";
 import { contractConfig } from "@/app/contracts/config";
@@ -329,6 +329,54 @@ export default function Game() {
     isLoaded,
   } = useGameSave(serverState);
 
+  interface RawReferral {
+    referee_id: string;
+    created_at: string;
+  }
+
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [isLoadingReferrals, setIsLoadingReferrals] = useState(true);
+
+  useEffect(() => {
+    const fetchReferrals = async () => {
+      if (!walletAddress) {
+        setIsLoadingReferrals(false);
+        return;
+      }
+      try {
+        setIsLoadingReferrals(true);
+        const response = await fetch(`/api/get-referrals?walletAddress=${walletAddress}`);
+        const data = await response.json();
+        if (data.success) {
+          const formattedReferrals = data.referrals.map((r: RawReferral, index: number) => ({
+            id: index,
+            wallet_address: r.referee_id,
+            created_at: r.created_at,
+          }));
+          setReferrals(formattedReferrals);
+        } else {
+          console.error("Failed to fetch referrals:", data.error);
+        }
+      } catch (error) {
+        console.error("Error fetching referrals:", error);
+      } finally {
+        setIsLoadingReferrals(false);
+      }
+    };
+
+    fetchReferrals();
+  }, [walletAddress]);
+
+  useEffect(() => {
+    const boost = referrals.length * 0.01; // 1% boost per referral
+    setGameState(prev => {
+      if (prev.permanent_referral_boost === boost) {
+        return prev;
+      }
+      return { ...prev, permanent_referral_boost: boost };
+    });
+  }, [referrals, setGameState]);
+
   const getGameState = useCallback((): FullGameState => ({
     gameState,
     stats,
@@ -387,6 +435,8 @@ export default function Game() {
     setGameState,
     setStats
   );
+
+
 
   const updateLastClaimTime = useCallback(async () => {
     if (!walletAddress) return;
@@ -1601,6 +1651,8 @@ export default function Game() {
             <ReferralsSection
               walletAddress={walletAddress}
               gameState={gameState}
+              referrals={referrals}
+              isLoading={isLoadingReferrals}
             />
           )}
         </div>

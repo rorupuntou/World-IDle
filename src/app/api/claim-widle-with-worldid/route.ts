@@ -31,6 +31,45 @@ interface IRequestPayload {
     signal: string;
 }
 
+async function getNonceForWallet(wallet: string, retries = 2): Promise<bigint> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const { data: newNonce, error: rpcError } = await supabase
+      .rpc('increment_next_widle_nonce', { p_wallet: wallet });
+    if (rpcError) {
+      // If row not found or other db error, let retry handle it
+      if (attempt < retries) {
+        // small backoff
+        await new Promise(res => setTimeout(res, 100 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(`Failed to get nonce from RPC: ${rpcError.message}`);
+    }
+    if (newNonce == null) {
+      if (attempt < retries) {
+        await new Promise(res => setTimeout(res, 100 * (attempt + 1)));
+        continue;
+      }
+      throw new Error('RPC returned null nonce.');
+    }
+    try {
+      if (typeof newNonce === 'string') {
+        return BigInt(newNonce);
+      }
+      if (typeof newNonce === 'number') {
+        if (!Number.isSafeInteger(newNonce)) {
+          throw new Error('Received unsafe integer nonce from DB');
+        }
+        return BigInt(newNonce);
+      }
+      // Fallback to string coercion
+      return BigInt(String(newNonce));
+    } catch (e) {
+      throw new Error(`Failed to parse nonce from RPC: ${(e as Error).message}`);
+    }
+  }
+  throw new Error('Exceeded retries while obtaining nonce');
+}
+
 export async function POST(req: NextRequest) {
     const privateKey = process.env.PRIVATE_KEY as `0x${string}` | undefined;
 
@@ -84,27 +123,12 @@ export async function POST(req: NextRequest) {
 
         let nonceBigInt: bigint;
         try {
-            // Atomically increment and get the new nonce using the DB function.
-            const { data: newNonce, error: rpcError } = await supabase.rpc('increment_next_widle_nonce', { p_wallet: lowercasedAddress as string });
-
-            if (rpcError) {
-                throw new Error(`Failed to get nonce from RPC: ${rpcError.message}`);
-            }
-
-            if (newNonce == null) {
-                throw new Error('RPC returned null nonce. User may not exist.');
-            }
-
-            nonceBigInt = BigInt(newNonce);
-            // eslint-disable-next-line no-console
+            const nonce = await getNonceForWallet(lowercasedAddress);
+            nonceBigInt = nonce;
             console.info('claim-widle: obtained nonce via rpc increment_next_widle_nonce ->', nonceBigInt.toString());
-
         } catch (err) {
-            // If the RPC fails for any reason, fallback to a timestamp-based nonce as a last resort.
-            const error = err as Error;
-            // eslint-disable-next-line no-console
-            console.warn(`claim-widle: error calling rpc increment_next_widle_nonce: ${error.message}. Falling back to timestamp nonce.`);
-            nonceBigInt = BigInt(Math.floor(Date.now() / 1000));
+            console.warn(`claim-widle: error calling rpc increment_next_widle_nonce: ${(err as Error).message}. Aborting claim.`);
+            return NextResponse.json({ success: false, error: 'Could not obtain nonce. Please retry.' }, { status: 503 });
         }
 
         // Build the message exactly as the contract does: keccak256(abi.encodePacked(msg.sender, amount, nonce))

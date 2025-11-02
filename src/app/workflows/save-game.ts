@@ -5,50 +5,29 @@ import { FatalError } from 'workflow';
 async function saveGameStep(walletAddress: string, gameData: FullGameState | null, lastWidleClaimAt: string | null) {
   "use step";
 
-  console.log(`Saving game state for wallet: ${walletAddress}`);
+  console.log(`Partially updating game state for wallet: ${walletAddress}`);
 
   const lowercasedAddress = walletAddress.toLowerCase();
 
-  const dataToUpsert: {
-    wallet_address: string;
-    game_data?: FullGameState;
-    last_widle_claim_at?: string;
-    permanent_referral_boost?: number;
-  } = {
-    wallet_address: lowercasedAddress,
-  };
+  // Extract the referral boost from the gameData object if it exists.
+  const permanentReferralBoost = gameData?.gameState?.permanent_referral_boost;
 
-  if (gameData) {
-    // Extract referral boost and save it to the dedicated column
-    if (gameData.gameState && typeof gameData.gameState.permanent_referral_boost === 'number') {
-      dataToUpsert.permanent_referral_boost = gameData.gameState.permanent_referral_boost;
-      // Remove from gameData to avoid duplication
-      delete gameData.gameState.permanent_referral_boost;
-    }
-    dataToUpsert.game_data = gameData;
-  }
-
-  if (lastWidleClaimAt) {
-    dataToUpsert.last_widle_claim_at = lastWidleClaimAt;
-  }
-
-  // If there's nothing to update besides the address, we can stop.
-  if (Object.keys(dataToUpsert).length === 1) {
-      console.log(`No new data to save for wallet: ${walletAddress}`);
-      return;
-  }
-
-  const { error } = await supabase
-    .from('game_state')
-    .upsert(dataToUpsert, { onConflict: 'wallet_address' });
+  // The RPC function will handle the logic of merging the JSONB data
+  // and conditionally updating the other columns.
+  const { error } = await supabase.rpc('update_game_state_partial', {
+    p_wallet_address: lowercasedAddress,
+    p_game_data_partial: gameData, // Pass the gameData object; SQL function will merge it.
+    p_last_widle_claim_at: lastWidleClaimAt,
+    p_permanent_referral_boost: permanentReferralBoost
+  });
 
   if (error) {
-    console.error("Supabase save error in workflow:", error);
+    console.error("Supabase RPC error in workflow:", error);
     // For a database error, retrying is a good default behavior.
-    throw new Error(`Failed to save game data for ${walletAddress}: ${error.message}`);
+    throw new Error(`Failed to save game data for ${walletAddress} via RPC: ${error.message}`);
   }
 
-  console.log(`Successfully saved game state for wallet: ${walletAddress}`);
+  console.log(`Successfully triggered partial update for wallet: ${walletAddress}`);
 }
 
 

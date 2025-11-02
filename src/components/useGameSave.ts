@@ -75,19 +75,21 @@ export function useGameSave(serverState: FullGameState | null) {
 
         localStorage.setItem(SAVE_KEY, JSON.stringify(stateToSave));
 
-        fetch('/api/save-game', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress, gameData: stateToSave }),
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (!data.success) {
-                console.error("Failed to save game to server:", data.error);
-            }
-        })
-        .catch(error => console.error("Error saving game to server:", error));
-    }, []);
+            console.log(`[DEBUG] Attempting to save to server at ${new Date().toISOString()}`);
+            /*
+            fetch('/api/save-game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletAddress, gameData: stateToSave }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error("Failed to save game to server:", data.error);
+                }
+            })
+            .catch(error => console.error("Error saving game to server:", error));
+            */    }, []);
 
     return { 
         gameState, setGameState, 

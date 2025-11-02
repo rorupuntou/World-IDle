@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -377,7 +377,7 @@ export default function Game() {
     });
   }, [referrals, setGameState]);
 
-  const getGameState = useCallback((): FullGameState => ({
+  const fullGameStateForSave = useMemo((): FullGameState => ({
     gameState,
     stats,
     autoclickers,
@@ -388,7 +388,7 @@ export default function Game() {
   const { forceSave } = useGameAutoSave(
     isLoaded,
     walletAddress,
-    getGameState,
+    fullGameStateForSave,
     saveGame
   );
 

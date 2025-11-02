@@ -46,3 +46,4 @@ cache/
 broadcast/
 contracts/lib/
 .env
+cancel-workflows.sh

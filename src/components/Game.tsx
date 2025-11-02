@@ -301,7 +301,7 @@ export default function Game() {
 
   useEffect(() => {
     handleFetchWIdleReward();
-    const interval = setInterval(handleFetchWIdleReward, 5000);
+    const interval = setInterval(handleFetchWIdleReward, 60000);
     return () => clearInterval(interval);
   }, [handleFetchWIdleReward]);
 

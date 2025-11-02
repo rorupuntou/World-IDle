@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { FullGameState } from '@/components/types';
 
-const AUTOSAVE_INTERVAL = 30000; // 30 seconds
+const AUTOSAVE_INTERVAL = 60000; // 60 seconds
 
 export function useGameAutoSave(
   isLoaded: boolean,

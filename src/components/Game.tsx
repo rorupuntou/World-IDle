@@ -1156,6 +1156,7 @@ export default function Game() {
             a.id === id ? { ...a, purchased: a.purchased + buyAmount } : a
           )
         );
+        forceSave();
       }
     },
     [
@@ -1165,6 +1166,7 @@ export default function Game() {
       buyAmount,
       setGameState,
       setAutoclickers,
+      forceSave,
     ]
   );
 

@@ -52,7 +52,8 @@ export function useGameAutoSave(
         clearTimeout(saveTimer.current);
       }
     };
-  }, [isLoaded, walletAddress, forceSave]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, walletAddress]);
 
   return { forceSave };
 }

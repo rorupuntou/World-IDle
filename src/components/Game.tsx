@@ -350,7 +350,7 @@ export default function Game() {
 
   // Calculate wIDLE reward for display in real-time
   useEffect(() => {
-    const calculatedReward = Math.floor(300 * Math.log(0.01 * stats.totalTokensEarned + 1));
+    const calculatedReward = Math.floor(10 + 300 * Math.log(0.01 * stats.totalTokensEarned + 1));
     setDisplayWIdleReward(calculatedReward);
   }, [stats.totalTokensEarned]);
 

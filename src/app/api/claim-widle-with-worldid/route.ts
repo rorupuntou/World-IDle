@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
             totalTokensEarned = gameData?.stats?.totalTokensEarned || 0;
         }
 
-        const wIdleReward = Math.floor(300 * Math.log(0.01 * totalTokensEarned + 1));
+        const wIdleReward = Math.floor(10 + 300 * Math.log(0.01 * totalTokensEarned + 1));
 
         if (wIdleReward < 1) {
             return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });

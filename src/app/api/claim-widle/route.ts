@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const resetData: FullGameState = {
         gameState: {
             ...initialState,
-            lastSaved: Date.now(),
+            lastSaved: new Date().toISOString(),
             permanentBoostBonus: permanentBoostBonus, // Use the extracted value
             permanent_referral_boost: permanentReferralBoost,
         },

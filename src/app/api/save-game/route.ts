@@ -16,9 +16,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing walletAddress or gameData' }, { status: 400 });
     }
 
+    const savedAt = new Date().toISOString();
+
+    // Ensure the server's authoritative timestamp is what's saved.
+    const serverSideGameData = {
+      ...gameData,
+      gameState: {
+        ...gameData.gameState,
+        lastSaved: savedAt,
+      },
+    };
+
     const { error } = await supabaseAdmin.rpc('upsert_game_state', {
-      p_wallet_address: walletAddress,
-      p_game_data: gameData,
+      p_wallet_address: walletAddress, // Client is expected to have lowercased this
+      p_game_data: serverSideGameData,
     });
 
     if (error) {
@@ -26,7 +37,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: `Supabase error: ${error.message}` }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, savedAt });
 
   } catch (error) {
     console.error('Error in save-game API route:', error);

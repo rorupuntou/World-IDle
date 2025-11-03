@@ -1,7 +1,7 @@
 import { Autoclicker, Upgrade, Achievement } from "@/components/types";
 
 // -- ESTADO INICIAL Y DATOS DEL JUEGO --
-export const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1, permanentBoostBonus: 0, lastSaved: 0, wldTimeWarpsPurchased: 0, permanent_referral_boost: 0 };
+export const initialState = { tokens: 0, humanityGems: 0, tokensPerClick: 1, permanentBoostBonus: 0, wldTimeWarpsPurchased: 0, permanent_referral_boost: 0 };
 export const initialStats = { totalTokensEarned: 0, totalClicks: 0, tokensPerSecond: 0, isVerified: false };
 export const SAVE_KEY = 'worldIdleSave_v1';
 

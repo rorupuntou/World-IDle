@@ -70,7 +70,7 @@ export type GameState = {
   tokensPerClick: number;
   permanentBoostBonus: number;
   permanent_referral_boost?: number; // For referral system boosts
-  lastSaved?: number;
+  lastSaved?: string;
   wldTimeWarpsPurchased?: number;
   lastWIdleTimeWarp?: number;
   lastWidleClaimAt?: string;

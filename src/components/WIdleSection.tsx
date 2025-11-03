@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Star } from 'iconoir-react';
+import { Star, Refresh } from 'iconoir-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { VerificationLevel } from '@worldcoin/minikit-js';
 import safeMiniKit from '@/lib/safeMiniKit';
@@ -14,9 +14,9 @@ interface WIdleSectionProps {
     walletAddress: string;
     setPendingWIdleTxId: (txId: string) => void;
     wIdleReward: number;
+    handleFetchWIdleReward: () => void;
     lastWidleClaimAt?: string;
     onClaimSuccess: () => void;
-    forceSave: () => void;
 }
 
 export default function WIdleSection({
@@ -27,9 +27,9 @@ export default function WIdleSection({
     walletAddress,
     setPendingWIdleTxId,
     wIdleReward,
+    handleFetchWIdleReward,
     lastWidleClaimAt,
     onClaimSuccess,
-    forceSave,
 }: WIdleSectionProps) {
     const { t } = useLanguage();
     const [cooldownTime, setCooldownTime] = useState("");
@@ -66,8 +66,6 @@ export default function WIdleSection({
     
 
     const handleClaimWIdle = async () => {
-        forceSave(); // Force save before claim
-
         if (cooldownTime) { // Check cooldownTime
             alert(t('error.no_widle_reward'));
             return;
@@ -171,6 +169,9 @@ export default function WIdleSection({
                 <span>
                     {t('widle_reward_message', { wIdleReward: (wIdleReward).toLocaleString() })}
                 </span>
+                <button onClick={handleFetchWIdleReward} disabled={isLoading} className="p-1 rounded-full hover:bg-slate-600/50 disabled:opacity-50">
+                    <Refresh className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
             </div>
 
             <motion.button

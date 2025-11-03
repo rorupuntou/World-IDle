@@ -368,6 +368,8 @@ export default function Game() {
     achievements,
   }), [gameState, stats, autoclickers, upgrades, achievements]);
 
+  console.log(`[Game.tsx] Rendering. isLoaded: ${isLoaded}, walletAddress: ${walletAddress}`);
+
   const { forceSave } = useGameAutoSave(
     isLoaded,
     walletAddress,

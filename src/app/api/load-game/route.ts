@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('game_state')
     .select('game_data, permanent_referral_boost, last_widle_claim_at')
-    .ilike('wallet_address', lowercasedAddress)
+    .eq('wallet_address', lowercasedAddress)
     .single();
 
   if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found

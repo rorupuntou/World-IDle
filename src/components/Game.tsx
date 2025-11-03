@@ -1488,6 +1488,7 @@ export default function Game() {
                 wIdleReward={displayWIdleReward}
                 lastWidleClaimAt={gameState.lastWidleClaimAt}
                 onClaimSuccess={updateLastClaimTime}
+                forceSave={forceSave}
               />
               {!stats.isVerified && (
                 <div className="mt-4">

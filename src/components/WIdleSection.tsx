@@ -16,6 +16,7 @@ interface WIdleSectionProps {
     wIdleReward: number;
     lastWidleClaimAt?: string;
     onClaimSuccess: () => void;
+    forceSave: () => void;
 }
 
 export default function WIdleSection({
@@ -28,6 +29,7 @@ export default function WIdleSection({
     wIdleReward,
     lastWidleClaimAt,
     onClaimSuccess,
+    forceSave,
 }: WIdleSectionProps) {
     const { t } = useLanguage();
     const [cooldownTime, setCooldownTime] = useState("");
@@ -64,6 +66,8 @@ export default function WIdleSection({
     
 
     const handleClaimWIdle = async () => {
+        forceSave(); // Force save before claim
+
         if (cooldownTime) { // Check cooldownTime
             alert(t('error.no_widle_reward'));
             return;

@@ -352,7 +352,13 @@ export default function Game() {
   useEffect(() => {
     const calculatedReward = Math.floor(300 * Math.log(0.01 * stats.totalTokensEarned + 1));
     setDisplayWIdleReward(calculatedReward);
-  }, [stats.totalTokensEarned]);
+    setStats(prevStats => {
+      if (prevStats.wIdleReward === calculatedReward) {
+        return prevStats;
+      }
+      return { ...prevStats, wIdleReward: calculatedReward };
+    });
+  }, [stats.totalTokensEarned, setStats]);
 
   const fullGameStateForSave = useMemo((): FullGameState => ({
     gameState,
@@ -1372,6 +1378,13 @@ export default function Game() {
           className="p-2 bg-slate-800/50 rounded-full text-white hover:bg-slate-700/70 transition-colors"
         >
           {isMuted ? <SoundOff /> : <SoundHigh />}
+        </button>
+        <button
+          onClick={() => forceSave()}
+          title="Save Game"
+          className="p-2 bg-slate-800/50 rounded-full text-white hover:bg-slate-700/70 transition-colors"
+        >
+          <Database />
         </button>
 
       </div>

@@ -47,3 +47,4 @@ broadcast/
 contracts/lib/
 .env
 cancel-workflows.sh
+game_state_rows BACKUP.csv

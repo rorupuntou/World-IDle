@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
         const { data: existingData, error: fetchError } = await supabase
             .from('game_state')
             .select('game_data')
-            .eq('wallet_address', lowercasedAddress)
+            .ilike('wallet_address', lowercasedAddress)
             .single();
 
         console.log('[DEBUG] Fetched existingData:', JSON.stringify(existingData, null, 2));

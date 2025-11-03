@@ -47,11 +47,12 @@ export function useGameAutoSave(
 
   // Effect for the periodic force-save
   useEffect(() => {
-    console.log(`[AutoSave] Periodic effect triggered. isLoaded: ${isLoaded}, walletAddress: !!${walletAddress}`);
+    // Temporary alert for debugging
+    alert(`[AutoSave] Periodic effect triggered. isLoaded: ${isLoaded}, walletAddress: !!${walletAddress}`);
+
     if (!isLoaded || !walletAddress) return;
 
     const timer = setInterval(() => {
-      console.log(`[AutoSave] Periodic force-save triggered.`);
       performSave();
     }, FORCE_SAVE_INTERVAL);
 

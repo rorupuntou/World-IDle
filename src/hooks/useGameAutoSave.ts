@@ -2,59 +2,80 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { FullGameState } from '@/components/types';
+import { useDebouncedCallback } from 'use-debounce';
 
-const AUTOSAVE_INTERVAL = 60000; // 60 seconds
+const DEBOUNCE_INTERVAL = 3000; // 3 seconds of inactivity
+const FORCE_SAVE_INTERVAL = 30000; // 30 seconds
 
 export function useGameAutoSave(
   isLoaded: boolean,
   walletAddress: string | null,
-  fullGameState: FullGameState, // Accept the full state directly
+  fullGameState: FullGameState,
   saveGame: (walletAddress: string, gameState: FullGameState) => void
 ) {
-  const saveTimer = useRef<NodeJS.Timeout | null>(null);
   const lastSavedState = useRef<string | null>(null);
-  const latestGameState = useRef(fullGameState); // Use a ref to hold the latest state
+  const latestGameState = useRef(fullGameState);
 
   // Keep the ref updated with the latest state on every render
   useEffect(() => {
     latestGameState.current = fullGameState;
   }, [fullGameState]);
 
-  const forceSave = useCallback(() => {
+  // The core save function
+  const performSave = useCallback(() => {
     if (!isLoaded || !walletAddress) return;
 
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
-
-    const currentState = latestGameState.current; // Read from the ref
+    const currentState = latestGameState.current;
     const currentStateJson = JSON.stringify(currentState);
 
     if (currentStateJson !== lastSavedState.current) {
       saveGame(walletAddress, currentState);
       lastSavedState.current = currentStateJson;
-      // console.log(`Game state ${immediate ? 'force saved' : 'auto-saved'}.`);
+      console.log(`[AutoSave] Game state saved at ${new Date().toISOString()}`);
     }
+  }, [isLoaded, walletAddress, saveGame]);
 
-    // Reset the auto-save timer
-    saveTimer.current = setTimeout(() => forceSave(), AUTOSAVE_INTERVAL);
+  // Debounced save function - triggers after user is inactive
+  const debouncedSave = useDebouncedCallback(performSave, DEBOUNCE_INTERVAL);
 
-  }, [isLoaded, walletAddress, saveGame]); // `getGameState` is removed, making this stable
-
+  // Effect for debouncing based on game state changes
   useEffect(() => {
     if (isLoaded && walletAddress) {
-      // Initial save and start the timer
-      forceSave();
+      debouncedSave();
     }
+  }, [fullGameState, isLoaded, walletAddress, debouncedSave]);
 
-    return () => {
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-      }
+  // Effect for the periodic force-save
+  useEffect(() => {
+    if (!isLoaded || !walletAddress) return;
+
+    const timer = setInterval(() => {
+      console.log(`[AutoSave] Periodic force-save triggered.`);
+      performSave();
+    }, FORCE_SAVE_INTERVAL);
+
+    return () => clearInterval(timer);
+  }, [isLoaded, walletAddress, performSave]);
+
+  // Effect for saving when the user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log(`[AutoSave] Saving game state on page unload.`);
+      performSave();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, walletAddress]); // forceSave is stable, but we keep it off the deps array to be safe
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [performSave]);
+
+  // Expose a manual save function if needed elsewhere
+  const forceSave = useCallback(() => {
+    console.log(`[AutoSave] Manual force-save triggered.`);
+    // Cancel any pending debounced save and save immediately
+    debouncedSave.flush();
+  }, [debouncedSave]);
 
   return { forceSave };
 }

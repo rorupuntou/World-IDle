@@ -1,20 +1,36 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { start } from 'workflow/api';
-import { saveGameWorkflow } from '@/app/workflows/save-game';
-import { FullGameState } from "@/components/types";
+import { createClient } from '@supabase/supabase-js';
+import { type NextRequest, NextResponse } from 'next/server';
+
+// Create a separate Supabase client for server-side operations
+// This uses the service_role key to bypass RLS.
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
-  const { walletAddress, gameData, lastWidleClaimAt } = await req.json() as { walletAddress?: string, gameData?: FullGameState, lastWidleClaimAt?: string };
+  try {
+    const { walletAddress, gameData } = await req.json();
 
-  if (!walletAddress) {
-    return NextResponse.json({ error: "walletAddress is required." }, { status: 400 });
+    if (!walletAddress || !gameData) {
+      return NextResponse.json({ success: false, error: 'Missing walletAddress or gameData' }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin.rpc('upsert_game_state', {
+      p_wallet_address: walletAddress,
+      p_game_data: gameData,
+    });
+
+    if (error) {
+      console.error('Supabase RPC error:', error);
+      return NextResponse.json({ success: false, error: `Supabase error: ${error.message}` }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Error in save-game API route:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
-
-  // The workflow itself will validate if at least one of gameData or lastWidleClaimAt is present.
-  
-  // Start the workflow. It will run in the background.
-  await start(saveGameWorkflow, [walletAddress, gameData ?? null, lastWidleClaimAt ?? null]);
-
-  // Return a 202 Accepted response to indicate that the request has been accepted for processing.
-  return NextResponse.json({ message: "Save request accepted." }, { status: 202 });
 }

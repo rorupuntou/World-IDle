@@ -76,6 +76,7 @@ export function useGameSave(serverState: FullGameState | null) {
         localStorage.setItem(SAVE_KEY, JSON.stringify(stateToSave));
 
             console.log(`[DEBUG] Attempting to save to server at ${new Date().toISOString()}`);
+            console.log('[DEBUG] Data being saved:', { ...stateToSave });
             
             fetch('/api/save-game', {
                 method: 'POST',

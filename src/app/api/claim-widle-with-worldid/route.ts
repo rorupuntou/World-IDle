@@ -105,14 +105,14 @@ export async function POST(req: NextRequest) {
             throw fetchError;
         }
 
-        let totalTokensEarned = 0;
-        // If game state exists, use its token count. Otherwise, it defaults to 0.
-        if (existingData && existingData.game_data) {
-            const gameData = existingData.game_data as { stats?: { totalTokensEarned?: number } };
-            totalTokensEarned = gameData?.stats?.totalTokensEarned || 0;
+        if (!existingData) {
+            return NextResponse.json({ success: false, error: 'Game state not found for user.' }, { status: 404 });
         }
 
-        const wIdleReward = Math.floor(300 * Math.log(0.01 * totalTokensEarned + 1));
+        const gameData = existingData.game_data as { stats: { totalTokensEarned: number } };
+        const totalTokensEarned = gameData.stats.totalTokensEarned || 0;
+
+        const wIdleReward = Math.floor(300 * Math.log(0.0001 * totalTokensEarned + 1));
 
         if (wIdleReward < 1) {
             return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });

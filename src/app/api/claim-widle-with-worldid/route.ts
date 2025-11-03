@@ -3,6 +3,7 @@ import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/mi
 import { supabase } from '@/lib/supabaseClient';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createWalletClient, http, keccak256, encodePacked, parseEther, defineChain } from 'viem';
+import { type FullGameState } from '@/components/types';
 
 // Define World Chain for Viem
 const worldChain = defineChain({
@@ -95,24 +96,47 @@ export async function POST(req: NextRequest) {
     }
 
     try {
+        console.log(`[DEBUG] Claim request for wallet: ${walletAddress} -> ${lowercasedAddress}`);
+
         const { data: existingData, error: fetchError } = await supabase
             .from('game_state')
             .select('game_data')
             .eq('wallet_address', lowercasedAddress)
             .single();
 
+        console.log('[DEBUG] Fetched existingData:', JSON.stringify(existingData, null, 2));
+        console.log('[DEBUG] Fetch error:', fetchError);
+
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: row not found
             throw fetchError;
         }
 
         let wIdleReward = 0;
-        // If game state exists, use its token count. Otherwise, it defaults to 0.
         if (existingData && existingData.game_data) {
-            const gameData = existingData.game_data as { stats?: { wIdleReward?: number } };
-            wIdleReward = gameData?.stats?.wIdleReward || 0;
+            let gameData: Partial<FullGameState> | null = existingData.game_data;
+            // Defensive check: parse game_data if it's a string
+            if (typeof gameData === 'string') {
+                try {
+                    gameData = JSON.parse(gameData) as Partial<FullGameState>;
+                } catch (e) {
+                    console.error('[DEBUG] Failed to parse game_data string:', e);
+                    gameData = {}; // Reset to avoid further errors
+                }
+            }
+            
+            console.log('[DEBUG] Parsed game_data:', gameData);
+
+            const stats = gameData?.stats;
+            if (stats && typeof stats.wIdleReward === 'number' && !isNaN(stats.wIdleReward)) {
+                wIdleReward = stats.wIdleReward;
+            } else {
+                wIdleReward = 0;
+            }
+            console.log(`[DEBUG] Extracted wIdleReward: ${wIdleReward}`);
         }
 
         if (wIdleReward < 1) {
+            console.log(`[DEBUG] Not eligible for claim. wIdleReward: ${wIdleReward}`);
             return NextResponse.json({ success: false, error: 'Not eligible for wIDle claim.' }, { status: 400 });
         }
 

@@ -262,7 +262,8 @@ export default function Game() {
   const [serverState, setServerState] = useState<FullGameState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [timeWarpCooldown, setTimeWarpCooldown] = useState("");
-  const [wIdleServerReward, setWIdleServerReward] = useState(0);
+  const [displayWIdleReward, setDisplayWIdleReward] = useState(0);
+
   const { data: supplyInfo, error: supplyError } = useSWR<{
     success: boolean;
     totalSupply: string;
@@ -274,36 +275,6 @@ export default function Game() {
       console.error("Failed to fetch supply info:", supplyError);
     }
   }, [supplyError]);
-
-
-
-  const handleFetchWIdleReward = useCallback(async () => {
-    if (!walletAddress) return;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      const res = await fetch(`/api/get-widle-reward?walletAddress=${walletAddress}`, { signal: controller.signal });
-      clearTimeout(timeout);
-      const data = await res.json();
-      if (data && data.success) {
-        const reward = typeof data.reward === 'number' ? data.reward : (typeof data.wIdleReward === 'number' ? data.wIdleReward : 0);
-        setWIdleServerReward(reward);
-      }
-    } catch (error) {
-      const err = error as Error & { name?: string };
-      if (err?.name === 'AbortError') {
-        console.warn('get-widle-reward request aborted due to timeout');
-      } else {
-        console.error("Failed to fetch wIDle reward:", error);
-      }
-    }
-  }, [walletAddress]);
-
-  useEffect(() => {
-    handleFetchWIdleReward();
-    const interval = setInterval(handleFetchWIdleReward, 60000);
-    return () => clearInterval(interval);
-  }, [handleFetchWIdleReward]);
 
   
   const { isMuted, toggleMute, triggerInteraction } = useAudio(
@@ -376,6 +347,12 @@ export default function Game() {
       return { ...prev, permanent_referral_boost: boost };
     });
   }, [referrals, setGameState]);
+
+  // Calculate wIDLE reward for display in real-time
+  useEffect(() => {
+    const calculatedReward = Math.floor(300 * Math.log(0.0001 * stats.totalTokensEarned + 1));
+    setDisplayWIdleReward(calculatedReward);
+  }, [stats.totalTokensEarned]);
 
   const fullGameStateForSave = useMemo((): FullGameState => ({
     gameState,
@@ -1508,8 +1485,7 @@ export default function Game() {
                 setIsLoading={setIsLoading}
                 walletAddress={walletAddress}
                 setPendingWIdleTxId={setPendingWIdleTxId}
-                wIdleReward={wIdleServerReward}
-                handleFetchWIdleReward={handleFetchWIdleReward}
+                wIdleReward={displayWIdleReward}
                 lastWidleClaimAt={gameState.lastWidleClaimAt}
                 onClaimSuccess={updateLastClaimTime}
               />

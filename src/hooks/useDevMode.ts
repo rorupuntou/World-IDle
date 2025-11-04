@@ -1,15 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from "react";
 
-export const useDevMode = (setNotification: (notification: { message: string; type: "success" | "error" } | null) => void, t: (key: string) => string) => {
-  const [devModeActive, setDevModeActive] = useState(false);
+export const useDevMode = (initialWalletAddress: `0x${string}` | null) => {
+  const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(
+    initialWalletAddress
+  );
 
-  const handleDevMode = useCallback(() => {
-    const code = prompt(t("dev_mode_prompt"));
-    if (code === "13.12") {
-      setDevModeActive(true);
-      setNotification({ message: t("dev_mode_activated"), type: "success" });
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" && !initialWalletAddress) {
+      setWalletAddress("0xa5bd869d909f92984475a0c5bf0ecb0be3bb921c");
+    } else {
+      setWalletAddress(initialWalletAddress);
     }
-  }, [t, setNotification]);
+  }, [initialWalletAddress]);
 
-  return { devModeActive, handleDevMode };
+  return walletAddress;
 };

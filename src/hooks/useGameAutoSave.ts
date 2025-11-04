@@ -26,6 +26,16 @@ export function useGameAutoSave(
     if (!isLoaded || !walletAddress) return;
 
     const currentState = latestGameState.current;
+
+    // If the game is in a pristine, initial state, don't save.
+    // This prevents overwriting a valid server save with a blank state
+    // if the initial load fails and the game resets.
+    // We check totalTokensEarned, which only increases with interaction.
+    if (currentState.stats.totalTokensEarned === 0 && lastSavedState.current === null) {
+        console.log("[AutoSave] Inhibited initial save of blank state.");
+        return;
+    }
+
     const currentStateJson = JSON.stringify(currentState);
 
     if (currentStateJson !== lastSavedState.current) {

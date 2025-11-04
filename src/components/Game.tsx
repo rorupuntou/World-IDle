@@ -50,6 +50,7 @@ import { useBlockchain } from "@/hooks/useBlockchain";
 import { useFloatingNumbers } from "@/hooks/useFloatingNumbers";
 import { useItemDetails } from "@/hooks/useItemDetails";
 import { useGameAutoSave } from "@/hooks/useGameAutoSave";
+import { useDevMode } from "@/hooks/useDevMode";
 
 
 import { useOfflineGains } from '@/hooks/useOfflineGains';
@@ -242,9 +243,8 @@ export default function Game() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("main");
   const [isClient, setIsClient] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<`0x${string}` | null>(
-    null
-  );
+  const [realWalletAddress, setRealWalletAddress] = useState<`0x${string}` | null>(null);
+  const walletAddress = useDevMode(realWalletAddress);
   const [buyAmount, setBuyAmount] = useState<BuyAmount>(1);
   const [pendingPurchaseTx, setPendingPurchaseTx] = useState<{
     txId: string;
@@ -395,24 +395,23 @@ export default function Game() {
     pendingSwapTxId
     );
     
-    const {
-        wIdleBoost,
-        totalCPS,
-        clickValue,
-        autoclickerCPSValues,
-        checkRequirements,
-        availableUpgradesCount,
-        sortedUpgrades,
-        timeWarpWIdleCost,
-        timeWarpWldCost,
-    } = useGameCalculations(
-        upgrades,
-        autoclickers,
-        wIdleBalance,
-        gameState,
-        stats
-        );
-        
+  const handleFetchWIdleReward = useCallback(() => {
+    const calculatedReward = Math.floor(300 * Math.log(0.01 * stats.totalTokensEarned + 1));
+    setDisplayWIdleReward(calculatedReward);
+  }, [stats.totalTokensEarned]);
+
+  const {
+    wIdleBoost,
+    totalCPS,
+    clickValue,
+    autoclickerCPSValues,
+    checkRequirements,
+    availableUpgradesCount,
+    sortedUpgrades,
+    timeWarpWIdleCost,
+    timeWarpWldCost,
+  } = useGameCalculations(upgrades, autoclickers, wIdleBalance, gameState, stats);
+
   const { offlineGains, handleClaimOfflineGains: originalHandleClaim } = useOfflineGains(
     isLoaded,
     totalCPS,
@@ -421,18 +420,16 @@ export default function Game() {
     setStats
   );
 
-
-
   const updateLastClaimTime = useCallback(async () => {
     if (!walletAddress) return;
     const now = new Date().toISOString();
-    setGameState(prev => ({ ...prev, lastWidleClaimAt: now }));
+    setGameState((prev) => ({ ...prev, lastWidleClaimAt: now }));
     forceSave();
   }, [walletAddress, setGameState, forceSave]);
 
   const handleClaimOfflineGains = useCallback(() => {
-      originalHandleClaim();
-      forceSave();
+    originalHandleClaim();
+    forceSave();
   }, [originalHandleClaim, forceSave]);
 
   useEffect(() => {
@@ -443,8 +440,7 @@ export default function Game() {
   }, [stats.isVerified, forceSave]);
 
   const formatNumber = useCallback((num: number) => {
-    if (num < 1e3)
-      return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    if (num < 1e3) return num.toLocaleString(undefined, { maximumFractionDigits: 1 });
     if (num < 1e6) return `${(num / 1e3).toFixed(2)}K`;
     if (num < 1e9) return `${(num / 1e6).toFixed(2)}M`;
     if (num < 1e12) return `${(num / 1e9).toFixed(2)}B`;
@@ -555,6 +551,12 @@ export default function Game() {
     },
     [t, setNotification]
   );
+
+  useEffect(() => {
+    if (walletAddress) {
+      loadGameFromBackend(walletAddress);
+    }
+  }, [walletAddress, loadGameFromBackend]);
 
   useEffect(() => {
     const handleWIdleClaim = async () => {
@@ -820,7 +822,7 @@ export default function Game() {
         const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
         if (fallbackAddress) {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
-          setWalletAddress(fallbackAddress as `0x${string}`);
+          setRealWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
 
           return;
@@ -834,13 +836,13 @@ export default function Game() {
       const verifyJson = JSON.parse(verifyText);
       if (verifyJson.success && verifyJson.address) {
         const address = verifyJson.address as `0x${string}`;
-        setWalletAddress(address);
+        setRealWalletAddress(address);
         loadGameFromBackend(address);
       } else {
         const fallbackAddress = extractAddressFromFinalPayload(result.finalPayload);
         if (fallbackAddress) {
           setNotification({ message: t("connect_fallback_used"), type: "error" });
-          setWalletAddress(fallbackAddress as `0x${string}`);
+          setRealWalletAddress(fallbackAddress as `0x${string}`);
           loadGameFromBackend(fallbackAddress as `0x${string}`);
 
           return;
@@ -1501,9 +1503,9 @@ export default function Game() {
                 walletAddress={walletAddress}
                 setPendingWIdleTxId={setPendingWIdleTxId}
                 wIdleReward={displayWIdleReward}
+                handleFetchWIdleReward={handleFetchWIdleReward}
                 lastWidleClaimAt={gameState.lastWidleClaimAt}
                 onClaimSuccess={updateLastClaimTime}
-                forceSave={forceSave}
               />
               {!stats.isVerified && (
                 <div className="mt-4">

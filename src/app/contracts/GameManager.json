@@ -1,1 +1,352 @@
-{"abi":[{"type":"constructor","inputs":[{"name":"_tokenAddress","type":"address","internalType":"address"}],"stateMutability":"nonpayable"},{"type":"function","name":"owner","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},{"type":"function","name":"prestige","inputs":[{"name":"totalPointsEarned","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"prestigeToken","inputs":[],"outputs":[{"name":"","type":"address","internalType":"contract PrestigeToken"}],"stateMutability":"view"},{"type":"function","name":"renounceOwnership","inputs":[],"outputs":[],"stateMutability":"nonpayable"},{"type":"function","name":"transferOwnership","inputs":[{"name":"newOwner","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},{"type":"event","name":"OwnershipTransferred","inputs":[{"name":"previousOwner","type":"address","indexed":true,"internalType":"address"},{"name":"newOwner","type":"address","indexed":true,"internalType":"address"}],"anonymous":false},{"type":"event","name":"PrestigeClaimed","inputs":[{"name":"player","type":"address","indexed":true,"internalType":"address"},{"name":"amount","type":"uint256","indexed":false,"internalType":"uint256"}],"anonymous":false},{"type":"error","name":"OwnableInvalidOwner","inputs":[{"name":"owner","type":"address","internalType":"address"}]},{"type":"error","name":"OwnableUnauthorizedAccount","inputs":[{"name":"account","type":"address","internalType":"address"}]}],"bytecode":{"object":"0x608060405234801561000f575f5ffd5b506040516109b23803806109b283398181016040528101906100319190610217565b335f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036100a2575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016100999190610251565b60405180910390fd5b6100b1816100f860201b60201c565b508060015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505061026a565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6101e6826101bd565b9050919050565b6101f6816101dc565b8114610200575f5ffd5b50565b5f81519050610211816101ed565b92915050565b5f6020828403121561022c5761022b6101b9565b5b5f61023984828501610203565b91505092915050565b61024b816101dc565b82525050565b5f6020820190506102645f830184610242565b92915050565b61073b806102775f395ff3fe608060405234801561000f575f5ffd5b5060043610610055575f3560e01c80632302d38714610059578063715018a61461007757806383c901e3146100815780638da5cb5b1461009d578063f2fde38b146100bb575b5f5ffd5b6100616100d7565b60405161006e91906104b2565b60405180910390f35b61007f6100fc565b005b61009b60048036038101906100969190610502565b61010f565b005b6100a561023e565b6040516100b2919061054d565b60405180910390f35b6100d560048036038101906100d09190610590565b610265565b005b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6101046102e9565b61010d5f610370565b565b5f620186a08261011f91906105e8565b90505f8111610163576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161015a90610698565b60405180910390fd5b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166340c10f1933836040518363ffffffff1660e01b81526004016101bf9291906106c5565b5f604051808303815f87803b1580156101d6575f5ffd5b505af11580156101e8573d5f5f3e3d5ffd5b505050503373ffffffffffffffffffffffffffffffffffffffff167fc86150d66acecd30d9b0f0dfe0357c4c6b59d2c2e208e5d3d90df1b7e34b17078260405161023291906106ec565b60405180910390a25050565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b61026d6102e9565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036102dd575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016102d4919061054d565b60405180910390fd5b6102e681610370565b50565b6102f1610431565b73ffffffffffffffffffffffffffffffffffffffff1661030f61023e565b73ffffffffffffffffffffffffffffffffffffffff161461036e57610332610431565b6040517f118cdaa7000000000000000000000000000000000000000000000000000000008152600401610365919061054d565b60405180910390fd5b565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f33905090565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f819050919050565b5f61047a61047561047084610438565b610457565b610438565b9050919050565b5f61048b82610460565b9050919050565b5f61049c82610481565b9050919050565b6104ac81610492565b82525050565b5f6020820190506104c55f8301846104a3565b92915050565b5f5ffd5b5f819050919050565b6104e1816104cf565b81146104eb575f5ffd5b50565b5f813590506104fc816104d8565b92915050565b5f60208284031215610517576105166104cb565b5b5f610524848285016104ee565b91505092915050565b5f61053782610438565b9050919050565b6105478161052d565b82525050565b5f6020820190506105605f83018461053e565b92915050565b61056f8161052d565b8114610579575f5ffd5b50565b5f8135905061058a81610566565b92915050565b5f602082840312156105a5576105a46104cb565b5b5f6105b28482850161057c565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b5f6105f2826104cf565b91506105fd836104cf565b92508261060d5761060c6105bb565b5b828204905092915050565b5f82825260208201905092915050565b7f4e6f2068617920737566696369656e74652067616e616e6369612070617261205f8201527f70726573746967696f0000000000000000000000000000000000000000000000602082015250565b5f610682602983610618565b915061068d82610628565b604082019050919050565b5f6020820190508181035f8301526106af81610676565b9050919050565b6106bf816104cf565b82525050565b5f6040820190506106d85f83018561053e565b6106e560208301846106b6565b9392505050565b5f6020820190506106ff5f8301846106b6565b9291505056fea2646970667358221220fa84fe845dfa74c877e09535211e121517c0e721a4f0fd709e2ba255e35be6d564736f6c634300081e0033","sourceMap":"257:895:28:-:0;;;404:116;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;447:10;1297:1:20;1273:26;;:12;:26;;;1269:95;;1350:1;1322:31;;;;;;;;;;;:::i;:::-;;;;;;;;1269:95;1373:32;1392:12;1373:18;;;:32;;:::i;:::-;1225:187;499:13:28::1;469;;:44;;;;;;;;;;;;;;;;;;404:116:::0;257:895;;2912:187:20;2985:16;3004:6;;;;;;;;;;;2985:25;;3029:8;3020:6;;:17;;;;;;;;;;;;;;;;;;3083:8;3052:40;;3073:8;3052:40;;;;;;;;;;;;2975:124;2912:187;:::o;88:117:31:-;197:1;194;187:12;334:126;371:7;411:42;404:5;400:54;389:65;;334:126;;;:::o;466:96::-;503:7;532:24;550:5;532:24;:::i;:::-;521:35;;466:96;;;:::o;568:122::-;641:24;659:5;641:24;:::i;:::-;634:5;631:35;621:63;;680:1;677;670:12;621:63;568:122;:::o;696:143::-;753:5;784:6;778:13;769:22;;800:33;827:5;800:33;:::i;:::-;696:143;;;;:::o;845:351::-;915:6;964:2;952:9;943:7;939:23;935:32;932:119;;;970:79;;:::i;:::-;932:119;1090:1;1115:64;1171:7;1162:6;1151:9;1147:22;1115:64;:::i;:::-;1105:74;;1061:128;845:351;;;;:::o;1202:118::-;1289:24;1307:5;1289:24;:::i;:::-;1284:3;1277:37;1202:118;;:::o;1326:222::-;1419:4;1457:2;1446:9;1442:18;1434:26;;1470:71;1538:1;1527:9;1523:17;1514:6;1470:71;:::i;:::-;1326:222;;;;:::o;257:895:28:-;;;;;;;","linkReferences":{}},"deployedBytecode":{"object":"0x608060405234801561000f575f5ffd5b5060043610610055575f3560e01c80632302d38714610059578063715018a61461007757806383c901e3146100815780638da5cb5b1461009d578063f2fde38b146100bb575b5f5ffd5b6100616100d7565b60405161006e91906104b2565b60405180910390f35b61007f6100fc565b005b61009b60048036038101906100969190610502565b61010f565b005b6100a561023e565b6040516100b2919061054d565b60405180910390f35b6100d560048036038101906100d09190610590565b610265565b005b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6101046102e9565b61010d5f610370565b565b5f620186a08261011f91906105e8565b90505f8111610163576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161015a90610698565b60405180910390fd5b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166340c10f1933836040518363ffffffff1660e01b81526004016101bf9291906106c5565b5f604051808303815f87803b1580156101d6575f5ffd5b505af11580156101e8573d5f5f3e3d5ffd5b505050503373ffffffffffffffffffffffffffffffffffffffff167fc86150d66acecd30d9b0f0dfe0357c4c6b59d2c2e208e5d3d90df1b7e34b17078260405161023291906106ec565b60405180910390a25050565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b61026d6102e9565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036102dd575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016102d4919061054d565b60405180910390fd5b6102e681610370565b50565b6102f1610431565b73ffffffffffffffffffffffffffffffffffffffff1661030f61023e565b73ffffffffffffffffffffffffffffffffffffffff161461036e57610332610431565b6040517f118cdaa7000000000000000000000000000000000000000000000000000000008152600401610365919061054d565b60405180910390fd5b565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f33905090565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f819050919050565b5f61047a61047561047084610438565b610457565b610438565b9050919050565b5f61048b82610460565b9050919050565b5f61049c82610481565b9050919050565b6104ac81610492565b82525050565b5f6020820190506104c55f8301846104a3565b92915050565b5f5ffd5b5f819050919050565b6104e1816104cf565b81146104eb575f5ffd5b50565b5f813590506104fc816104d8565b92915050565b5f60208284031215610517576105166104cb565b5b5f610524848285016104ee565b91505092915050565b5f61053782610438565b9050919050565b6105478161052d565b82525050565b5f6020820190506105605f83018461053e565b92915050565b61056f8161052d565b8114610579575f5ffd5b50565b5f8135905061058a81610566565b92915050565b5f602082840312156105a5576105a46104cb565b5b5f6105b28482850161057c565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b5f6105f2826104cf565b91506105fd836104cf565b92508261060d5761060c6105bb565b5b828204905092915050565b5f82825260208201905092915050565b7f4e6f2068617920737566696369656e74652067616e616e6369612070617261205f8201527f70726573746967696f0000000000000000000000000000000000000000000000602082015250565b5f610682602983610618565b915061068d82610628565b604082019050919050565b5f6020820190508181035f8301526106af81610676565b9050919050565b6106bf816104cf565b82525050565b5f6040820190506106d85f83018561053e565b6106e560208301846106b6565b9392505050565b5f6020820190506106ff5f8301846106b6565b9291505056fea2646970667358221220fa84fe845dfa74c877e09535211e121517c0e721a4f0fd709e2ba255e35be6d564736f6c634300081e0033","sourceMap":"257:895:28:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;295:34;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;2293:101:20;;;:::i;:::-;;714:436:28;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;1638:85:20;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;2543:215;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;295:34:28;;;;;;;;;;;;;:::o;2293:101:20:-;1531:13;:11;:13::i;:::-;2357:30:::1;2384:1;2357:18;:30::i;:::-;2293:101::o:0;714:436:28:-;841:20;884:6;864:17;:26;;;;:::i;:::-;841:49;;923:1;908:12;:16;900:70;;;;;;;;;;;;:::i;:::-;;;;;;;;;1042:13;;;;;;;;;;;:18;;;1061:10;1073:12;1042:44;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1118:10;1102:41;;;1130:12;1102:41;;;;;;:::i;:::-;;;;;;;;766:384;714:436;:::o;1638:85:20:-;1684:7;1710:6;;;;;;;;;;;1703:13;;1638:85;:::o;2543:215::-;1531:13;:11;:13::i;:::-;2647:1:::1;2627:22;;:8;:22;;::::0;2623:91:::1;;2700:1;2672:31;;;;;;;;;;;:::i;:::-;;;;;;;;2623:91;2723:28;2742:8;2723:18;:28::i;:::-;2543:215:::0;:::o;1796:162::-;1866:12;:10;:12::i;:::-;1855:23;;:7;:5;:7::i;:::-;:23;;;1851:101;;1928:12;:10;:12::i;:::-;1901:40;;;;;;;;;;;:::i;:::-;;;;;;;;1851:101;1796:162::o;2912:187::-;2985:16;3004:6;;;;;;;;;;;2985:25;;3029:8;3020:6;;:17;;;;;;;;;;;;;;;;;;3083:8;3052:40;;3073:8;3052:40;;;;;;;;;;;;2975:124;2912:187;:::o;656:96:25:-;709:7;735:10;728:17;;656:96;:::o;7:126:31:-;44:7;84:42;77:5;73:54;62:65;;7:126;;;:::o;139:60::-;167:3;188:5;181:12;;139:60;;;:::o;205:142::-;255:9;288:53;306:34;315:24;333:5;315:24;:::i;:::-;306:34;:::i;:::-;288:53;:::i;:::-;275:66;;205:142;;;:::o;353:126::-;403:9;436:37;467:5;436:37;:::i;:::-;423:50;;353:126;;;:::o;485:149::-;558:9;591:37;622:5;591:37;:::i;:::-;578:50;;485:149;;;:::o;640:177::-;750:60;804:5;750:60;:::i;:::-;745:3;738:73;640:177;;:::o;823:268::-;939:4;977:2;966:9;962:18;954:26;;990:94;1081:1;1070:9;1066:17;1057:6;990:94;:::i;:::-;823:268;;;;:::o;1178:117::-;1287:1;1284;1277:12;1424:77;1461:7;1490:5;1479:16;;1424:77;;;:::o;1507:122::-;1580:24;1598:5;1580:24;:::i;:::-;1573:5;1570:35;1560:63;;1619:1;1616;1609:12;1560:63;1507:122;:::o;1635:139::-;1681:5;1719:6;1706:20;1697:29;;1735:33;1762:5;1735:33;:::i;:::-;1635:139;;;;:::o;1780:329::-;1839:6;1888:2;1876:9;1867:7;1863:23;1859:32;1856:119;;;1894:79;;:::i;:::-;1856:119;2014:1;2039:53;2084:7;2075:6;2064:9;2060:22;2039:53;:::i;:::-;2029:63;;1985:117;1780:329;;;;:::o;2115:96::-;2152:7;2181:24;2199:5;2181:24;:::i;:::-;2170:35;;2115:96;;;:::o;2217:118::-;2304:24;2322:5;2304:24;:::i;:::-;2299:3;2292:37;2217:118;;:::o;2341:222::-;2434:4;2472:2;2461:9;2457:18;2449:26;;2485:71;2553:1;2542:9;2538:17;2529:6;2485:71;:::i;:::-;2341:222;;;;:::o;2569:122::-;2642:24;2660:5;2642:24;:::i;:::-;2635:5;2632:35;2622:63;;2681:1;2678;2671:12;2622:63;2569:122;:::o;2697:139::-;2743:5;2781:6;2768:20;2759:29;;2797:33;2824:5;2797:33;:::i;:::-;2697:139;;;;:::o;2842:329::-;2901:6;2950:2;2938:9;2929:7;2925:23;2921:32;2918:119;;;2956:79;;:::i;:::-;2918:119;3076:1;3101:53;3146:7;3137:6;3126:9;3122:22;3101:53;:::i;:::-;3091:63;;3047:117;2842:329;;;;:::o;3177:180::-;3225:77;3222:1;3215:88;3322:4;3319:1;3312:15;3346:4;3343:1;3336:15;3549:185;3589:1;3606:20;3624:1;3606:20;:::i;:::-;3601:25;;3640:20;3658:1;3640:20;:::i;:::-;3635:25;;3679:1;3669:35;;3684:18;;:::i;:::-;3669:35;3726:1;3723;3719:9;3714:14;;3549:185;;;;:::o;3740:169::-;3824:11;3858:6;3853:3;3846:19;3898:4;3893:3;3889:14;3874:29;;3740:169;;;;:::o;3915:228::-;4055:34;4051:1;4043:6;4039:14;4032:58;4124:11;4119:2;4111:6;4107:15;4100:36;3915:228;:::o;4149:366::-;4291:3;4312:67;4376:2;4371:3;4312:67;:::i;:::-;4305:74;;4388:93;4477:3;4388:93;:::i;:::-;4506:2;4501:3;4497:12;4490:19;;4149:366;;;:::o;4521:419::-;4687:4;4725:2;4714:9;4710:18;4702:26;;4774:9;4768:4;4764:20;4760:1;4749:9;4745:17;4738:47;4802:131;4928:4;4802:131;:::i;:::-;4794:139;;4521:419;;;:::o;4946:118::-;5033:24;5051:5;5033:24;:::i;:::-;5028:3;5021:37;4946:118;;:::o;5070:332::-;5191:4;5229:2;5218:9;5214:18;5206:26;;5242:71;5310:1;5299:9;5295:17;5286:6;5242:71;:::i;:::-;5323:72;5391:2;5380:9;5376:18;5367:6;5323:72;:::i;:::-;5070:332;;;;;:::o;5408:222::-;5501:4;5539:2;5528:9;5524:18;5516:26;;5552:71;5620:1;5609:9;5605:17;5596:6;5552:71;:::i;:::-;5408:222;;;;:::o","linkReferences":{}},"methodIdentifiers":{"owner()":"8da5cb5b","prestige(uint256)":"83c901e3","prestigeToken()":"2302d387","renounceOwnership()":"715018a6","transferOwnership(address)":"f2fde38b"},"rawMetadata":"{\"compiler\":{\"version\":\"0.8.30+commit.73712a01\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"PrestigeClaimed\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"totalPointsEarned\",\"type\":\"uint256\"}],\"name\":\"prestige\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"prestigeToken\",\"outputs\":[{\"internalType\":\"contract PrestigeToken\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Contrato que gestiona la l\\u00f3gica de prestigio y acu\\u00f1a recompensas.\",\"errors\":{\"OwnableInvalidOwner(address)\":[{\"details\":\"The owner is not a valid owner account. (eg. `address(0)`)\"}],\"OwnableUnauthorizedAccount(address)\":[{\"details\":\"The caller account is not authorized to perform an operation.\"}]},\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"prestige(uint256)\":{\"details\":\"Permite a un jugador reiniciar su progreso (prestigio) y acu\\u00f1ar tokens de recompensa. La cantidad de tokens es el 0.001% de los puntos totales ganados.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"title\":\"GameManager\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/GameManager.sol\":\"GameManager\"},\"evmVersion\":\"prague\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/access/Ownable.sol\":{\"keccak256\":\"0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6\",\"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a\"]},\"lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol\":{\"keccak256\":\"0x19fdfb0f3b89a230e7dbd1cf416f1a6b531a3ee5db4da483f946320fc74afc0e\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3490d794728f5bfecb46820431adaff71ba374141545ec20b650bb60353fac23\",\"dweb:/ipfs/QmPsfxjVpMcZbpE7BH93DzTpEaktESigEw4SmDzkXuJ4WR\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol\":{\"keccak256\":\"0x86b7b71a6aedefdad89b607378eeab1dcc5389b9ea7d17346d08af01d7190994\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1dc2db8d94a21eac8efe03adf574c419b08536409b416057a2b5b95cb772c43c\",\"dweb:/ipfs/QmZfqJCKVU1ScuX2A7s8WZdQEaikwJbDH5JBrBdKTUT4Gu\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x74ed01eb66b923d0d0cfe3be84604ac04b76482a55f9dd655e1ef4d367f95bc2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5282825a626cfe924e504274b864a652b0023591fa66f06a067b25b51ba9b303\",\"dweb:/ipfs/QmeCfPykghhMc81VJTrHTC7sF6CRvaA1FXVq2pJhwYp1dV\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0xd6fa4088198f04eef10c5bce8a2f4d60554b7ec4b987f684393c01bf79b94d9f\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://f95ee0bbd4dd3ac730d066ba3e785ded4565e890dbec2fa7d3b9fe3bad9d0d6e\",\"dweb:/ipfs/QmSLr6bHkPFWT7ntj34jmwfyskpwo97T9jZUrk5sz3sdtR\"]},\"lib/openzeppelin-contracts/contracts/utils/Context.sol\":{\"keccak256\":\"0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12\",\"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF\"]},\"src/GameManager.sol\":{\"keccak256\":\"0x37400ab29e3c3de3be6f7ab357288abb80cdacb9ab0b1e2b4330dc798135fbf4\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3f290d7373d038447c97f1ab188bfbe97d038f21ae802ccc14bfe24c82bb3ab1\",\"dweb:/ipfs/QmYtEDC1ifn821tzyyMrPLLUVF6PgvdP7XmUTVwX97KqRV\"]},\"src/PrestigeToken.sol\":{\"keccak256\":\"0x8ce81705de6182fd887286feb45a2d290920e061fb86ea30e6b132f349d64508\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c68c58e83dfd4056222a6d3d819f158d5d31199088bd6960d80a42dff212fe10\",\"dweb:/ipfs/QmbhTBgKq5xV59ja3TtnEBXSeTPeRmfFgEKDPT1G6Gus9D\"]}},\"version\":1}","metadata":{"compiler":{"version":"0.8.30+commit.73712a01"},"language":"Solidity","output":{"abi":[{"inputs":[{"internalType":"address","name":"_tokenAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"type":"error","name":"OwnableInvalidOwner"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"type":"error","name":"OwnableUnauthorizedAccount"},{"inputs":[{"internalType":"address","name":"previousOwner","type":"address","indexed":true},{"internalType":"address","name":"newOwner","type":"address","indexed":true}],"type":"event","name":"OwnershipTransferred","anonymous":false},{"inputs":[{"internalType":"address","name":"player","type":"address","indexed":true},{"internalType":"uint256","name":"amount","type":"uint256","indexed":false}],"type":"event","name":"PrestigeClaimed","anonymous":false},{"inputs":[],"stateMutability":"view","type":"function","name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}]},{"inputs":[{"internalType":"uint256","name":"totalPointsEarned","type":"uint256"}],"stateMutability":"nonpayable","type":"function","name":"prestige"},{"inputs":[],"stateMutability":"view","type":"function","name":"prestigeToken","outputs":[{"internalType":"contract PrestigeToken","name":"","type":"address"}]},{"inputs":[],"stateMutability":"nonpayable","type":"function","name":"renounceOwnership"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"stateMutability":"nonpayable","type":"function","name":"transferOwnership"}],"devdoc":{"kind":"dev","methods":{"owner()":{"details":"Returns the address of the current owner."},"prestige(uint256)":{"details":"Permite a un jugador reiniciar su progreso (prestigio) y acuñar tokens de recompensa. La cantidad de tokens es el 0.001% de los puntos totales ganados."},"renounceOwnership()":{"details":"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."},"transferOwnership(address)":{"details":"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."}},"version":1},"userdoc":{"kind":"user","methods":{},"version":1}},"settings":{"remappings":["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/","erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/","forge-std/=lib/forge-std/src/","halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/","openzeppelin-contracts/=lib/openzeppelin-contracts/"],"optimizer":{"enabled":false,"runs":200},"metadata":{"bytecodeHash":"ipfs"},"compilationTarget":{"src/GameManager.sol":"GameManager"},"evmVersion":"prague","libraries":{}},"sources":{"lib/openzeppelin-contracts/contracts/access/Ownable.sol":{"keccak256":"0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb","urls":["bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6","dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a"],"license":"MIT"},"lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol":{"keccak256":"0x19fdfb0f3b89a230e7dbd1cf416f1a6b531a3ee5db4da483f946320fc74afc0e","urls":["bzz-raw://3490d794728f5bfecb46820431adaff71ba374141545ec20b650bb60353fac23","dweb:/ipfs/QmPsfxjVpMcZbpE7BH93DzTpEaktESigEw4SmDzkXuJ4WR"],"license":"MIT"},"lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol":{"keccak256":"0x86b7b71a6aedefdad89b607378eeab1dcc5389b9ea7d17346d08af01d7190994","urls":["bzz-raw://1dc2db8d94a21eac8efe03adf574c419b08536409b416057a2b5b95cb772c43c","dweb:/ipfs/QmZfqJCKVU1ScuX2A7s8WZdQEaikwJbDH5JBrBdKTUT4Gu"],"license":"MIT"},"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol":{"keccak256":"0x74ed01eb66b923d0d0cfe3be84604ac04b76482a55f9dd655e1ef4d367f95bc2","urls":["bzz-raw://5282825a626cfe924e504274b864a652b0023591fa66f06a067b25b51ba9b303","dweb:/ipfs/QmeCfPykghhMc81VJTrHTC7sF6CRvaA1FXVq2pJhwYp1dV"],"license":"MIT"},"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol":{"keccak256":"0xd6fa4088198f04eef10c5bce8a2f4d60554b7ec4b987f684393c01bf79b94d9f","urls":["bzz-raw://f95ee0bbd4dd3ac730d066ba3e785ded4565e890dbec2fa7d3b9fe3bad9d0d6e","dweb:/ipfs/QmSLr6bHkPFWT7ntj34jmwfyskpwo97T9jZUrk5sz3sdtR"],"license":"MIT"},"lib/openzeppelin-contracts/contracts/utils/Context.sol":{"keccak256":"0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2","urls":["bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12","dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"],"license":"MIT"},"src/GameManager.sol":{"keccak256":"0x37400ab29e3c3de3be6f7ab357288abb80cdacb9ab0b1e2b4330dc798135fbf4","urls":["bzz-raw://3f290d7373d038447c97f1ab188bfbe97d038f21ae802ccc14bfe24c82bb3ab1","dweb:/ipfs/QmYtEDC1ifn821tzyyMrPLLUVF6PgvdP7XmUTVwX97KqRV"],"license":"MIT"},"src/PrestigeToken.sol":{"keccak256":"0x8ce81705de6182fd887286feb45a2d290920e061fb86ea30e6b132f349d64508","urls":["bzz-raw://c68c58e83dfd4056222a6d3d819f158d5d31199088bd6960d80a42dff212fe10","dweb:/ipfs/QmbhTBgKq5xV59ja3TtnEBXSeTPeRmfFgEKDPT1G6Gus9D"],"license":"MIT"}},"version":1},"id":28}
+{
+  "abi": [
+    {
+      "type": "constructor",
+      "inputs": [
+        {
+          "name": "_tokenAddress",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "prestige",
+      "inputs": [
+        {
+          "name": "totalPointsEarned",
+          "type": "uint256",
+          "internalType": "uint256"
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "prestigeToken",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "contract PrestigeToken"
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "renounceOwnership",
+      "inputs": [],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "transferOwnership",
+      "inputs": [
+        { "name": "newOwner", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "name": "previousOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "newOwner",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "PrestigeClaimed",
+      "inputs": [
+        {
+          "name": "player",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "error",
+      "name": "OwnableInvalidOwner",
+      "inputs": [
+        { "name": "owner", "type": "address", "internalType": "address" }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "OwnableUnauthorizedAccount",
+      "inputs": [
+        { "name": "account", "type": "address", "internalType": "address" }
+      ]
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561000f575f5ffd5b506040516109b23803806109b283398181016040528101906100319190610217565b335f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036100a2575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016100999190610251565b60405180910390fd5b6100b1816100f860201b60201c565b508060015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055505061026a565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f5ffd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6101e6826101bd565b9050919050565b6101f6816101dc565b8114610200575f5ffd5b50565b5f81519050610211816101ed565b92915050565b5f6020828403121561022c5761022b6101b9565b5b5f61023984828501610203565b91505092915050565b61024b816101dc565b82525050565b5f6020820190506102645f830184610242565b92915050565b61073b806102775f395ff3fe608060405234801561000f575f5ffd5b5060043610610055575f3560e01c80632302d38714610059578063715018a61461007757806383c901e3146100815780638da5cb5b1461009d578063f2fde38b146100bb575b5f5ffd5b6100616100d7565b60405161006e91906104b2565b60405180910390f35b61007f6100fc565b005b61009b60048036038101906100969190610502565b61010f565b005b6100a561023e565b6040516100b2919061054d565b60405180910390f35b6100d560048036038101906100d09190610590565b610265565b005b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6101046102e9565b61010d5f610370565b565b5f620186a08261011f91906105e8565b90505f8111610163576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161015a90610698565b60405180910390fd5b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166340c10f1933836040518363ffffffff1660e01b81526004016101bf9291906106c5565b5f604051808303815f87803b1580156101d6575f5ffd5b505af11580156101e8573d5f5f3e3d5ffd5b505050503373ffffffffffffffffffffffffffffffffffffffff167fc86150d66acecd30d9b0f0dfe0357c4c6b59d2c2e208e5d3d90df1b7e34b17078260405161023291906106ec565b60405180910390a25050565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b61026d6102e9565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036102dd575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016102d4919061054d565b60405180910390fd5b6102e681610370565b50565b6102f1610431565b73ffffffffffffffffffffffffffffffffffffffff1661030f61023e565b73ffffffffffffffffffffffffffffffffffffffff161461036e57610332610431565b6040517f118cdaa7000000000000000000000000000000000000000000000000000000008152600401610365919061054d565b60405180910390fd5b565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f33905090565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f819050919050565b5f61047a61047561047084610438565b610457565b610438565b9050919050565b5f61048b82610460565b9050919050565b5f61049c82610481565b9050919050565b6104ac81610492565b82525050565b5f6020820190506104c55f8301846104a3565b92915050565b5f5ffd5b5f819050919050565b6104e1816104cf565b81146104eb575f5ffd5b50565b5f813590506104fc816104d8565b92915050565b5f60208284031215610517576105166104cb565b5b5f610524848285016104ee565b91505092915050565b5f61053782610438565b9050919050565b6105478161052d565b82525050565b5f6020820190506105605f83018461053e565b92915050565b61056f8161052d565b8114610579575f5ffd5b50565b5f8135905061058a81610566565b92915050565b5f602082840312156105a5576105a46104cb565b5b5f6105b28482850161057c565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b5f6105f2826104cf565b91506105fd836104cf565b92508261060d5761060c6105bb565b5b828204905092915050565b5f82825260208201905092915050565b7f4e6f2068617920737566696369656e74652067616e616e6369612070617261205f8201527f70726573746967696f0000000000000000000000000000000000000000000000602082015250565b5f610682602983610618565b915061068d82610628565b604082019050919050565b5f6020820190508181035f8301526106af81610676565b9050919050565b6106bf816104cf565b82525050565b5f6040820190506106d85f83018561053e565b6106e560208301846106b6565b9392505050565b5f6020820190506106ff5f8301846106b6565b9291505056fea2646970667358221220fa84fe845dfa74c877e09535211e121517c0e721a4f0fd709e2ba255e35be6d564736f6c634300081e0033",
+    "sourceMap": "257:895:28:-:0;;;404:116;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;447:10;1297:1:20;1273:26;;:12;:26;;;1269:95;;1350:1;1322:31;;;;;;;;;;;:::i;:::-;;;;;;;;1269:95;1373:32;1392:12;1373:18;;;:32;;:::i;:::-;1225:187;499:13:28::1;469;;:44;;;;;;;;;;;;;;;;;;404:116:::0;257:895;;2912:187:20;2985:16;3004:6;;;;;;;;;;;2985:25;;3029:8;3020:6;;:17;;;;;;;;;;;;;;;;;;3083:8;3052:40;;3073:8;3052:40;;;;;;;;;;;;2975:124;2912:187;:::o;88:117:31:-;197:1;194;187:12;334:126;371:7;411:42;404:5;400:54;389:65;;334:126;;;:::o;466:96::-;503:7;532:24;550:5;532:24;:::i;:::-;521:35;;466:96;;;:::o;568:122::-;641:24;659:5;641:24;:::i;:::-;634:5;631:35;621:63;;680:1;677;670:12;621:63;568:122;:::o;696:143::-;753:5;784:6;778:13;769:22;;800:33;827:5;800:33;:::i;:::-;696:143;;;;:::o;845:351::-;915:6;964:2;952:9;943:7;939:23;935:32;932:119;;;970:79;;:::i;:::-;932:119;1090:1;1115:64;1171:7;1162:6;1151:9;1147:22;1115:64;:::i;:::-;1105:74;;1061:128;845:351;;;;:::o;1202:118::-;1289:24;1307:5;1289:24;:::i;:::-;1284:3;1277:37;1202:118;;:::o;1326:222::-;1419:4;1457:2;1446:9;1442:18;1434:26;;1470:71;1538:1;1527:9;1523:17;1514:6;1470:71;:::i;:::-;1326:222;;;;:::o;257:895:28:-;;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x608060405234801561000f575f5ffd5b5060043610610055575f3560e01c80632302d38714610059578063715018a61461007757806383c901e3146100815780638da5cb5b1461009d578063f2fde38b146100bb575b5f5ffd5b6100616100d7565b60405161006e91906104b2565b60405180910390f35b61007f6100fc565b005b61009b60048036038101906100969190610502565b61010f565b005b6100a561023e565b6040516100b2919061054d565b60405180910390f35b6100d560048036038101906100d09190610590565b610265565b005b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6101046102e9565b61010d5f610370565b565b5f620186a08261011f91906105e8565b90505f8111610163576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161015a90610698565b60405180910390fd5b60015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166340c10f1933836040518363ffffffff1660e01b81526004016101bf9291906106c5565b5f604051808303815f87803b1580156101d6575f5ffd5b505af11580156101e8573d5f5f3e3d5ffd5b505050503373ffffffffffffffffffffffffffffffffffffffff167fc86150d66acecd30d9b0f0dfe0357c4c6b59d2c2e208e5d3d90df1b7e34b17078260405161023291906106ec565b60405180910390a25050565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905090565b61026d6102e9565b5f73ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff16036102dd575f6040517f1e4fbdf70000000000000000000000000000000000000000000000000000000081526004016102d4919061054d565b60405180910390fd5b6102e681610370565b50565b6102f1610431565b73ffffffffffffffffffffffffffffffffffffffff1661030f61023e565b73ffffffffffffffffffffffffffffffffffffffff161461036e57610332610431565b6040517f118cdaa7000000000000000000000000000000000000000000000000000000008152600401610365919061054d565b60405180910390fd5b565b5f5f5f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff169050815f5f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055508173ffffffffffffffffffffffffffffffffffffffff168173ffffffffffffffffffffffffffffffffffffffff167f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e060405160405180910390a35050565b5f33905090565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f819050919050565b5f61047a61047561047084610438565b610457565b610438565b9050919050565b5f61048b82610460565b9050919050565b5f61049c82610481565b9050919050565b6104ac81610492565b82525050565b5f6020820190506104c55f8301846104a3565b92915050565b5f5ffd5b5f819050919050565b6104e1816104cf565b81146104eb575f5ffd5b50565b5f813590506104fc816104d8565b92915050565b5f60208284031215610517576105166104cb565b5b5f610524848285016104ee565b91505092915050565b5f61053782610438565b9050919050565b6105478161052d565b82525050565b5f6020820190506105605f83018461053e565b92915050565b61056f8161052d565b8114610579575f5ffd5b50565b5f8135905061058a81610566565b92915050565b5f602082840312156105a5576105a46104cb565b5b5f6105b28482850161057c565b91505092915050565b7f4e487b71000000000000000000000000000000000000000000000000000000005f52601260045260245ffd5b5f6105f2826104cf565b91506105fd836104cf565b92508261060d5761060c6105bb565b5b828204905092915050565b5f82825260208201905092915050565b7f4e6f2068617920737566696369656e74652067616e616e6369612070617261205f8201527f70726573746967696f0000000000000000000000000000000000000000000000602082015250565b5f610682602983610618565b915061068d82610628565b604082019050919050565b5f6020820190508181035f8301526106af81610676565b9050919050565b6106bf816104cf565b82525050565b5f6040820190506106d85f83018561053e565b6106e560208301846106b6565b9392505050565b5f6020820190506106ff5f8301846106b6565b9291505056fea2646970667358221220fa84fe845dfa74c877e09535211e121517c0e721a4f0fd709e2ba255e35be6d564736f6c634300081e0033",
+    "sourceMap": "257:895:28:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;295:34;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;2293:101:20;;;:::i;:::-;;714:436:28;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;1638:85:20;;;:::i;:::-;;;;;;;:::i;:::-;;;;;;;;2543:215;;;;;;;;;;;;;:::i;:::-;;:::i;:::-;;295:34:28;;;;;;;;;;;;;:::o;2293:101:20:-;1531:13;:11;:13::i;:::-;2357:30:::1;2384:1;2357:18;:30::i;:::-;2293:101::o:0;714:436:28:-;841:20;884:6;864:17;:26;;;;:::i;:::-;841:49;;923:1;908:12;:16;900:70;;;;;;;;;;;;:::i;:::-;;;;;;;;;1042:13;;;;;;;;;;;:18;;;1061:10;1073:12;1042:44;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1118:10;1102:41;;;1130:12;1102:41;;;;;;:::i;:::-;;;;;;;;766:384;714:436;:::o;1638:85:20:-;1684:7;1710:6;;;;;;;;;;;1703:13;;1638:85;:::o;2543:215::-;1531:13;:11;:13::i;:::-;2647:1:::1;2627:22;;:8;:22;;::::0;2623:91:::1;;2700:1;2672:31;;;;;;;;;;;:::i;:::-;;;;;;;;2623:91;2723:28;2742:8;2723:18;:28::i;:::-;2543:215:::0;:::o;1796:162::-;1866:12;:10;:12::i;:::-;1855:23;;:7;:5;:7::i;:::-;:23;;;1851:101;;1928:12;:10;:12::i;:::-;1901:40;;;;;;;;;;;:::i;:::-;;;;;;;;1851:101;1796:162::o;2912:187::-;2985:16;3004:6;;;;;;;;;;;2985:25;;3029:8;3020:6;;:17;;;;;;;;;;;;;;;;;;3083:8;3052:40;;3073:8;3052:40;;;;;;;;;;;;2975:124;2912:187;:::o;656:96:25:-;709:7;735:10;728:17;;656:96;:::o;7:126:31:-;44:7;84:42;77:5;73:54;62:65;;7:126;;;:::o;139:60::-;167:3;188:5;181:12;;139:60;;;:::o;205:142::-;255:9;288:53;306:34;315:24;333:5;315:24;:::i;:::-;306:34;:::i;:::-;288:53;:::i;:::-;275:66;;205:142;;;:::o;353:126::-;403:9;436:37;467:5;436:37;:::i;:::-;423:50;;353:126;;;:::o;485:149::-;558:9;591:37;622:5;591:37;:::i;:::-;578:50;;485:149;;;:::o;640:177::-;750:60;804:5;750:60;:::i;:::-;745:3;738:73;640:177;;:::o;823:268::-;939:4;977:2;966:9;962:18;954:26;;990:94;1081:1;1070:9;1066:17;1057:6;990:94;:::i;:::-;823:268;;;;:::o;1178:117::-;1287:1;1284;1277:12;1424:77;1461:7;1490:5;1479:16;;1424:77;;;:::o;1507:122::-;1580:24;1598:5;1580:24;:::i;:::-;1573:5;1570:35;1560:63;;1619:1;1616;1609:12;1560:63;1507:122;:::o;1635:139::-;1681:5;1719:6;1706:20;1697:29;;1735:33;1762:5;1735:33;:::i;:::-;1635:139;;;;:::o;1780:329::-;1839:6;1888:2;1876:9;1867:7;1863:23;1859:32;1856:119;;;1894:79;;:::i;:::-;1856:119;2014:1;2039:53;2084:7;2075:6;2064:9;2060:22;2039:53;:::i;:::-;2029:63;;1985:117;1780:329;;;;:::o;2115:96::-;2152:7;2181:24;2199:5;2181:24;:::i;:::-;2170:35;;2115:96;;;:::o;2217:118::-;2304:24;2322:5;2304:24;:::i;:::-;2299:3;2292:37;2217:118;;:::o;2341:222::-;2434:4;2472:2;2461:9;2457:18;2449:26;;2485:71;2553:1;2542:9;2538:17;2529:6;2485:71;:::i;:::-;2341:222;;;;:::o;2569:122::-;2642:24;2660:5;2642:24;:::i;:::-;2635:5;2632:35;2622:63;;2681:1;2678;2671:12;2622:63;2569:122;:::o;2697:139::-;2743:5;2781:6;2768:20;2759:29;;2797:33;2824:5;2797:33;:::i;:::-;2697:139;;;;:::o;2842:329::-;2901:6;2950:2;2938:9;2929:7;2925:23;2921:32;2918:119;;;2956:79;;:::i;:::-;2918:119;3076:1;3101:53;3146:7;3137:6;3126:9;3122:22;3101:53;:::i;:::-;3091:63;;3047:117;2842:329;;;;:::o;3177:180::-;3225:77;3222:1;3215:88;3322:4;3319:1;3312:15;3346:4;3343:1;3336:15;3549:185;3589:1;3606:20;3624:1;3606:20;:::i;:::-;3601:25;;3640:20;3658:1;3640:20;:::i;:::-;3635:25;;3679:1;3669:35;;3684:18;;:::i;:::-;3669:35;3726:1;3723;3719:9;3714:14;;3549:185;;;;:::o;3740:169::-;3824:11;3858:6;3853:3;3846:19;3898:4;3893:3;3889:14;3874:29;;3740:169;;;;:::o;3915:228::-;4055:34;4051:1;4043:6;4039:14;4032:58;4124:11;4119:2;4111:6;4107:15;4100:36;3915:228;:::o;4149:366::-;4291:3;4312:67;4376:2;4371:3;4312:67;:::i;:::-;4305:74;;4388:93;4477:3;4388:93;:::i;:::-;4506:2;4501:3;4497:12;4490:19;;4149:366;;;:::o;4521:419::-;4687:4;4725:2;4714:9;4710:18;4702:26;;4774:9;4768:4;4764:20;4760:1;4749:9;4745:17;4738:47;4802:131;4928:4;4802:131;:::i;:::-;4794:139;;4521:419;;;:::o;4946:118::-;5033:24;5051:5;5033:24;:::i;:::-;5028:3;5021:37;4946:118;;:::o;5070:332::-;5191:4;5229:2;5218:9;5214:18;5206:26;;5242:71;5310:1;5299:9;5295:17;5286:6;5242:71;:::i;:::-;5323:72;5391:2;5380:9;5376:18;5367:6;5323:72;:::i;:::-;5070:332;;;;;:::o;5408:222::-;5501:4;5539:2;5528:9;5524:18;5516:26;;5552:71;5620:1;5609:9;5605:17;5596:6;5552:71;:::i;:::-;5408:222;;;;:::o",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "owner()": "8da5cb5b",
+    "prestige(uint256)": "83c901e3",
+    "prestigeToken()": "2302d387",
+    "renounceOwnership()": "715018a6",
+    "transferOwnership(address)": "f2fde38b"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.30+commit.73712a01\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"PrestigeClaimed\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"totalPointsEarned\",\"type\":\"uint256\"}],\"name\":\"prestige\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"prestigeToken\",\"outputs\":[{\"internalType\":\"contract PrestigeToken\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Contrato que gestiona la l\\u00f3gica de prestigio y acu\\u00f1a recompensas.\",\"errors\":{\"OwnableInvalidOwner(address)\":[{\"details\":\"The owner is not a valid owner account. (eg. `address(0)`)\"}],\"OwnableUnauthorizedAccount(address)\":[{\"details\":\"The caller account is not authorized to perform an operation.\"}]},\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"prestige(uint256)\":{\"details\":\"Permite a un jugador reiniciar su progreso (prestigio) y acu\\u00f1ar tokens de recompensa. La cantidad de tokens es el 0.001% de los puntos totales ganados.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"title\":\"GameManager\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/GameManager.sol\":\"GameManager\"},\"evmVersion\":\"prague\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/access/Ownable.sol\":{\"keccak256\":\"0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6\",\"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a\"]},\"lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol\":{\"keccak256\":\"0x19fdfb0f3b89a230e7dbd1cf416f1a6b531a3ee5db4da483f946320fc74afc0e\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3490d794728f5bfecb46820431adaff71ba374141545ec20b650bb60353fac23\",\"dweb:/ipfs/QmPsfxjVpMcZbpE7BH93DzTpEaktESigEw4SmDzkXuJ4WR\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol\":{\"keccak256\":\"0x86b7b71a6aedefdad89b607378eeab1dcc5389b9ea7d17346d08af01d7190994\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1dc2db8d94a21eac8efe03adf574c419b08536409b416057a2b5b95cb772c43c\",\"dweb:/ipfs/QmZfqJCKVU1ScuX2A7s8WZdQEaikwJbDH5JBrBdKTUT4Gu\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x74ed01eb66b923d0d0cfe3be84604ac04b76482a55f9dd655e1ef4d367f95bc2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5282825a626cfe924e504274b864a652b0023591fa66f06a067b25b51ba9b303\",\"dweb:/ipfs/QmeCfPykghhMc81VJTrHTC7sF6CRvaA1FXVq2pJhwYp1dV\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"keccak256\":\"0xd6fa4088198f04eef10c5bce8a2f4d60554b7ec4b987f684393c01bf79b94d9f\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://f95ee0bbd4dd3ac730d066ba3e785ded4565e890dbec2fa7d3b9fe3bad9d0d6e\",\"dweb:/ipfs/QmSLr6bHkPFWT7ntj34jmwfyskpwo97T9jZUrk5sz3sdtR\"]},\"lib/openzeppelin-contracts/contracts/utils/Context.sol\":{\"keccak256\":\"0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12\",\"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF\"]},\"src/GameManager.sol\":{\"keccak256\":\"0x37400ab29e3c3de3be6f7ab357288abb80cdacb9ab0b1e2b4330dc798135fbf4\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3f290d7373d038447c97f1ab188bfbe97d038f21ae802ccc14bfe24c82bb3ab1\",\"dweb:/ipfs/QmYtEDC1ifn821tzyyMrPLLUVF6PgvdP7XmUTVwX97KqRV\"]},\"src/PrestigeToken.sol\":{\"keccak256\":\"0x8ce81705de6182fd887286feb45a2d290920e061fb86ea30e6b132f349d64508\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://c68c58e83dfd4056222a6d3d819f158d5d31199088bd6960d80a42dff212fe10\",\"dweb:/ipfs/QmbhTBgKq5xV59ja3TtnEBXSeTPeRmfFgEKDPT1G6Gus9D\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": { "version": "0.8.30+commit.73712a01" },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "_tokenAddress",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "constructor"
+        },
+        {
+          "inputs": [
+            { "internalType": "address", "name": "owner", "type": "address" }
+          ],
+          "type": "error",
+          "name": "OwnableInvalidOwner"
+        },
+        {
+          "inputs": [
+            { "internalType": "address", "name": "account", "type": "address" }
+          ],
+          "type": "error",
+          "name": "OwnableUnauthorizedAccount"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "previousOwner",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "address",
+              "name": "newOwner",
+              "type": "address",
+              "indexed": true
+            }
+          ],
+          "type": "event",
+          "name": "OwnershipTransferred",
+          "anonymous": false
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "player",
+              "type": "address",
+              "indexed": true
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256",
+              "indexed": false
+            }
+          ],
+          "type": "event",
+          "name": "PrestigeClaimed",
+          "anonymous": false
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "owner",
+          "outputs": [
+            { "internalType": "address", "name": "", "type": "address" }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "totalPointsEarned",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "prestige"
+        },
+        {
+          "inputs": [],
+          "stateMutability": "view",
+          "type": "function",
+          "name": "prestigeToken",
+          "outputs": [
+            {
+              "internalType": "contract PrestigeToken",
+              "name": "",
+              "type": "address"
+            }
+          ]
+        },
+        {
+          "inputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "renounceOwnership"
+        },
+        {
+          "inputs": [
+            { "internalType": "address", "name": "newOwner", "type": "address" }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function",
+          "name": "transferOwnership"
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "owner()": { "details": "Returns the address of the current owner." },
+          "prestige(uint256)": {
+            "details": "Permite a un jugador reiniciar su progreso (prestigio) y acuñar tokens de recompensa. La cantidad de tokens es el 0.001% de los puntos totales ganados."
+          },
+          "renounceOwnership()": {
+            "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner."
+          },
+          "transferOwnership(address)": {
+            "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+          }
+        },
+        "version": 1
+      },
+      "userdoc": { "kind": "user", "methods": {}, "version": 1 }
+    },
+    "settings": {
+      "remappings": [
+        "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+        "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+        "forge-std/=lib/forge-std/src/",
+        "halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+        "openzeppelin-contracts/=lib/openzeppelin-contracts/"
+      ],
+      "optimizer": { "enabled": false, "runs": 200 },
+      "metadata": { "bytecodeHash": "ipfs" },
+      "compilationTarget": { "src/GameManager.sol": "GameManager" },
+      "evmVersion": "prague",
+      "libraries": {}
+    },
+    "sources": {
+      "lib/openzeppelin-contracts/contracts/access/Ownable.sol": {
+        "keccak256": "0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb",
+        "urls": [
+          "bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6",
+          "dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/interfaces/draft-IERC6093.sol": {
+        "keccak256": "0x19fdfb0f3b89a230e7dbd1cf416f1a6b531a3ee5db4da483f946320fc74afc0e",
+        "urls": [
+          "bzz-raw://3490d794728f5bfecb46820431adaff71ba374141545ec20b650bb60353fac23",
+          "dweb:/ipfs/QmPsfxjVpMcZbpE7BH93DzTpEaktESigEw4SmDzkXuJ4WR"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol": {
+        "keccak256": "0x86b7b71a6aedefdad89b607378eeab1dcc5389b9ea7d17346d08af01d7190994",
+        "urls": [
+          "bzz-raw://1dc2db8d94a21eac8efe03adf574c419b08536409b416057a2b5b95cb772c43c",
+          "dweb:/ipfs/QmZfqJCKVU1ScuX2A7s8WZdQEaikwJbDH5JBrBdKTUT4Gu"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol": {
+        "keccak256": "0x74ed01eb66b923d0d0cfe3be84604ac04b76482a55f9dd655e1ef4d367f95bc2",
+        "urls": [
+          "bzz-raw://5282825a626cfe924e504274b864a652b0023591fa66f06a067b25b51ba9b303",
+          "dweb:/ipfs/QmeCfPykghhMc81VJTrHTC7sF6CRvaA1FXVq2pJhwYp1dV"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+        "keccak256": "0xd6fa4088198f04eef10c5bce8a2f4d60554b7ec4b987f684393c01bf79b94d9f",
+        "urls": [
+          "bzz-raw://f95ee0bbd4dd3ac730d066ba3e785ded4565e890dbec2fa7d3b9fe3bad9d0d6e",
+          "dweb:/ipfs/QmSLr6bHkPFWT7ntj34jmwfyskpwo97T9jZUrk5sz3sdtR"
+        ],
+        "license": "MIT"
+      },
+      "lib/openzeppelin-contracts/contracts/utils/Context.sol": {
+        "keccak256": "0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2",
+        "urls": [
+          "bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12",
+          "dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
+        ],
+        "license": "MIT"
+      },
+      "src/GameManager.sol": {
+        "keccak256": "0x37400ab29e3c3de3be6f7ab357288abb80cdacb9ab0b1e2b4330dc798135fbf4",
+        "urls": [
+          "bzz-raw://3f290d7373d038447c97f1ab188bfbe97d038f21ae802ccc14bfe24c82bb3ab1",
+          "dweb:/ipfs/QmYtEDC1ifn821tzyyMrPLLUVF6PgvdP7XmUTVwX97KqRV"
+        ],
+        "license": "MIT"
+      },
+      "src/PrestigeToken.sol": {
+        "keccak256": "0x8ce81705de6182fd887286feb45a2d290920e061fb86ea30e6b132f349d64508",
+        "urls": [
+          "bzz-raw://c68c58e83dfd4056222a6d3d819f158d5d31199088bd6960d80a42dff212fe10",
+          "dweb:/ipfs/QmbhTBgKq5xV59ja3TtnEBXSeTPeRmfFgEKDPT1G6Gus9D"
+        ],
+        "license": "MIT"
+      }
+    },
+    "version": 1
+  },
+  "id": 28
+}

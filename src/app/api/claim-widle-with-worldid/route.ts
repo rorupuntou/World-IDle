@@ -127,12 +127,12 @@ export async function POST(req: NextRequest) {
             console.log('[DEBUG] Parsed game_data:', gameData);
 
             const stats = gameData?.stats;
-            if (stats && typeof stats.wIdleReward === 'number' && !isNaN(stats.wIdleReward)) {
-                wIdleReward = stats.wIdleReward;
+            if (stats && typeof stats.totalTokensEarned === 'number' && !isNaN(stats.totalTokensEarned)) {
+                wIdleReward = Math.floor(300 * Math.log(0.01 * stats.totalTokensEarned + 1));
             } else {
                 wIdleReward = 0;
             }
-            console.log(`[DEBUG] Extracted wIdleReward: ${wIdleReward}`);
+            console.log(`[DEBUG] Calculated wIdleReward: ${wIdleReward}`);
         }
 
         if (wIdleReward < 1) {
